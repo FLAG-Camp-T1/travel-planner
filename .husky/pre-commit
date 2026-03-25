@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "正在检查代码格式 (Pre-commit Hook)..."
+
+if [ -d "backend" ]; then
+  echo "  正在检查 Spring Boot后端 代码格式..."
+  cd backend
+  ./gradlew spotlessCheck || {
+    echo "后端代码格式不规范！请在 backend 目录下运行 './gradlew spotlessApply' 修复后再尝试提交。"
+    exit 1
+  }
+  cd ..
+fi
+
+if [ -d "frontend" ]; then
+  echo "  正在检查 React前端 代码格式..."
+  # 这里未来会替换为 npm run lint 等命令
+  # cd frontend && npm run lint || exit 1
+  # cd ..
+fi
+
+echo "代码格式检查通过，正在提交..."

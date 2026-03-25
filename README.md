@@ -33,6 +33,9 @@ git switch develop
 
 # 4. 拉取远端最新代码
 git pull origin develop
+
+# 5. 安装Git Hook管理工具Husky. 需要确保你本地已安装 Node.js
+npm install
 ```
 
 ### 第二步：创建自己的Feature Branch
