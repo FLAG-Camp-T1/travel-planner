@@ -1,23 +1,23 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
 
-echo "正在检查代码格式 (Pre-commit Hook)..."
+echo "正在由 lint-staged 检查增量代码格式..."
 
-if [ -d "backend" ]; then
-  echo "  正在检查 Spring Boot后端 代码格式..."
-  cd backend
-  ./gradlew spotlessCheck || {
-    echo "后端代码格式不规范！请在 backend 目录下运行 './gradlew spotlessApply' 修复后再尝试提交。"
-    exit 1
-  }
-  cd ..
-fi
+npx lint-staged || {
+  echo ""
+  echo "您的提交未通过代码规范检查！"
+  echo "========================================================"
+  echo "快速修复指南："
+  echo ""
+  echo "【前端问题】请打开终端进入 frontend 目录，运行："
+  echo "    npm run format   (自动修复排版问题)"
+  echo "    (若上方有 ESLint 逻辑报错，请手动根据提示修改代码)"
+  echo ""
+  echo "【后端问题】请打开终端进入 backend 目录，运行："
+  echo "    ./gradlew spotlessApply  (自动修复 Java 格式问题)"
+  echo "========================================================"
+  echo "请修复错误后，再次尝试 commit。"
+  echo ""
+  exit 1
+}
 
-if [ -d "frontend" ]; then
-  echo "  正在检查 React前端 代码格式..."
-  # 这里未来会替换为 npm run lint 等命令
-  # cd frontend && npm run lint || exit 1
-  # cd ..
-fi
-
-echo "代码格式检查通过，正在提交..."
+echo "规范检查通过，代码已成功提交！"
