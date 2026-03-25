@@ -1,0 +1,24 @@
+# Java Compiled Files
+*.class
+
+# Build Directories
+target/
+build/
+out/
+.gradle/
+
+# Artifacts
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Logs
+*.log
+
+# Local Environment Files
+application-local.yml
+application-local.properties

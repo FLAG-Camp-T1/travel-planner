@@ -1,0 +1,30 @@
+{
+  "name": "travel-planner",
+  "version": "1.0.0",
+  "description": "为保证代码库健康，该Repo采用类Git Flow协作模式并强制关键变更通过Pull Request（PR）合并。",
+  "main": ".commitlintrc.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FLAG-Camp-T1/travel-planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FLAG-Camp-T1/travel-planner/issues"
+  },
+  "homepage": "https://github.com/FLAG-Camp-T1/travel-planner#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "husky": "^9.1.7"
+  }
+}
