@@ -1,25 +1,52 @@
-# 协作指引
+# 项目协作与开发指南
 
-为保证代码库健康，该Repo采用类Git Flow协作模式并强制关键变更通过Pull Request（PR）合并。
+本文档规定了 Travel Planner 项目的整体协作模式、全局环境配置及代码提交规范。请在编写第一行代码前仔细阅读。
 
-请在编写第一行代码前，仔细阅读并严格遵循以下工作流。
+## 附录
 
-## 注意
-
-1. 为了保护其他组员的本地分支不受影响，**请勿**直接向 `main` 和 `develop` 分支推送（Push）代码。这两个分支已被设置保护。
-2. `main` 与 `develop` 上所有的代码变更（无论多小）都必须通过 **Pull Request (PR)** 合并。
-3. 提交变更前，请确保 GitHub Projects 看板上已有对应的Issue描述此次变更需要解决的问题/需求。
+此处提到的git操作并非都一定要用命令完成。如果还不熟悉git命令，可以尝试一下这个[交互式学习git命令的网站](https://learngitbranching.js.org/)
 
 ## 目录
 
-1. [仓库克隆与提交指南](#实操指南)
-2. [Commit Message 规范](#git-提交信息规范)
+- [1. 全局环境依赖](#1-全局环境依赖)
+- [2. 协作开发流程](#2-协作开发流程)
+  - [2.1 注意事项](#21-注意事项)
+  - [2.2 克隆仓库与初始化](#22-克隆仓库与初始化)
+  - [2.3 创建特性分支](#23-创建特性分支)
+  - [2.4 推送与合并-PR](#24-推送与合并-pr)
+- [2. 协作开发流程](#2-协作开发流程)
+  - [2.1 注意事项](#21-注意事项)
+  - [2.2 克隆仓库与初始化](#22-克隆仓库与初始化)
+  - [2.3 创建特性分支](#23-创建特性分支)
+  - [2.4 推送与合并-PR](#24-推送与合并-pr)
+- [3. 代码提交规范](#3-代码提交规范)
+  - [3.1 提交格式约束](#31-提交格式约束)
+  - [3.2 提交示例](#32-提交示例)
+  - [3.3 提交失败处理](#33-提交失败处理)
+- [4. 子模块开发指南](#4-子模块开发指南)
 
-## 实操指南
+---
 
-### 第一步：克隆仓库并切换到开发主干
+## 1. 全局环境依赖
 
-我们的日常开发基准分支是 `develop`，而不是 `main`。请按照以下步骤获取最新代码：
+本项目采用 Monorepo（单体仓库）架构，在根目录配置了全局代码规范检查器（Husky + Commitlint）。**为了保证代码提交时格式检查正常运行，无论是否同时参与前后端开发，均需在本地安装并配置以下基础环境：**
+
+- **Node.js & npm** (v18.0+): 必须安装。用于在代码提交时触发根目录的 Husky 钩子以及执行 Commitlint 提交信息格式检查。
+- **JDK 21 & `JAVA_HOME` 环境变量**: 必须正确配置。Husky 钩子会在提交前触发后端 Java 代码的 Spotless 格式化检查，若操作系统未正确配置 `JAVA_HOME` 变量，将导致代码提交失败。
+
+## 2. 协作开发流程
+
+为保证代码库健康，该 Repo 采用类 Git Flow 协作模式，并强制关键变更通过 Pull Request（PR）合并。
+
+### 2.1 注意事项
+
+1. **保护分支**：为了保护其他组员的本地分支不受影响，**禁止**直接向 `main` 和 `develop` 分支推送（Push）代码。这两个分支已被设置保护。
+2. **强制 PR**：`main` 与 `develop` 上所有的代码变更（无论多小）都必须通过 **Pull Request (PR)** 合并。
+3. **关联 Issue**：提交变更前，请确保 GitHub Projects 看板上已有对应的 Issue 描述此次变更需要解决的问题或需求。
+
+### 2.2 克隆仓库与初始化
+
+日常开发基准分支是 `develop`，而不是 `main`。请按照以下步骤获取最新代码：
 
 ```bash
 # 1. 克隆整个代码仓库到本地
@@ -34,20 +61,22 @@ git switch develop
 # 4. 拉取远端最新代码
 git pull origin develop
 
-# 5. 安装Git Hook管理工具Husky. 需要确保你本地已安装 Node.js
+# 5. 安装全局依赖，初始化 Git Hook 管理工具 Husky
 npm install
 ```
 
-### 第二步：创建自己的Feature Branch
+**重要提示：绝对不要使用 IDE 单独打开 frontend 或 backend 子目录！请务必使用 IDE 打开包含 .git 的顶级项目根目录，否则将导致路径错乱、规范检测失效且代码可能无法提交。**
+
+### 2.3 创建特性分支
 
 **切忌**在 develop 分支上直接写代码。开发新功能或修复 Bug 时，请基于 develop 切出一个新的分支。
 
-分支命名规范： <类型>/<Issue编号（如有）><简短英文描述>
+**分支命名规范：** <类型>/<Issue编号（如有）><简短英文描述>
 
 - 新功能示例：feature/12-user-login
 - 修 Bug 示例：bug/34-poi-bookmark-conflict
 
-```Bash
+```bash
 # 确保你当前在 develop 分支上，该命令应当返回 develop
 git branch --show-current
 
@@ -55,51 +84,33 @@ git branch --show-current
 git switch -c feature/<branch-name>
 ```
 
-### 第三步：提交代码变更 (Commit)
+### 2.4 推送与合并 (PR)
 
-写完代码后，我们需要将其提交到本地暂存区。本项目遵循 [Angular Commit 规范](https://github.com/angular/angular/blob/main/contributing-docs/commit-message-guidelines.md)
+当你在本地完成开发、通过自测并在本地完成了规范的 Commit（详见第3节）后，将你的分支推送到 GitHub：
 
-Commit Message格式： \<type>(\<scope>): \<subject>
-
-```Bash
-# 1. 将改动添加到暂存区
-git add .
-
-# 2. 书写规范的提交信息
-# 新增功能演示：
-git commit -m "feat(backend/login): implement user login backend"
-
-# 修复Bug演示：
-git commit -m "fix(frontend/login): fix misplaced login button"
-```
-
-(支持的 type 包含：build, ci, docs, feat, fix, perf, refactor, test, chore, revert. 详见Angular Commit规范文档与仓库根目录的.commitlintrc.js文件)
-
-### 第四步：推送到远端并提交 Pull Request (PR)
-
-当你在本地完成开发并自测通过后，将你的分支推送到 GitHub：
-
-```Bash
+```bash
 # 将本地分支推送到远端仓库
 git push -u origin feature/<branch-name>
 ```
 
-在 GitHub 上提交 PR 的步骤：
+**在 GitHub 上提交 PR 的步骤：**
 
-1. 登录该项目对应的 GitHub 仓库页面，系统会提示你有一个刚推送的分支，点击 "Compare & pull request" 按钮。
-2. 确保目标分支（base）是 develop，来源分支（compare）是你的 feature/xxx 分支。
-3. 填写 PR 描述（关键）
-   - 若有关联的Issue，必须在描述中写明 Closes #12（数字为你关联的 Issue 编号），这样 PR 合并后，关联的 Issue 也会自动关闭。
-   - 请在 PR 内@与你合作开发该分支的组员（如有）以提醒他查看该变更。
+1. 登录该项目对应的 GitHub 仓库页面，点击 "Compare & pull request" 按钮。
+2. 确保目标分支（base）是 develop，来源分支（compare）是你的特性分支。
+3. 填写 PR 描述（关键）：
+
+- 若有关联的 Issue，必须在描述中写明 `Closes #<number>`（数字为你关联的 Issue 编号），以实现 PR 合并后自动关闭关联 Issue。
+- 请在 PR 内 @ 与你合作开发该分支的组员（如有）以提醒代码 Review。
+
 4. 点击 "Create pull request"。
 
-## Git 提交信息规范
+## 3. 代码提交规范
 
-为了清晰追踪每次变更，本项目已集成了 **Commitlint** 与 **Husky**。
+为了清晰追踪每次变更，本项目遵循 Angular Commit 规范，并集成了 Commitlint 与 Husky 进行严格校验。
 
-### 1. 提交格式约束
+### 3.1 提交格式约束
 
-任何通过 `git commit` 生成的提交记录，**必须**严格符合以下结构，否则在本地就会报错并拒绝提交：
+任何通过 `git commit` 生成的提交记录，**必须**严格符合以下结构，否则在本地执行`git commit -m "<消息>"`就会报错并拒绝提交：
 
 `<type>(<scope>): <subject>`
 
@@ -118,20 +129,22 @@ git push -u origin feature/<branch-name>
 - **scope（选填）:** 影响范围。用于说明本次修改涉及的模块（例如：`auth`, `user-service`, `frontend-ui`）。
 - **subject（必填）:** 简短精炼的描述。说明你做了什么。
 
-### 2. 标准提交示例 ✅
+### 3.2 提交示例
+
+**✅ 标准提交示例**
 
 ```bash
-# 好的示例（带 scope）
+# 新增功能演示（带 scope）
 git commit -m "feat(auth): add user login token expiry"
 
-# 好的示例（不带 scope）
+# 修复Bug演示（不带 scope）
 git commit -m "fix: fix overflow of index page"
 
-# 好的示例（关联了 GitHub 任务）
+# 杂项更新演示（注明了关联的 GitHub 任务）
 git commit -m "chore: upgrade Spring Boot dependency (#23)"
 ```
 
-### 3. 错误提交示例 ❌（将被系统拦截）
+**❌ 错误提交示例（将被检查器拦截）**
 
 ```Bash
 git commit -m "更新代码"               # 缺少 type
@@ -139,15 +152,24 @@ git commit -m "feat 新增了用户登录"    # 缺少冒号
 git commit -m "Fix: 修复空指针异常"    # type 必须是纯小写字母
 ```
 
-### 4. 提交失败了怎么办？
+### 3.3 提交失败处理
 
-如果写错了格式导致终端报错（通常会看到 type must be one of [feat, fix, docs...] 的红色提示），你的代码依然处于暂存区（Staged）。
+如果写错了格式导致终端报错，通常会看到中文排错提示。
 
 修复方法：
-重新执行 `git commit -m "填写正确的格式"` 即可。
+按照提示执行了格式修复命令后，再执行 `git commit -m "<填写正确格式的提交信息>"` 即可。
 
-如果是因为上一次提交漏了某个文件，想要合并到上一个正确的 Commit 中，可以使用：
+如果是因为上一次提交漏了某个文件，想要合并到上一个正确的 Commit 中而不改变提交信息，可以使用：
 
-```Bash
+```bash
 git commit --amend --no-edit
 ```
+
+## 4. 子模块开发指南
+
+有关具体的前端/后端项目的运行命令、调试方式与本地构建细节，请参见各子模块的专属文档：
+
+- [前端项目开发指南-README](./frontend/README.md)
+- [后端服务开发指南-README](./backend/README.md)
+
+---

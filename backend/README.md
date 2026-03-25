@@ -102,3 +102,5 @@ gradlew.bat bootRun
 通过在IDEA Gradle面板里运行Tasks > Verification > spotlessCheck/spotlessApply 可以绕过该需求执行格式化。
 
 但Husky依然需要JAVA_HOME执行pre-commit的代码格式检查。
+
+---
