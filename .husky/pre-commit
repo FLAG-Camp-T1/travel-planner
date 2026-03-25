@@ -20,4 +20,4 @@ npx lint-staged || {
   exit 1
 }
 
-echo "规范检查通过，代码已成功提交！"
+echo "代码已通过规范检查！"
