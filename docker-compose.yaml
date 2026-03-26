@@ -41,6 +41,8 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    environment:
+      - WATCH_POLLING=true
 
 volumes:
   db_data:
