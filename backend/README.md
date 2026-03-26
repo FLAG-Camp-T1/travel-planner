@@ -41,7 +41,7 @@
 项目底层使用 Spring Data JDBC，**不会自动创建数据库实例与数据表**。在首次启动项目前，必须通过数据库客户端或命令行手动创建开发库：
 
 ```sql
-CREATE DATABASE travelplanner_db;
+CREATE DATABASE travel_planner_db;
 ```
 
 ### 2.2 配置数据库凭证
