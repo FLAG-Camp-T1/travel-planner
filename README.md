@@ -46,7 +46,7 @@
 
 ```bash
 # 1. 克隆整个代码仓库到本地
-git clone [https://github.com/FLAG-Camp-T1/travel-planner.git](https://github.com/FLAG-Camp-T1/travel-planner.git)
+git clone https://github.com/FLAG-Camp-T1/travel-planner.git
 
 # 2. 进入项目根目录
 cd travel-planner
@@ -67,7 +67,7 @@ npm install
 
 **切忌**在 develop 分支上直接写代码。开发新功能或修复 Bug 时，请基于 develop 切出一个新的分支。
 
-**分支命名规范：** <类型>/<Issue编号（如有）><简短英文描述>
+**分支命名规范：** <类型>/<Issue编号(如有)><简短英文描述>
 
 - 新功能示例：feature/12-user-login
 - 修 Bug 示例：bug/34-poi-bookmark-conflict
@@ -77,7 +77,7 @@ npm install
 git branch --show-current
 
 # 然后创建并切换到新分支
-git switch -c feature/<branch-name>
+git switch -c <branch-name>
 ```
 
 ### 2.4 推送与合并 (PR)
@@ -86,7 +86,7 @@ git switch -c feature/<branch-name>
 
 ```bash
 # 将本地分支推送到远端仓库
-git push -u origin feature/<branch-name>
+git push -u origin <branch-name>
 ```
 
 **在 GitHub 上提交 PR 的步骤：**
@@ -225,19 +225,50 @@ Docker 容器映射了 5005 端口用于 Debugger 连接。
 3. 在平常运行本地 Spring Boot 应用的位置点 BackendApplication，切换到刚创建的 Debugger
 4. 点击 Debug 按钮，连接成功即可正常调试
 
-### 5.4 停止与清理环境
+### 5.4 重新运行环境
+
+更新依赖后，一般需要重新构建项目。然而前端的热重载并不会完全重新构建项目。
 
 ```bash
-# 仅停止运行中的容器（保留数据库数据）
-docker-compose stop
-
-# 停止容器并移除它们（保留数据库数据）
-docker-compose down
+# -d表示detach，--build表示重新构建，-V表示重建当前正在使用的匿名卷
+docker-compose up -d --build -V <service-name>
 ```
 
-**⚠️ 彻底清空数据库（危险操作）：**
+service-name在[docker-compose.yml](./docker-compose.yml)中配置为了
 
-如果需要清理所有脏数据，让 PostgreSQL 恢复到初始的空库状态，请附加 -v 参数以销毁所有相关的命名卷
+- db
+- backend
+- frontend
+
+> node_modules匿名卷是为了既支持热重载而映射源代码目录，又需要防止主机frontend/node_modules将其覆盖。
+
+### 5.5 停止与清理环境
+
+```bash
+# 仅停止所有运行中的容器
+docker-compose stop
+
+# 停止并移除所有容器，同时删除创建的内部网络 (但保留数据卷)
+docker-compose down
+
+# 销毁容器、网络，并强制删除所有挂载的数据卷
+docker-compose down -v
+
+# 停止 (-s) 并移除指定容器，同时 (-v) 销毁挂载在其上的匿名卷
+docker-compose rm -s -v <service-name>
+```
+
+**例1：清理前端服务**
+
+如果需要清理node_modules数据，需附加 -v 参数以销毁所有相关的匿名卷
+
+```bash
+docker-compose rm -s -v frontend
+```
+
+**例2：⚠️ 彻底清空数据库（危险操作）**
+
+如果需要清理所有数据，让 PostgreSQL 恢复到初始的空库状态，需附加 -v 参数以销毁所有相关的命名卷
 
 ```bash
 docker-compose down -v
