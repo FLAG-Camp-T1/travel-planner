@@ -14,16 +14,12 @@
   - [2.2 克隆仓库与初始化](#22-克隆仓库与初始化)
   - [2.3 创建特性分支](#23-创建特性分支)
   - [2.4 推送与合并-PR](#24-推送与合并-pr)
-- [2. 协作开发流程](#2-协作开发流程)
-  - [2.1 注意事项](#21-注意事项)
-  - [2.2 克隆仓库与初始化](#22-克隆仓库与初始化)
-  - [2.3 创建特性分支](#23-创建特性分支)
-  - [2.4 推送与合并-PR](#24-推送与合并-pr)
 - [3. 代码提交规范](#3-代码提交规范)
   - [3.1 提交格式约束](#31-提交格式约束)
   - [3.2 提交示例](#32-提交示例)
   - [3.3 提交失败处理](#33-提交失败处理)
 - [4. 子模块开发指南](#4-子模块开发指南)
+- [5. 容器化开发环境 (Docker 一键部署)](#5-容器化开发环境-docker-一键部署)
 
 ---
 
@@ -31,7 +27,7 @@
 
 本项目采用 Monorepo（单体仓库）架构，在根目录配置了全局代码规范检查器（Husky + Commitlint）。**为了保证代码提交时格式检查正常运行，无论是否同时参与前后端开发，均需在本地安装并配置以下基础环境：**
 
-- **Node.js & npm** (v18.0+): 必须安装。用于在代码提交时触发根目录的 Husky 钩子以及执行 Commitlint 提交信息格式检查。
+- **Node.js & npm** (v22.0+): 必须安装。用于在代码提交时触发根目录的 Husky 钩子以及执行 Commitlint 提交信息格式检查。
 - **JDK 21 & `JAVA_HOME` 环境变量**: 必须正确配置。Husky 钩子会在提交前触发后端 Java 代码的 Spotless 格式化检查，若操作系统未正确配置 `JAVA_HOME` 变量，将导致代码提交失败。
 
 ## 2. 协作开发流程
@@ -50,7 +46,7 @@
 
 ```bash
 # 1. 克隆整个代码仓库到本地
-git clone https://github.com/FLAG-Camp-T1/travel-planner.git
+git clone [https://github.com/FLAG-Camp-T1/travel-planner.git](https://github.com/FLAG-Camp-T1/travel-planner.git)
 
 # 2. 进入项目根目录
 cd travel-planner
@@ -171,5 +167,80 @@ git commit --amend --no-edit
 
 - [前端项目开发指南-README](./frontend/README.md)
 - [后端服务开发指南-README](./backend/README.md)
+
+---
+
+## 5. 容器化开发环境 (Docker 一键部署)
+
+本项目支持使用 Docker 进行一键化的本地开发环境部署。
+
+此方案将自动拉起 PostgreSQL 18 数据库、Spring Boot 后端 以及 React 前端，并支持代码的实时热重载。
+
+> Vite + React 支持标准的热重载，只需修改代码后保存即可\
+> Spring Boot 通过引入 devtools 支持检测到构建产物变更时快速重启，需要打开IDE的自动构建项目/自动生成项目选项。
+
+### 5.1 启动环境
+
+在项目根目录下，确保 Docker Desktop 已运行，然后执行：
+
+```bash
+# 后台启动并构建所有服务
+docker-compose up -d --build
+```
+
+首次运行可能需要几分钟下载基础镜像及依赖，需耐心等待。
+
+启动完成后，可以通过以下地址访问服务：
+
+- 前端页面: localhost:5173
+- 后端 API: localhost:8080
+- 数据库连接: localhost:5432
+
+### 5.2 查看日志
+
+如果某个服务没有正常响应，可以通过以下命令查看容器日志：
+
+```bash
+# 查看所有服务的实时日志
+docker-compose logs -f
+
+# 仅查看前端或后端的实时日志
+docker-compose logs -f frontend
+docker-compose logs -f backend
+```
+
+### 5.3 调试后端服务
+
+Docker 容器映射了 5005 端口用于 Debugger 连接。
+
+需要在IDEA中执行以下操作创建一个连接至后端Docker的调试器
+
+1. 创建一个新的运行/调试配置
+2. 选择“远程 JVM 调试”
+
+- 模式: 附加到远程 JVM
+- Host: localhost
+- Port: 5005
+
+3. 在平常运行本地 Spring Boot 应用的位置点 BackendApplication，切换到刚创建的 Debugger
+4. 点击 Debug 按钮，连接成功即可正常调试
+
+### 5.4 停止与清理环境
+
+```bash
+# 仅停止运行中的容器（保留数据库数据）
+docker-compose stop
+
+# 停止容器并移除它们（保留数据库数据）
+docker-compose down
+```
+
+**⚠️ 彻底清空数据库（危险操作）：**
+
+如果需要清理所有脏数据，让 PostgreSQL 恢复到初始的空库状态，请附加 -v 参数以销毁所有相关的命名卷
+
+```bash
+docker-compose down -v
+```
 
 ---

@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:18
+    container_name: travel-planner-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=travel_planner_db
+    volumes:
+      - db_data:/var/lib/postgresql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: travel-planner-backend
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    volumes:
+      - ./backend:/app
+      - gradle_cache:/root/.gradle
+    depends_on:
+      - db
+    environment:
+      - REMOTE_DEBUG=true
+      - DB_HOST=db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: travel-planner-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
+  gradle_cache:
