@@ -4,6 +4,8 @@ import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.route.dto.RouteRequest;
 import com.travelplanner.backend.route.dto.RouteSummaryDto;
 import com.travelplanner.backend.route.service.GoogleRouteService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,11 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/routes")
 @RequiredArgsConstructor
+@Tag(name = "Routes", description = "APIs for retrieving map routes")
 public class RouteController {
 
     private final GoogleRouteService googleRouteService;
 
     @PostMapping("/request")
+    @Operation(
+            summary = "Request a new route",
+            description =
+                    "Request a route between two specified Google Place IDs using Google Routes API")
     public ApiResponse<RouteSummaryDto> requestRoute(@RequestBody RouteRequest request) {
         log.info("Inbound Route Request: {}", request);
         RouteSummaryDto routeSummaryDto = googleRouteService.computeRoute(request);
