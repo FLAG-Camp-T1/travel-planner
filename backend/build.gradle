@@ -51,7 +51,7 @@ tasks.named('bootRun') {
 // Use Google Java format
 spotless {
 	java {
-		googleJavaFormat()
+		googleJavaFormat().aosp()
 		removeUnusedImports()
 		trimTrailingWhitespace()
 		endWithNewline()

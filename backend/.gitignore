@@ -22,6 +22,8 @@ out/
 # Local Environment Files
 application-local.yml
 application-local.properties
+.env
+.env.local
 
 # From Spring Initializr
 HELP.md

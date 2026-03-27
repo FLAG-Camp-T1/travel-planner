@@ -25,6 +25,8 @@ services:
       - gradle_cache:/root/.gradle
     depends_on:
       - db
+    env_file:
+      - ./backend/.env
     environment:
       - REMOTE_DEBUG=true
       - DB_HOST=db
