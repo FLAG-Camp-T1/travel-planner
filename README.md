@@ -4,7 +4,7 @@
 
 ## 附录
 
-此处提到的git操作并非都一定要用命令完成。如果还不熟悉git命令，可以尝试一下这个[交互式学习git命令的网站](https://learngitbranching.js.org/)
+此处提到的 git 操作并非必须使用命令行完成。若对 git 命令尚不熟悉，可尝试[交互式学习git命令的网站](https://learngitbranching.js.org/)
 
 ## 目录
 
@@ -13,7 +13,7 @@
   - [2.1 注意事项](#21-注意事项)
   - [2.2 克隆仓库与初始化](#22-克隆仓库与初始化)
   - [2.3 创建特性分支](#23-创建特性分支)
-  - [2.4 推送与合并-PR](#24-推送与合并-pr)
+  - [2.4 推送与合并](#24-推送与合并)
 - [3. 代码提交规范](#3-代码提交规范)
   - [3.1 提交格式约束](#31-提交格式约束)
   - [3.2 提交示例](#32-提交示例)
@@ -36,9 +36,10 @@
 
 ### 2.1 注意事项
 
-1. **保护分支**：为了保护其他组员的本地分支不受影响，**禁止**直接向 `main` 和 `develop` 分支推送（Push）代码。这两个分支已被设置保护。
-2. **强制 PR**：`main` 与 `develop` 上所有的代码变更（无论多小）都必须通过 **Pull Request (PR)** 合并。
-3. **关联 Issue**：提交变更前，请确保 GitHub Projects 看板上已有对应的 Issue 描述此次变更需要解决的问题或需求。
+1. **保护分支**：为了保护本地分支不受影响，禁止直接向 `main`、`develop` 及 `release/vx.y.z` 分支推送代码。这些分支已被设置保护。
+2. **强制合并**：`main`、`develop` 及 `release/vx.y.z` 上的所有代码变更均需通过 Pull Request 合并。
+3. **合并模式**：代码库在合并 Pull Request 时仅允许使用 squash-and-merge 模式。由于该模式会将分支上的所有提交压缩为单一提交记录，因此分支颗粒度十分重要，请尽量确保每个分支仅独立包含单一功能或修复。
+4. **关联任务**：提交变更前，请确保项目看板上已有对应的 Issue 描述此次变更需解决的问题或需求。
 
 ### 2.2 克隆仓库与初始化
 
@@ -73,30 +74,30 @@ npm install
 - 修 Bug 示例：bug/34-poi-bookmark-conflict
 
 ```bash
-# 确保你当前在 develop 分支上，该命令应当返回 develop
+# 确保当前位于 develop 分支，该命令应当返回 develop
 git branch --show-current
 
 # 然后创建并切换到新分支
 git switch -c <branch-name>
 ```
 
-### 2.4 推送与合并 (PR)
+### 2.4 推送与合并
 
-当你在本地完成开发、通过自测并在本地完成了规范的 Commit（详见第3节）后，将你的分支推送到 GitHub：
+当本地完成开发、通过自测并完成规范的提交（详见第3节）后，将分支推送到远端：
 
 ```bash
 # 将本地分支推送到远端仓库
 git push -u origin <branch-name>
 ```
 
-**在 GitHub 上提交 PR 的步骤：**
+**在 GitHub 上提交 Pull Request 的步骤：**
 
 1. 登录该项目对应的 GitHub 仓库页面，点击 "Compare & pull request" 按钮。
-2. 确保目标分支（base）是 develop，来源分支（compare）是你的特性分支。
+2. 确保目标分支（base）是 develop，来源分支（compare）是待合并的特性分支。
 3. 填写 PR 描述（关键）：
 
-- 若有关联的 Issue，必须在描述中写明 `Closes #<number>`（数字为你关联的 Issue 编号），以实现 PR 合并后自动关闭关联 Issue。
-- 请在 PR 内 @ 与你合作开发该分支的组员（如有）以提醒代码 Review。
+- 若有关联的 Issue，必须在描述中写明 Closes #<number>（数字为关联的 Issue 编号），以实现代码合并后自动关闭关联 Issue。
+- 请在 Pull Request 内 @ 合作开发该分支或功能的成员（如有）以提醒代码 Review。
 
 4. 点击 "Create pull request"。
 
@@ -123,11 +124,11 @@ git push -u origin <branch-name>
   - `revert`: 代码回滚
 
 - **scope（选填）:** 影响范围。用于说明本次修改涉及的模块（例如：`auth`, `user-service`, `frontend-ui`）。
-- **subject（必填）:** 简短精炼的描述。说明你做了什么。
+- **subject（必填）:** 简短精炼的描述。说明本次代码修改的具体内容。
 
 ### 3.2 提交示例
 
-**✅ 标准提交示例**
+**标准提交示例**
 
 ```bash
 # 新增功能演示（带 scope）
@@ -140,7 +141,7 @@ git commit -m "fix: fix overflow of index page"
 git commit -m "chore: upgrade Spring Boot dependency (#23)"
 ```
 
-**❌ 错误提交示例（将被检查器拦截）**
+**错误提交示例（将被检查器拦截）**
 
 ```Bash
 git commit -m "更新代码"               # 缺少 type
@@ -266,7 +267,7 @@ docker-compose rm -s -v <service-name>
 docker-compose rm -s -v frontend
 ```
 
-**例2：⚠️ 彻底清空数据库（危险操作）**
+**例2：彻底清空数据库（危险操作⚠️）**
 
 如果需要清理所有数据，让 PostgreSQL 恢复到初始的空库状态，需附加 -v 参数以销毁所有相关的命名卷
 
