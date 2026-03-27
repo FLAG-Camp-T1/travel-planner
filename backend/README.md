@@ -11,8 +11,9 @@
   - [2.3 配置数据库凭证](#23-配置数据库凭证)
   - [2.4 启动服务](#24-启动服务)
 - [3. 代码规范与格式化](#3-代码规范与格式化)
-- [4. 常见问题排查 (FAQ)](#4-常见问题排查-faq)
-  - [4.1 终端执行 gradlew 提示找不到 Java](#41-终端执行-gradlew-提示找不到-java)
+- [4. Swagger UI](#4-swagger-ui)
+- [5. 常见问题排查 (FAQ)](#5-常见问题排查-faq)
+  - [5.1 终端执行 gradlew 提示找不到 Java](#51-终端执行-gradlew-提示找不到-java)
 
 ---
 
@@ -85,9 +86,15 @@ gradlew.bat bootRun
 
 若直接执行`git commit -m "<消息>"`, Husky会使用spotlessCheck并在代码格式不规范时拒绝提交。
 
-## 4. 常见问题排查 (FAQ)
+## 4. Swagger UI
 
-#### 4.1 终端执行 gradlew 提示找不到 Java
+项目引入了Swagger UI来自动生成接口的OpenAPI描述文档。
+
+后端正常运行后，访问 http://localhost:8080/swagger-ui.html 即可看到OpenAPI文档。
+
+## 5. 常见问题排查 (FAQ)
+
+#### 5.1 终端执行 gradlew 提示找不到 Java
 
 现象：在 IDE 的 Terminal 或系统终端运行 ./gradlew 相关的命令时，提示无法找到 Java 环境，但 IDE 内部点击运行按钮可以正常启动项目。
 
