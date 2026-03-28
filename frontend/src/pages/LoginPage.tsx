@@ -1,6 +1,9 @@
+import WelcomeBanner from '@/components/WelcomeBanner';
+
 export default function LoginPage() {
   return (
     <div className="space-y-6">
+      <WelcomeBanner userName="John Doe" />
       <h2 className="text-2xl font-bold text-center text-gray-800">Welcome</h2>
       <p className="text-center text-gray-500">Please enter your account and password to log in</p>
       {/* 假装这里有个表单 */}
