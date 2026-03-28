@@ -13,6 +13,7 @@
 - [4. 常见问题排查 (FAQ)](#4-常见问题排查-faq)
   - [4.1 代码提交时被 pre-commit 钩子拦截](#41-代码提交时被-pre-commit-钩子拦截)
   - [4.2 运行启动命令提示 vite 不是内部或外部命令](#42-运行启动命令提示-vite-不是内部或外部命令)
+- [5. JavaScript / JSX 混合开发指南](#5-javascript--jsx-混合开发指南)
 
 ---
 
@@ -100,5 +101,53 @@ npm run lint
 - 确认当前终端路径位于 frontend 目录下。
 - 执行 npm install 重新下载所有依赖。
 - 待进度条走完后，再次执行启动命令。
+
+## 5. JavaScript / JSX 混合开发指南
+
+本项目核心为 TypeScript 架构，已配置了兼容纯 JavaScript 的设置。若需使用纯 JS 进行业务开发，请遵循以下步骤与规范：
+
+### 5.1 严格的文件后缀命名限制
+
+在 Vite 构建体系下，系统对包含 React 语法的 JS 文件扩展名有极其严格的区分限制：
+
+- UI 组件必须使用 .jsx：只要文件中包含任何 React 标签语法（例如 `<div>`、`<Component>` 等），该文件绝对不能命名为 .js，必须命名为 .jsx。错误使用 .js 后缀会导致项目编译错误。
+- 纯逻辑代码使用 .js：不包含任何 UI 渲染标签的纯业务逻辑、工具函数（如数学计算、API 请求封装等），请正常使用 .js 后缀。
+
+### 5.2 跨语言调用约定
+
+项目中已完成 ESLint TS + JS 校验与 TS 编译器的兼容放行，你可以基本零阻力进行混合调用：
+
+- 在 JS 中调用 TS：在你的 .jsx 或 .js 文件中，可以直接 import 其他成员编写的 .ts 或 .tsx 文件并使用，Vite 会自动处理编译。
+- 在 TS 中调用 JS：其他成员也可以在 .tsx 中直接引入你编写的 .jsx 组件。唯一的区别是，调用 .jsx 组件时 IDE 不会提供强制的 Props 属性类型推断提示（引擎会将其视作安全的 any 兼容处理），但这完全合法且能正常运行。
+
+### 5.3 使用 JSDoc 增强团队协作
+
+即使编写的是纯 JS/JSX 文件，为了方便团队中其他成员在调用你的组件时能获得 IDE 的智能参数提示，强烈建议在组件或复杂函数顶部添加极简的 JSDoc 注释：
+
+```javaScript
+// 示例：带有 JSDoc 注释的纯 JS 组件
+
+/**
+ * 欢迎横幅组件
+ * * @param {Object} props
+ * @param {string} props.userName - 用户的显示名称
+ * @param {string} [props.role] - 用户的系统角色（可选）
+ */
+export default function WelcomeBanner(props) {
+  const userName = props.userName || 'Guest';
+  const role = props.role || 'User';
+
+  return (
+    <div className="p-4 bg-orange-100 rounded-xl mb-6">
+      <h3 className="font-bold">👋 Hello, {userName}!</h3>
+      <p className="text-sm">Role: {role}</p>
+    </div>
+  );
+}
+```
+
+加上上述注释后，当其他人在任何文件中敲下 `<WelcomeBanner` 时，IDE 将自动提示 userName 和 role 两个属性。
+
+作为参考的js组件与逻辑代码分别位于`components/WelcomeBanner.jsx`与`utils/greetingHelper.js`下，演示效果可访问 http://localhost:5173/login 查看
 
 ---
