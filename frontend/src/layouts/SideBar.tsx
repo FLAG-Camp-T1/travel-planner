@@ -1,3 +1,5 @@
+import BookmarkList from '@/components/bookmark/BookmarkList';
+
 export default function SideBar() {
   return (
     <aside className="w-80 shrink-0 bg-white border-r border-gray-200 overflow-y-auto z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col">
@@ -19,6 +21,11 @@ export default function SideBar() {
         <button className="w-full mt-6 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium hover:border-blue-500 hover:text-blue-600 transition-colors">
           + Add New Day
         </button>
+
+        {/* Bookmarks 区块 */}
+        <hr className="my-6 border-gray-100" />
+        <h2 className="text-lg font-semibold mb-4 text-gray-700">My Bookmarks</h2>
+        <BookmarkList />
       </div>
     </aside>
   );
