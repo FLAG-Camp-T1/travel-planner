@@ -1,0 +1,4 @@
+#!/bin/sh
+
+command -v git-lfs >/dev/null 2>&1 || { echo >&2 "\n[FATAL] 本项目配置了 Git LFS，但未检测到 git-lfs。请先安装并执行 git lfs install。\n"; exit 2; }
+git lfs pre-push "$@"
