@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
@@ -30,6 +31,15 @@ const createErrorResponse = (message: string, code = 40000) => {
 
 let nextBookmarkSequence = 3;
 
+let mockUsers: Array<{ username: string; password: string }> = [
+  {
+    username: 'demo',
+    password: 'demo1234',
+  },
+];
+
+const createMockToken = (username: string) => `mock-token-${username}`;
+
 let mockBookmarks: Bookmark[] = [
   {
     bookmarkId: 'bookmark-1',
@@ -54,6 +64,60 @@ let mockBookmarks: Bookmark[] = [
 ];
 
 export const handlers = [
+  http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
+    `${API_BASE_URL}/login`,
+    async ({ request }) => {
+      const requestBody = (await request.json()) as LoginCredentials;
+      const username = requestBody.username?.trim();
+      const password = requestBody.password?.trim();
+
+      if (!username || !password) {
+        return createErrorResponse('Username and password are required.', 40002);
+      }
+
+      const matchedUser = mockUsers.find(
+        (user) => user.username === username && user.password === password,
+      );
+
+      if (!matchedUser) {
+        return createErrorResponse('Invalid username or password.', 40100);
+      }
+
+      return createSuccessResponse<AuthResponse>({
+        token: createMockToken(matchedUser.username),
+      });
+    },
+  ),
+
+  http.post<never, SignupData, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
+    `${API_BASE_URL}/signup`,
+    async ({ request }) => {
+      const requestBody = (await request.json()) as SignupData;
+      const username = requestBody.username?.trim();
+      const password = requestBody.password?.trim();
+
+      if (!username || !password) {
+        return createErrorResponse('Username and password are required.', 40002);
+      }
+
+      const usernameExists = mockUsers.some((user) => user.username === username);
+
+      if (usernameExists) {
+        return createErrorResponse('Username already exists.', 40000);
+      }
+
+      mockUsers = [...mockUsers, { username, password }];
+
+      return createSuccessResponse<AuthResponse>({
+        token: createMockToken(username),
+      });
+    },
+  ),
+
+  http.post(`${API_BASE_URL}/logout`, () => {
+    return createSuccessResponse(null);
+  }),
+
   http.get(`${API_BASE_URL}/bookmarks`, () => {
     return createSuccessResponse(mockBookmarks);
   }),
