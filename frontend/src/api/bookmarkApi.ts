@@ -10,26 +10,23 @@
 import axiosClient from './axiosClient';
 
 // 后端发给前端的完整数据
+// 后端同学请注意：如果 poi 相关的字段有不需要的，可以在群文档中留言。
 export interface Bookmark {
   bookmarkId: string;
   poiId: string;
-  googlePlaceId: string;
+  googlePlacesId: string;
   poiName: string;
   poiAddress: string;
   poiLatitude: number;
   poiLongitude: number;
-  category?: string;
+  categoryId?: number;
 }
 
 // 前端 Post 请求时发给后端的完整数据
 // 这里没有 poiId 是因为 poiId 是后端自动生成的，前端不知道。
 export interface CreateBookmarkRequest {
-  googlePlaceId: string;
-  poiName: string;
-  poiAddress: string;
-  poiLatitude: number;
-  poiLongitude: number;
-  category?: string;
+  googlePlacesId: string;
+  categoryId?: number;
 }
 
 export const getBookmarks = (): Promise<Bookmark[]> => {
