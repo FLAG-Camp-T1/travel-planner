@@ -2,10 +2,9 @@ import { createContext, useContext } from 'react';
 import type { LoginCredentials, SignupData } from './api/authApi';
 
 export interface AuthContextType {
-  loading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (userData: SignupData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 

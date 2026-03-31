@@ -6,18 +6,20 @@ export interface AuthResponse {
 
 export interface LoginCredentials {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export interface SignupData {
   username: string;
-  password?: string;
+  password: string;
 }
 
 export const authApi = {
-  login: (credentials: LoginCredentials) => axiosClient.post<AuthResponse>('/login', credentials),
+  login: (credentials: LoginCredentials): Promise<AuthResponse> =>
+    axiosClient.post<AuthResponse, AuthResponse, LoginCredentials>('/login', credentials),
 
-  signup: (userData: SignupData) => axiosClient.post<AuthResponse>('/signup', userData),
+  signup: (userData: SignupData): Promise<AuthResponse> =>
+    axiosClient.post<AuthResponse, AuthResponse, SignupData>('/signup', userData),
 
-  logout: () => axiosClient.post('/logout'),
+  logout: (): Promise<null> => axiosClient.post<null, null>('/logout'),
 };

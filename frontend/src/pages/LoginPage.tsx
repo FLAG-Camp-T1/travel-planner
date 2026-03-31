@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../useAuth';
+
+interface LoginLocationState {
+  message?: string;
+}
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -8,7 +12,9 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const successMessage = (location.state as LoginLocationState | null)?.message;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +39,12 @@ export default function LoginPage() {
       <p className="text-center text-gray-500">Please enter your account and password to log in</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {successMessage && (
+          <div className="p-3 text-sm text-green-700 bg-green-50 rounded-lg border border-green-100">
+            {successMessage}
+          </div>
+        )}
+
         {error && (
           <div className="p-3 text-sm text-red-500 bg-red-50 rounded-lg border border-red-100">
             {error}

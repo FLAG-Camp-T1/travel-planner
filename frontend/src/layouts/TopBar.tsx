@@ -1,4 +1,20 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/useAuth';
+
 export default function TopBar() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    } finally {
+      navigate('/login');
+    }
+  };
+
   return (
     <header className="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-20 shadow-sm">
       {/* Top Left Logo and Title */}
@@ -12,9 +28,17 @@ export default function TopBar() {
         </h1>
       </div>
 
-      {/* User Avatar Placeholder */}
-      <div className="w-9 h-9 bg-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
-        <span className="text-sm text-gray-500">U</span>
+      {/* User Profile and Logout */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={handleLogout}
+          className="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
+        >
+          Log Out
+        </button>
+        <div className="w-9 h-9 bg-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+          <span className="text-sm text-gray-500">U</span>
+        </div>
       </div>
     </header>
   );
