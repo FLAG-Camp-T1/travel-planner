@@ -1,24 +1,27 @@
 import { useState } from 'react';
+import { useAppStore } from '@/stores/useAppStore';
 
-interface DebugRoutePanelProps {
-  onApplyRoute: (originId: string, destId: string) => void;
-  onClearRoute: () => void;
-}
-
-const DebugRoutePanel = ({ onApplyRoute, onClearRoute }: DebugRoutePanelProps) => {
+const DebugRoutePanel = () => {
+  // Form text stays local; the shared route request/result lives in Zustand.
   const [origin, setOrigin] = useState('');
   const [dest, setDest] = useState('');
+  const clearRoute = useAppStore((state) => state.clearRoute);
+  const requestRoute = useAppStore((state) => state.requestRoute);
+  const routeStatus = useAppStore((state) => state.routeStatus);
 
   const handleApply = () => {
-    if (origin.trim() && dest.trim()) {
-      onApplyRoute(origin.trim(), dest.trim());
+    const trimmedOrigin = origin.trim();
+    const trimmedDest = dest.trim();
+
+    if (trimmedOrigin && trimmedDest) {
+      void requestRoute(trimmedOrigin, trimmedDest);
     }
   };
 
   const handleClear = () => {
     setOrigin('');
     setDest('');
-    onClearRoute();
+    clearRoute();
   };
 
   return (
@@ -53,9 +56,10 @@ const DebugRoutePanel = ({ onApplyRoute, onClearRoute }: DebugRoutePanelProps) =
         <div className="flex gap-2 pt-2">
           <button
             onClick={handleApply}
-            className="flex-1 bg-blue-600 text-white text-sm font-medium py-1.5 rounded hover:bg-blue-700 transition-colors"
+            disabled={routeStatus === 'loading' || !origin.trim() || !dest.trim()}
+            className="flex-1 bg-blue-600 text-white text-sm font-medium py-1.5 rounded hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Draw Route
+            {routeStatus === 'loading' ? 'Drawing...' : 'Draw Route'}
           </button>
           <button
             onClick={handleClear}

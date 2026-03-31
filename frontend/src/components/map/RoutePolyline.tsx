@@ -1,23 +1,28 @@
 import { useEffect, useRef } from 'react';
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import { fetchRoute, type RouteRequest } from '@/api/routeApi';
+import { useShallow } from 'zustand/react/shallow';
+import { useAppStore } from '@/stores/useAppStore';
 
-interface RoutePolylineProps {
-  originPlaceId: string;
-  destinationPlaceId: string;
-}
-
-const RoutePolyline = ({ originPlaceId, destinationPlaceId }: RoutePolylineProps) => {
+const RoutePolyline = () => {
   const map = useMap();
   const geometryLib = useMapsLibrary('geometry');
   const markerLib = useMapsLibrary('marker');
+  const { destinationId, originId, routeSummary } = useAppStore(
+    useShallow((state) => ({
+      destinationId: state.destinationId,
+      originId: state.originId,
+      routeSummary: state.routeSummary,
+    })),
+  );
 
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const startMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const endMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   useEffect(() => {
-    if (!map || !geometryLib || !markerLib || !originPlaceId || !destinationPlaceId) return;
+    if (!map || !geometryLib || !markerLib || !originId || !destinationId || !routeSummary) {
+      return;
+    }
 
     if (!polylineRef.current) {
       polylineRef.current = new google.maps.Polyline({
@@ -56,38 +61,25 @@ const RoutePolyline = ({ originPlaceId, destinationPlaceId }: RoutePolylineProps
       });
     }
 
-    const loadRoute = async () => {
-      try {
-        const request: RouteRequest = {
-          originPlaceId,
-          destinationPlaceId,
-          travelMode: 'DRIVE',
-        };
+    const decodedPath = geometryLib.encoding.decodePath(routeSummary.encodedPolyline);
+    polylineRef.current?.setPath(decodedPath);
 
-        const routeData = await fetchRoute(request);
-        const decodedPath = geometryLib.encoding.decodePath(routeData.encodedPolyline);
-
-        polylineRef.current?.setPath(decodedPath);
-
-        if (decodedPath.length > 0) {
-          if (startMarkerRef.current) startMarkerRef.current.position = decodedPath[0];
-          if (endMarkerRef.current)
-            endMarkerRef.current.position = decodedPath[decodedPath.length - 1];
-        }
-
-        if (routeData.viewport) {
-          const bounds = new google.maps.LatLngBounds(
-            routeData.viewport.southwest,
-            routeData.viewport.northeast,
-          );
-          map.fitBounds(bounds);
-        }
-      } catch (error) {
-        console.error('Failed to fetch or render route:', error);
+    if (decodedPath.length > 0) {
+      if (startMarkerRef.current) {
+        startMarkerRef.current.position = decodedPath[0];
       }
-    };
+      if (endMarkerRef.current) {
+        endMarkerRef.current.position = decodedPath[decodedPath.length - 1];
+      }
+    }
 
-    loadRoute();
+    if (routeSummary.viewport) {
+      const bounds = new google.maps.LatLngBounds(
+        routeSummary.viewport.southwest,
+        routeSummary.viewport.northeast,
+      );
+      map.fitBounds(bounds);
+    }
 
     return () => {
       if (polylineRef.current) {
@@ -103,7 +95,7 @@ const RoutePolyline = ({ originPlaceId, destinationPlaceId }: RoutePolylineProps
         endMarkerRef.current = null;
       }
     };
-  }, [map, geometryLib, markerLib, originPlaceId, destinationPlaceId]);
+  }, [destinationId, geometryLib, map, markerLib, originId, routeSummary]);
 
   return null;
 };
