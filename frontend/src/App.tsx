@@ -9,18 +9,16 @@ import SignupPage from '@/pages/SignupPage';
 import PlannerPage from '@/pages/PlannerPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
   if (isAuthenticated) return <Navigate to="/planner" replace />;
 
   return <>{children}</>;
