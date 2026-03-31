@@ -1,30 +1,44 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './AuthProvider';
-import { useAuth } from './useAuth';
 
 import MainLayout from '@/layouts/MainLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
 import PlannerPage from '@/pages/PlannerPage';
+import { useAppStore } from '@/stores/useAppStore';
+
+function AuthLoadingScreen() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-50">Checking session...</div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const authStatus = useAppStore((state) => state.authStatus);
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (authStatus === 'hydrating') return <AuthLoadingScreen />;
+  if (authStatus !== 'authenticated') return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const authStatus = useAppStore((state) => state.authStatus);
 
-  if (isAuthenticated) return <Navigate to="/planner" replace />;
+  if (authStatus === 'hydrating') return <AuthLoadingScreen />;
+  if (authStatus === 'authenticated') return <Navigate to="/planner" replace />;
 
   return <>{children}</>;
 }
 
-function AppContent() {
+function App() {
+  const hydrateAuth = useAppStore((state) => state.hydrateAuth);
+
+  useEffect(() => {
+    hydrateAuth();
+  }, [hydrateAuth]);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -57,14 +71,6 @@ function AppContent() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
-  );
-}
-
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
   );
 }
 

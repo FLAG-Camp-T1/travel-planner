@@ -1,29 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../useAuth';
-
-interface LoginLocationState {
-  message?: string;
-}
+import type { AuthNoticeState } from '@/types/authNotice';
+import { useAppStore } from '@/stores/useAppStore';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const clearAuthError = useAppStore((state) => state.clearAuthError);
+  const login = useAppStore((state) => state.login);
   const location = useLocation();
   const navigate = useNavigate();
-  const successMessage = (location.state as LoginLocationState | null)?.message;
+  const authNotice = (location.state as AuthNoticeState | null) ?? null;
+  const noticeTone = authNotice?.messageTone ?? 'success';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+    clearAuthError();
 
     try {
       await login({ username, password });
-      navigate('/planner');
+      navigate('/planner', { replace: true });
     } catch (err) {
       const error = err as Error;
       console.error('Login failed:', error);
@@ -39,9 +39,15 @@ export default function LoginPage() {
       <p className="text-center text-gray-500">Please enter your account and password to log in</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {successMessage && (
-          <div className="p-3 text-sm text-green-700 bg-green-50 rounded-lg border border-green-100">
-            {successMessage}
+        {authNotice?.message && (
+          <div
+            className={`rounded-lg border p-3 text-sm ${
+              noticeTone === 'warning'
+                ? 'border-amber-100 bg-amber-50 text-amber-700'
+                : 'border-green-100 bg-green-50 text-green-700'
+            }`}
+          >
+            {authNotice.message}
           </div>
         )}
 

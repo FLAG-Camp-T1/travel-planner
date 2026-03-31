@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../useAuth';
+import type { AuthNoticeState } from '@/types/authNotice';
+import { useAppStore } from '@/stores/useAppStore';
 
 export default function SignupPage() {
   const [username, setUsername] = useState('');
@@ -8,7 +9,8 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { signup } = useAuth();
+  const clearAuthError = useAppStore((state) => state.clearAuthError);
+  const signup = useAppStore((state) => state.signup);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,10 +23,22 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
+    clearAuthError();
 
     try {
-      await signup({ username, password });
-      navigate('/login', { state: { message: 'Registration succeeded! Please log in.' } });
+      const result = await signup({ username, password }, { autoLogin: false });
+
+      if (result.redirectedToLogin) {
+        const signupNotice: AuthNoticeState = {
+          message: 'Registration succeeded! Please log in.',
+          messageTone: 'success',
+        };
+
+        navigate('/login', { replace: true, state: signupNotice });
+        return;
+      }
+
+      navigate('/planner', { replace: true });
     } catch (err) {
       const error = err as Error;
       console.error('Registration failed:', error);

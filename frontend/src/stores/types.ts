@@ -1,8 +1,10 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { RouteSummary } from '@/api/routeApi';
 import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type AuthStatus = 'hydrating' | 'authenticated' | 'unauthenticated';
 
 export interface RouteSlice {
   originId: string | null;
@@ -24,6 +26,27 @@ export interface BookmarkSlice {
   removeBookmark: (bookmarkId: string, googlePlaceId: string) => Promise<void>;
 }
 
-export type AppStore = RouteSlice & BookmarkSlice;
+export interface AuthSlice {
+  token: string | null;
+  authStatus: AuthStatus;
+  authError: string | null;
+  isAuthenticated: boolean;
+  hydrateAuth: () => void;
+  clearAuthError: () => void;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  signup: (
+    userData: SignupData,
+    options?: {
+      autoLogin?: boolean;
+    },
+  ) => Promise<{
+    redirectedToLogin: boolean;
+  }>;
+  logout: () => Promise<{
+    serverSynced: boolean;
+  }>;
+}
+
+export type AppStore = RouteSlice & BookmarkSlice & AuthSlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;
