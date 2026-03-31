@@ -1,5 +1,30 @@
 #!/bin/sh
 
+if ! command -v git-lfs >/dev/null 2>&1; then
+  echo ""
+  echo "========================================================"
+  echo "[FATAL ERROR] 您的环境尚未安装 Git LFS！"
+  echo "本项目需要 LFS 追踪大文件，缺少 LFS 将导致仓库损坏。"
+  echo "请立即终止提交，并前往安装 Git LFS："
+  echo "  - Mac: brew install git-lfs"
+  echo "  - Windows安装包: https://git-lfs.github.com/"
+  echo "安装完成后，请务必执行一次 'git lfs install'。"
+  echo "========================================================"
+  echo ""
+  exit 1
+fi
+
+if ! git config filter.lfs.smudge >/dev/null 2>&1; then
+  echo "========================================================"
+  echo "[FATAL ERROR] Git LFS 已安装，但尚未初始化！"
+  echo "您的 Git 尚未配置 LFS 过滤器，直接提交会把大文件本体塞入 Git 历史。"
+  echo ""
+  echo "👉 请立即在终端执行以下命令进行初始化："
+  echo "    git lfs install"
+  echo "========================================================"
+  exit 1
+fi
+
 echo "正在由 lint-staged 检查增量代码格式..."
 
 npx lint-staged || {
