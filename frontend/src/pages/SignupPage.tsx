@@ -2,26 +2,33 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../useAuth';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await login({ username, password });
-      navigate('/planner');
+      await signup({ username, password });
+      navigate('/login', { state: { message: 'Registration succeeded! Please log in.' } });
     } catch (err) {
       const error = err as Error;
-      console.error('Login failed:', error);
-      setError(error.message || 'Login failed. Please check your credentials.');
+      console.error('Registration failed:', error);
+      setError(error.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -29,8 +36,10 @@ export default function LoginPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-center text-gray-800">Welcome Back</h2>
-      <p className="text-center text-gray-500">Please enter your account and password to log in</p>
+      <h2 className="text-2xl font-bold text-center text-gray-800">Create Account</h2>
+      <p className="text-center text-gray-500">
+        Join Travel Planner to start organizing your trips
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
@@ -47,7 +56,7 @@ export default function LoginPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            placeholder="Enter your username"
+            placeholder="Choose a username"
           />
         </div>
 
@@ -63,6 +72,18 @@ export default function LoginPage() {
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+          <input
+            type="password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            placeholder="••••••••"
+          />
+        </div>
+
         <button
           type="submit"
           disabled={isLoading}
@@ -70,14 +91,14 @@ export default function LoginPage() {
             isLoading ? 'opacity-70 cursor-not-allowed' : ''
           }`}
         >
-          {isLoading ? 'Logging in...' : 'Log In'}
+          {isLoading ? 'Creating account...' : 'Sign Up'}
         </button>
       </form>
 
       <div className="text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <Link to="/signup" className="text-blue-600 font-semibold hover:underline">
-          Sign up now
+        Already have an account?{' '}
+        <Link to="/login" className="text-blue-600 font-semibold hover:underline">
+          Log in
         </Link>
       </div>
     </div>
