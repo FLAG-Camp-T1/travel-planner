@@ -1,18 +1,25 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/useAuth';
+import type { AuthNoticeState } from '@/types/authNotice';
+import { useAppStore } from '@/stores/useAppStore';
 
 export default function TopBar() {
-  const { logout } = useAuth();
+  const logout = useAppStore((state) => state.logout);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout request failed:', error);
-    } finally {
-      navigate('/login');
+    const result = await logout();
+
+    if (!result.serverSynced) {
+      const logoutNotice: AuthNoticeState = {
+        message: 'Logged out locally, but we could not confirm the server logout request.',
+        messageTone: 'warning',
+      };
+
+      navigate('/login', { replace: true, state: logoutNotice });
+      return;
     }
+
+    navigate('/login', { replace: true });
   };
 
   return (
