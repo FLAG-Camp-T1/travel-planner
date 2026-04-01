@@ -13,7 +13,7 @@ export default function SignupPage() {
   const signup = useAppStore((state) => state.signup);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 

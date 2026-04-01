@@ -15,7 +15,7 @@ export default function LoginPage() {
   const authNotice = (location.state as AuthNoticeState | null) ?? null;
   const noticeTone = authNotice?.messageTone ?? 'success';
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
