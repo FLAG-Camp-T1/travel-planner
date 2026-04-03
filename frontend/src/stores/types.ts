@@ -2,6 +2,7 @@ import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { RouteSummary } from '@/api/routeApi';
 import type {
+  CreateTripRequest,
   DayRouteSegment,
   DayRouteSummary,
   ItineraryItem,
@@ -69,6 +70,11 @@ export interface TripPlanningSlice {
   daysStatus: LoadStatus;
   tripError: string | null;
   daysError: string | null;
+  tripCreationStatus: LoadStatus;
+  tripCreationError: string | null;
+  tripBootstrapStatus: LoadStatus;
+  tripBootstrapError: string | null;
+  createTrip: (request: CreateTripRequest) => Promise<void>;
   bootstrapTrip: (tripId: number) => Promise<void>;
   fetchTrip: (tripId: number) => Promise<void>;
   fetchTripDays: (tripId: number) => Promise<void>;

@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
@@ -14,18 +15,30 @@ const defaultCameraProps = {
   center: DEFAULT_COORDINATES,
   zoom: DEFAULT_ZOOM,
 };
+const SHOULD_ENABLE_DEV_FALLBACK =
+  import.meta.env.DEV && import.meta.env.VITE_TRIP_PLAN_ENABLE_DEV_FALLBACK === 'true';
 
 export default function PlannerPage() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
-  const bootstrapTrip = useAppStore((state) => state.bootstrapTrip);
+  const { bootstrapTrip, currentTrip, tripBootstrapStatus } = useAppStore(
+    useShallow((state) => ({
+      bootstrapTrip: state.bootstrapTrip,
+      currentTrip: state.currentTrip,
+      tripBootstrapStatus: state.tripBootstrapStatus,
+    })),
+  );
 
-  useEffect(() => {
-    if (!apiKey) {
+  useLayoutEffect(() => {
+    if (!apiKey || !SHOULD_ENABLE_DEV_FALLBACK) {
+      return;
+    }
+
+    if (currentTrip !== null || tripBootstrapStatus !== 'idle') {
       return;
     }
 
     void bootstrapTrip(DEFAULT_MOCK_TRIP_ID);
-  }, [apiKey, bootstrapTrip]);
+  }, [apiKey, bootstrapTrip, currentTrip, tripBootstrapStatus]);
 
   if (!apiKey) {
     return (

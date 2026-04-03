@@ -87,8 +87,8 @@ export default function TripDayNavigationSection() {
         })}
 
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Day creation controls will be introduced only after real trip data and trip-creation flow
-          are added in a later phase.
+          Day creation controls remain outside the current planner flow. This section only handles
+          day selection for the active trip.
         </div>
       </div>
     </section>

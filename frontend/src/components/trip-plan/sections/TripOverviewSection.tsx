@@ -24,6 +24,7 @@ export default function TripOverviewSection() {
       ? `${currentTrip.durationDays} days`
       : 'Duration pending';
   const startDateLabel = formatStartDate(currentTrip?.startDate);
+  const schedulingModeLabel = currentTrip?.startDate ? 'Fixed' : 'Flexible';
 
   return (
     <section className="space-y-3">
@@ -31,7 +32,7 @@ export default function TripOverviewSection() {
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Trip Overview</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Read-only trip summary backed by the current mock trip bootstrap.
+            Read-only trip summary backed by the current active trip context.
           </p>
         </div>
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
@@ -53,7 +54,7 @@ export default function TripOverviewSection() {
           </div>
 
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            Flexible
+            {schedulingModeLabel}
           </span>
         </div>
 
