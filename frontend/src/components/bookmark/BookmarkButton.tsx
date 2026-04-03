@@ -11,6 +11,7 @@ interface BookmarkButtonProps {
   poiLatitude: number;
   poiLongitude: number;
   category?: string;
+  size?: 'sm' | 'md';
 }
 export default function BookmarkButton({
   googlePlaceId,
@@ -19,6 +20,7 @@ export default function BookmarkButton({
   poiLatitude,
   poiLongitude,
   category,
+  size = 'md',
 }: BookmarkButtonProps) {
   const currentBookmark = useAppStore((state) =>
     state.bookmarks.find((bookmark) => bookmark.googlePlaceId === googlePlaceId),
@@ -27,6 +29,8 @@ export default function BookmarkButton({
   const isPending = useAppStore((state) => Boolean(state.pendingByPlaceId[googlePlaceId]));
   const removeBookmark = useAppStore((state) => state.removeBookmark);
   const isBookmarked = currentBookmark !== undefined;
+  const buttonSizeClass = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
+  const iconSizeClass = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
 
   const handleClick = async () => {
     if (currentBookmark) {
@@ -46,12 +50,15 @@ export default function BookmarkButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={isPending}
-      className="p-1 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+      aria-label={isBookmarked ? `Remove bookmark for ${poiName}` : `Save bookmark for ${poiName}`}
+      title={isBookmarked ? 'Remove bookmark' : 'Save bookmark'}
+      className={`inline-flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 ${buttonSizeClass}`}
     >
       <Star
-        className={`w-5 h-5 transition-colors ${
+        className={`${iconSizeClass} transition-colors ${
           isBookmarked ? 'fill-yellow-400 text-yellow-400' : 'fill-none text-gray-400'
         }`}
       />

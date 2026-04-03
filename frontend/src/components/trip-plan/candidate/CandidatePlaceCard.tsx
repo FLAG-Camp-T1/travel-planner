@@ -13,12 +13,27 @@ export default function CandidatePlaceCard({
   ctaLabel,
 }: CandidatePlaceCardProps) {
   return (
-    <div className="flex items-start justify-between gap-4 px-4 py-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+    <div className="relative px-4 py-4">
+      <div className="absolute right-4 top-4">
+        <BookmarkButton
+          googlePlaceId={bookmark.googlePlaceId}
+          poiName={bookmark.poiName}
+          poiAddress={bookmark.poiAddress}
+          poiLatitude={bookmark.poiLatitude}
+          poiLongitude={bookmark.poiLongitude}
+          category={bookmark.category}
+          size="sm"
+        />
+      </div>
+
+      <div className="min-w-0 pr-12">
+        <div className="flex flex-wrap items-center gap-2">
           <h3 className="truncate text-sm font-medium text-gray-900">{bookmark.poiName}</h3>
           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
-            Bookmark source
+            Bookmark
+          </span>
+          <span className="rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+            Candidate for planning
           </span>
         </div>
 
@@ -30,7 +45,6 @@ export default function CandidatePlaceCard({
               {bookmark.category}
             </span>
           ) : null}
-          <span className="rounded-full bg-gray-50 px-3 py-1">Candidate place</span>
         </div>
 
         <div className="mt-4">
@@ -42,20 +56,7 @@ export default function CandidatePlaceCard({
             {ctaLabel}
           </button>
           <p className="mt-2 text-xs text-gray-500">{ctaHelperText}</p>
-        </div>
-      </div>
-
-      <div className="shrink-0">
-        <BookmarkButton
-          googlePlaceId={bookmark.googlePlaceId}
-          poiName={bookmark.poiName}
-          poiAddress={bookmark.poiAddress}
-          poiLatitude={bookmark.poiLatitude}
-          poiLongitude={bookmark.poiLongitude}
-          category={bookmark.category}
-        />
-        <div className="mt-2 text-right text-[11px] text-gray-400">
-          Remove only affects bookmark source
+          <p className="mt-2 text-[11px] text-gray-400">Remove only affects bookmark source.</p>
         </div>
       </div>
     </div>

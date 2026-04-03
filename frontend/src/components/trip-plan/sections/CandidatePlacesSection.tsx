@@ -1,5 +1,6 @@
 import { useShallow } from 'zustand/react/shallow';
-import CandidatePlaceList from '@/components/trip-plan/candidate/CandidatePlaceList';
+import BookmarkList from '@/components/bookmark/BookmarkList';
+import CandidatePlaceCard from '@/components/trip-plan/candidate/CandidatePlaceCard';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function CandidatePlacesSection() {
@@ -64,7 +65,17 @@ export default function CandidatePlacesSection() {
               ? `Selected-day awareness is active for Day ${selectedDayNumber}. It only changes candidate copy and the disabled Add affordance.`
               : 'Bookmark loading, empty state, and removal still belong only to the bookmark source. Candidate day-specific affordances will wait until planner context is ready.'}
           </div>
-          <CandidatePlaceList ctaHelperText={disabledCtaHelperText} ctaLabel={disabledCtaLabel} />
+          <BookmarkList
+            loadingMessage="Loading bookmark source data."
+            listClassName="divide-y divide-gray-100"
+            renderBookmark={(bookmark) => (
+              <CandidatePlaceCard
+                bookmark={bookmark}
+                ctaHelperText={disabledCtaHelperText}
+                ctaLabel={disabledCtaLabel}
+              />
+            )}
+          />
         </div>
       </div>
     </section>
