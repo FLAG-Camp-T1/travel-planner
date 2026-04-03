@@ -1,7 +1,8 @@
-import { APIProvider, Map } from '@vis.gl/react-google-maps';
+import { Map } from '@vis.gl/react-google-maps';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
-import DebugRoutePanel from '../components/map/DebugRoutePanel';
+import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
+import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShell';
 
 const DEFAULT_COORDINATES = { lat: 38.8977, lng: -77.0365 };
 const DEFAULT_ZOOM = 13;
@@ -22,26 +23,21 @@ export default function PlannerPage() {
   }
 
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden">
-      <APIProvider apiKey={apiKey}>
-        <div className="relative w-full h-full">
-          {/* Debug Panel floating on top of the map */}
-          <DebugRoutePanel />
-
-          <Map
-            defaultCenter={defaultCameraProps.center}
-            defaultZoom={defaultCameraProps.zoom}
-            style={{ width: '100%', height: '100%' }}
-            disableDefaultUI={true}
-            mapTypeControl={false}
-            gestureHandling={'greedy'}
-            mapId={'DEMO_MAP_ID'}
-          >
-            <CustomZoomControl />
-            <RoutePolyline />
-          </Map>
-        </div>
-      </APIProvider>
-    </div>
+    <TripPlanWorkspaceShell>
+      <TripPlanMapShell apiKey={apiKey}>
+        <Map
+          defaultCenter={defaultCameraProps.center}
+          defaultZoom={defaultCameraProps.zoom}
+          style={{ width: '100%', height: '100%' }}
+          disableDefaultUI={true}
+          mapTypeControl={false}
+          gestureHandling={'greedy'}
+          mapId={'DEMO_MAP_ID'}
+        >
+          <CustomZoomControl />
+          <RoutePolyline />
+        </Map>
+      </TripPlanMapShell>
+    </TripPlanWorkspaceShell>
   );
 }
