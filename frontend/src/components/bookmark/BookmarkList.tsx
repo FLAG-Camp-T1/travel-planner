@@ -32,7 +32,7 @@ export default function BookmarkList() {
   }
 
   if (bookmarks.length === 0) {
-    return <div>Waiting for your first bookmark</div>;
+    return <div>No saved bookmarks yet.</div>;
   }
   return (
     <ul>
