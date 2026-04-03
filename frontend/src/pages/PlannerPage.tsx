@@ -3,6 +3,7 @@ import { Map } from '@vis.gl/react-google-maps';
 import { useAppStore } from '@/stores/useAppStore';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
+import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
 import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShell';
 
@@ -48,6 +49,7 @@ export default function PlannerPage() {
         >
           <CustomZoomControl />
           <RoutePolyline />
+          <SelectedDayRoutePolyline />
         </Map>
       </TripPlanMapShell>
     </TripPlanWorkspaceShell>

@@ -31,6 +31,8 @@ const getItemLabel = (itemsById: Record<number, ItineraryItem>, itemId: number) 
 };
 
 export default function RouteSegmentList({ itemsById, segments }: RouteSegmentListProps) {
+  // Phase 4 keeps segment rows display-only so future hover/click work can layer on later
+  // without reopening route summary ownership or current map behavior.
   return (
     <div className="divide-y divide-gray-100">
       {segments.map((segment, index) => (
