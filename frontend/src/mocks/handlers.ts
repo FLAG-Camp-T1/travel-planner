@@ -1,6 +1,17 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type {
+  CreateTripRequest,
+  DayRouteSummary,
+  DayRouteSegment,
+  GenerateDayRouteResponse,
+  ItineraryItem,
+  TripDay,
+  TripDayItemsResponse,
+  TripDaysResponse,
+  TripSummary,
+} from '@/api/tripApi';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -30,6 +41,7 @@ const createErrorResponse = (message: string, code = 40000) => {
 };
 
 let nextBookmarkSequence = 3;
+let nextTripSequence = 1002;
 
 let mockUsers: Array<{ username: string; password: string }> = [
   {
@@ -62,6 +74,87 @@ let mockBookmarks: Bookmark[] = [
     category: 'landmark',
   },
 ];
+
+let mockTrips: TripSummary[] = [
+  {
+    tripId: 1001,
+    title: 'Spring DC Trip',
+    durationDays: 3,
+    startDate: null,
+  },
+];
+
+const mockTripDaysByTripId: Record<number, TripDay[]> = {
+  1001: [
+    { dayNumber: 1, date: null },
+    { dayNumber: 2, date: null },
+    { dayNumber: 3, date: null },
+  ],
+};
+
+const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
+  1001: {
+    1: [
+      {
+        itemId: 101,
+        placeId: 'place-georgetown-waterfront',
+        name: 'Georgetown Waterfront',
+        visitOrder: 1,
+        travelMethod: 'Walk',
+      },
+      {
+        itemId: 102,
+        placeId: 'place-lincoln-memorial',
+        name: 'Lincoln Memorial',
+        visitOrder: 2,
+        travelMethod: 'Drive',
+      },
+    ],
+    2: [
+      {
+        itemId: 201,
+        placeId: 'place-smithsonian-castle',
+        name: 'Smithsonian Castle',
+        visitOrder: 1,
+        travelMethod: 'Transit',
+      },
+    ],
+    3: [],
+  },
+};
+
+const createMockRouteSummary = (
+  totalDistanceMeters: number,
+  totalDurationSeconds: number,
+  encodedPolyline: string,
+): DayRouteSummary => ({
+  totalDistanceMeters,
+  totalDurationSeconds,
+  encodedPolyline,
+  viewport: {
+    northeast: { lat: 38.8979, lng: -77.0091 },
+    southwest: { lat: 38.8812, lng: -77.0489 },
+  },
+});
+
+const createMockRouteSegments = (items: ItineraryItem[]): DayRouteSegment[] => {
+  if (items.length < 2) {
+    return [];
+  }
+
+  return items.slice(0, -1).map((item, index) => ({
+    fromItemId: item.itemId,
+    toItemId: items[index + 1].itemId,
+    travelMethod: items[index + 1].travelMethod,
+    distanceMeters: 1800 + index * 450,
+    durationSeconds: 720 + index * 180,
+    encodedPolyline: `mock-segment-polyline-${item.itemId}-${items[index + 1].itemId}`,
+    viewport: {
+      northeast: { lat: 38.8979, lng: -77.0091 },
+      southwest: { lat: 38.8812, lng: -77.0489 },
+    },
+  }));
+};
 
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
@@ -158,5 +251,122 @@ export const handlers = [
     mockBookmarks = mockBookmarks.filter((bookmark) => bookmark.bookmarkId !== bookmarkId);
 
     return createSuccessResponse(null);
+  }),
+
+  http.post<never, CreateTripRequest, MockApiResponse<TripSummary> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/create`,
+    async ({ request }) => {
+      const requestBody = (await request.json()) as CreateTripRequest;
+      const title = requestBody.title?.trim();
+      const durationDays = requestBody.durationDays;
+
+      if (!title || !durationDays || durationDays < 1) {
+        return createErrorResponse('Trip title and durationDays are required.', 40002);
+      }
+
+      const newTrip: TripSummary = {
+        tripId: nextTripSequence,
+        title,
+        durationDays,
+        startDate: requestBody.startDate ?? null,
+      };
+
+      mockTrips = [...mockTrips, newTrip];
+      mockTripDaysByTripId[newTrip.tripId] = Array.from({ length: durationDays }, (_, index) => ({
+        dayNumber: index + 1,
+        date: null,
+      }));
+      mockTripItemsByTripId[newTrip.tripId] = Object.fromEntries(
+        Array.from({ length: durationDays }, (_, index) => [index + 1, []]),
+      );
+
+      nextTripSequence += 1;
+
+      return createSuccessResponse(newTrip);
+    },
+  ),
+
+  http.get<{ tripId: string }, never, MockApiResponse<TripSummary> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId`,
+    ({ params }) => {
+      const tripId = Number(params.tripId);
+      const trip = mockTrips.find((item) => item.tripId === tripId);
+
+      if (!trip) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      return createSuccessResponse(trip);
+    },
+  ),
+
+  http.get<{ tripId: string }, never, MockApiResponse<TripDaysResponse> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days`,
+    ({ params }) => {
+      const tripId = Number(params.tripId);
+      const trip = mockTrips.find((item) => item.tripId === tripId);
+
+      if (!trip) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      const response: TripDaysResponse = {
+        tripId,
+        days: mockTripDaysByTripId[tripId] ?? [],
+      };
+
+      return createSuccessResponse(response);
+    },
+  ),
+
+  http.get<
+    { tripId: string; dayNumber: string },
+    never,
+    MockApiResponse<TripDayItemsResponse> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items`, ({ params }) => {
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const trip = mockTrips.find((item) => item.tripId === tripId);
+
+    if (!trip) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const response: TripDayItemsResponse = {
+      tripId,
+      dayNumber,
+      items: mockTripItemsByTripId[tripId]?.[dayNumber] ?? [],
+    };
+
+    return createSuccessResponse(response);
+  }),
+
+  http.post<
+    { tripId: string; dayNumber: string },
+    never,
+    MockApiResponse<GenerateDayRouteResponse> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/route/generate`, ({ params }) => {
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const trip = mockTrips.find((item) => item.tripId === tripId);
+
+    if (!trip) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber] ?? [];
+    const response: GenerateDayRouteResponse = {
+      tripId,
+      dayNumber,
+      items,
+      routeSummary: createMockRouteSummary(
+        items.length > 0 ? 3600 + items.length * 400 : 0,
+        items.length > 0 ? 1200 + items.length * 180 : 0,
+        `mock-day-route-polyline-${tripId}-${dayNumber}`,
+      ),
+      segments: createMockRouteSegments(items),
+    };
+
+    return createSuccessResponse(response);
   }),
 ];

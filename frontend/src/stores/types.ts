@@ -1,6 +1,7 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { RouteSummary } from '@/api/routeApi';
+import type { DayRouteSummary, ItineraryItem, TripDay, TripSummary } from '@/api/tripApi';
 import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -47,6 +48,29 @@ export interface AuthSlice {
   }>;
 }
 
-export type AppStore = RouteSlice & BookmarkSlice & AuthSlice;
+export interface TripPlanningSlice {
+  currentTrip: TripSummary | null;
+  days: TripDay[];
+  selectedDayNumber: number | null;
+  dayItemsByDayNumber: Record<number, ItineraryItem[]>;
+  dayRouteByDayNumber: Record<number, DayRouteSummary | null>;
+  tripStatus: LoadStatus;
+  daysStatus: LoadStatus;
+  dayItemsStatus: LoadStatus;
+  dayRouteStatus: LoadStatus;
+  tripError: string | null;
+  daysError: string | null;
+  dayItemsError: string | null;
+  dayRouteError: string | null;
+  bootstrapTrip: (tripId: number) => Promise<void>;
+  fetchTrip: (tripId: number) => Promise<void>;
+  fetchTripDays: (tripId: number) => Promise<void>;
+  selectDay: (dayNumber: number) => void;
+  fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
+  generateDayRoute: (tripId: number, dayNumber: number) => Promise<void>;
+  clearTripPlanning: () => void;
+}
+
+export type AppStore = RouteSlice & BookmarkSlice & AuthSlice & TripPlanningSlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;

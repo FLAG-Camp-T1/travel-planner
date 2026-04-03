@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
+import { useAppStore } from '@/stores/useAppStore';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
@@ -6,6 +8,7 @@ import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShel
 
 const DEFAULT_COORDINATES = { lat: 38.8977, lng: -77.0365 };
 const DEFAULT_ZOOM = 13;
+const DEFAULT_MOCK_TRIP_ID = 1001;
 const defaultCameraProps = {
   center: DEFAULT_COORDINATES,
   zoom: DEFAULT_ZOOM,
@@ -13,6 +16,15 @@ const defaultCameraProps = {
 
 export default function PlannerPage() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
+  const bootstrapTrip = useAppStore((state) => state.bootstrapTrip);
+
+  useEffect(() => {
+    if (!apiKey) {
+      return;
+    }
+
+    void bootstrapTrip(DEFAULT_MOCK_TRIP_ID);
+  }, [apiKey, bootstrapTrip]);
 
   if (!apiKey) {
     return (

@@ -4,6 +4,7 @@ import { devtools } from 'zustand/middleware';
 import { createAuthSlice } from './slices/authSlice';
 import { createBookmarkSlice } from './slices/bookmarkSlice';
 import { createRouteSlice } from './slices/routeSlice';
+import { createTripPlanningSlice } from './slices/tripPlanningSlice';
 import type { AppStore } from './types';
 
 // One store with slices keeps shared state discoverable as the app grows.
@@ -15,6 +16,7 @@ export const useAppStore = create<AppStore>()(
       ...createAuthSlice(...args),
       ...createRouteSlice(...args),
       ...createBookmarkSlice(...args),
+      ...createTripPlanningSlice(...args),
     }),
     {
       name: 'travel-planner-store',
