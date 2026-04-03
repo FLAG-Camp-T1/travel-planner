@@ -19,6 +19,12 @@ export default function CandidatePlacesSection() {
     daysStatus === 'ready' &&
     selectedDayNumber !== null &&
     days.some((day) => day.dayNumber === selectedDayNumber);
+  const disabledCtaLabel = isSelectedDayReady
+    ? `Add to Day ${selectedDayNumber}`
+    : 'Select a trip day first';
+  const disabledCtaHelperText = isSelectedDayReady
+    ? `Day ${selectedDayNumber} assignment comes next. This affordance is intentionally disabled in Phase 5.`
+    : 'Selected-day awareness is not ready yet, so day assignment stays unavailable.';
 
   return (
     <section className="space-y-3">
@@ -55,10 +61,10 @@ export default function CandidatePlacesSection() {
         <div className="px-4 py-3">
           <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
             {isSelectedDayReady
-              ? `Selected-day awareness is active for Day ${selectedDayNumber}. Bookmark loading and removal still belong only to the bookmark source.`
+              ? `Selected-day awareness is active for Day ${selectedDayNumber}. It only changes candidate copy and the disabled Add affordance.`
               : 'Bookmark loading, empty state, and removal still belong only to the bookmark source. Candidate day-specific affordances will wait until planner context is ready.'}
           </div>
-          <CandidatePlaceList />
+          <CandidatePlaceList ctaHelperText={disabledCtaHelperText} ctaLabel={disabledCtaLabel} />
         </div>
       </div>
     </section>

@@ -3,9 +3,15 @@ import BookmarkButton from '@/components/bookmark/BookmarkButton';
 
 type CandidatePlaceCardProps = {
   bookmark: Bookmark;
+  ctaLabel: string;
+  ctaHelperText: string;
 };
 
-export default function CandidatePlaceCard({ bookmark }: CandidatePlaceCardProps) {
+export default function CandidatePlaceCard({
+  bookmark,
+  ctaHelperText,
+  ctaLabel,
+}: CandidatePlaceCardProps) {
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-4">
       <div className="min-w-0 flex-1">
@@ -26,6 +32,17 @@ export default function CandidatePlaceCard({ bookmark }: CandidatePlaceCardProps
           ) : null}
           <span className="rounded-full bg-gray-50 px-3 py-1">Candidate place</span>
         </div>
+
+        <div className="mt-4">
+          <button
+            type="button"
+            disabled
+            className="rounded-full bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 cursor-not-allowed"
+          >
+            {ctaLabel}
+          </button>
+          <p className="mt-2 text-xs text-gray-500">{ctaHelperText}</p>
+        </div>
       </div>
 
       <div className="shrink-0">
@@ -37,6 +54,9 @@ export default function CandidatePlaceCard({ bookmark }: CandidatePlaceCardProps
           poiLongitude={bookmark.poiLongitude}
           category={bookmark.category}
         />
+        <div className="mt-2 text-right text-[11px] text-gray-400">
+          Remove only affects bookmark source
+        </div>
       </div>
     </div>
   );

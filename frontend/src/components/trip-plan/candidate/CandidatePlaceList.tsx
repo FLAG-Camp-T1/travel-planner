@@ -3,7 +3,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 import CandidatePlaceCard from './CandidatePlaceCard';
 
-export default function CandidatePlaceList() {
+type CandidatePlaceListProps = {
+  ctaHelperText: string;
+  ctaLabel: string;
+};
+
+export default function CandidatePlaceList({ ctaHelperText, ctaLabel }: CandidatePlaceListProps) {
   const { bookmarks, bookmarksError, bookmarksStatus, fetchBookmarks } = useAppStore(
     useShallow((state) => ({
       bookmarks: state.bookmarks,
@@ -38,7 +43,12 @@ export default function CandidatePlaceList() {
   return (
     <div className="divide-y divide-gray-100">
       {bookmarks.map((bookmark) => (
-        <CandidatePlaceCard key={bookmark.bookmarkId} bookmark={bookmark} />
+        <CandidatePlaceCard
+          key={bookmark.bookmarkId}
+          bookmark={bookmark}
+          ctaHelperText={ctaHelperText}
+          ctaLabel={ctaLabel}
+        />
       ))}
     </div>
   );
