@@ -6,11 +6,12 @@ const getDaySecondaryText = (date: string | null) => {
 };
 
 export default function TripDayNavigationSection() {
-  const { days, daysError, daysStatus, selectedDayNumber } = useAppStore(
+  const { days, daysError, daysStatus, selectDay, selectedDayNumber } = useAppStore(
     useShallow((state) => ({
       days: state.days,
       daysError: state.daysError,
       daysStatus: state.daysStatus,
+      selectDay: state.selectDay,
       selectedDayNumber: state.selectedDayNumber,
     })),
   );
@@ -21,12 +22,12 @@ export default function TripDayNavigationSection() {
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Day Navigation</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Read-only day entries from the current mock trip bootstrap. Day switching is not enabled
-            yet.
+            Select a day to change the active itinerary context. Day selection is enabled here, but
+            itinerary loading still belongs to the itinerary section.
           </p>
         </div>
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-          Read-Only Data
+          Day Selection
         </span>
       </div>
 
@@ -53,11 +54,16 @@ export default function TripDayNavigationSection() {
           const isSelected = day.dayNumber === selectedDayNumber;
 
           return (
-            <div
+            <button
+              type="button"
               key={day.dayNumber}
+              onClick={() => selectDay(day.dayNumber)}
               className={`rounded-2xl border px-4 py-3 shadow-sm ${
-                isSelected ? 'border-blue-200 bg-blue-50/60' : 'border-gray-200 bg-white'
+                isSelected
+                  ? 'border-blue-200 bg-blue-50/60'
+                  : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/30'
               }`}
+              aria-pressed={isSelected}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -66,17 +72,17 @@ export default function TripDayNavigationSection() {
                 </div>
                 {isSelected ? (
                   <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
-                    Current Read-Only Day
+                    Current Day
                   </span>
                 ) : null}
               </div>
 
               <div className="mt-3 text-sm text-gray-600">
                 {isSelected
-                  ? 'This is the default selected day from trip bootstrap. Interactive day switching will arrive in a later phase.'
-                  : 'Additional day-level itinerary and route details will be connected in later phases.'}
+                  ? 'This day is currently selected. The itinerary section is responsible for loading or reusing the matching day items.'
+                  : 'Select this day to update the active itinerary context. Route and itinerary details will continue to load in later section-level steps.'}
               </div>
-            </div>
+            </button>
           );
         })}
 

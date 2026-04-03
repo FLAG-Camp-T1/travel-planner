@@ -53,14 +53,14 @@ export interface TripPlanningSlice {
   days: TripDay[];
   selectedDayNumber: number | null;
   dayItemsByDayNumber: Record<number, ItineraryItem[]>;
+  dayItemsStatusByDayNumber: Record<number, LoadStatus>;
+  dayItemsErrorByDayNumber: Record<number, string | null>;
   dayRouteByDayNumber: Record<number, DayRouteSummary | null>;
   tripStatus: LoadStatus;
   daysStatus: LoadStatus;
-  dayItemsStatus: LoadStatus;
   dayRouteStatus: LoadStatus;
   tripError: string | null;
   daysError: string | null;
-  dayItemsError: string | null;
   dayRouteError: string | null;
   bootstrapTrip: (tripId: number) => Promise<void>;
   fetchTrip: (tripId: number) => Promise<void>;
