@@ -13,12 +13,13 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
   dayItemsStatusByDayNumber: {},
   dayItemsErrorByDayNumber: {},
   dayRouteByDayNumber: {},
+  dayRouteSegmentsByDayNumber: {},
+  dayRouteStatusByDayNumber: {},
+  dayRouteErrorByDayNumber: {},
   tripStatus: 'idle',
   daysStatus: 'idle',
-  dayRouteStatus: 'idle',
   tripError: null,
   daysError: null,
-  dayRouteError: null,
 
   bootstrapTrip: async (tripId) => {
     await get().fetchTrip(tripId);
@@ -182,11 +183,28 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
   },
 
   generateDayRoute: async (tripId, dayNumber) => {
+    const currentState = get();
+    const currentDayRouteStatus = currentState.dayRouteStatusByDayNumber[dayNumber] ?? 'idle';
+    const hasCachedRoute = Object.prototype.hasOwnProperty.call(
+      currentState.dayRouteByDayNumber,
+      dayNumber,
+    );
+
+    if (currentDayRouteStatus === 'loading' || hasCachedRoute) {
+      return;
+    }
+
     set(
-      {
-        dayRouteStatus: 'loading',
-        dayRouteError: null,
-      },
+      (state) => ({
+        dayRouteStatusByDayNumber: {
+          ...state.dayRouteStatusByDayNumber,
+          [dayNumber]: 'loading',
+        },
+        dayRouteErrorByDayNumber: {
+          ...state.dayRouteErrorByDayNumber,
+          [dayNumber]: null,
+        },
+      }),
       false,
       'trip/day-route:start',
     );
@@ -200,18 +218,34 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
             ...state.dayRouteByDayNumber,
             [dayNumber]: response.routeSummary,
           },
-          dayRouteStatus: 'ready',
-          dayRouteError: null,
+          dayRouteSegmentsByDayNumber: {
+            ...state.dayRouteSegmentsByDayNumber,
+            [dayNumber]: response.segments,
+          },
+          dayRouteStatusByDayNumber: {
+            ...state.dayRouteStatusByDayNumber,
+            [dayNumber]: 'ready',
+          },
+          dayRouteErrorByDayNumber: {
+            ...state.dayRouteErrorByDayNumber,
+            [dayNumber]: null,
+          },
         }),
         false,
         'trip/day-route:success',
       );
     } catch (error) {
       set(
-        {
-          dayRouteStatus: 'error',
-          dayRouteError: getErrorMessage(error),
-        },
+        (state) => ({
+          dayRouteStatusByDayNumber: {
+            ...state.dayRouteStatusByDayNumber,
+            [dayNumber]: 'error',
+          },
+          dayRouteErrorByDayNumber: {
+            ...state.dayRouteErrorByDayNumber,
+            [dayNumber]: getErrorMessage(error),
+          },
+        }),
         false,
         'trip/day-route:error',
       );
@@ -228,12 +262,13 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         dayItemsStatusByDayNumber: {},
         dayItemsErrorByDayNumber: {},
         dayRouteByDayNumber: {},
+        dayRouteSegmentsByDayNumber: {},
+        dayRouteStatusByDayNumber: {},
+        dayRouteErrorByDayNumber: {},
         tripStatus: 'idle',
         daysStatus: 'idle',
-        dayRouteStatus: 'idle',
         tripError: null,
         daysError: null,
-        dayRouteError: null,
       },
       false,
       'trip/clear',

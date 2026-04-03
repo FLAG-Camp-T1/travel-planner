@@ -1,7 +1,13 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { RouteSummary } from '@/api/routeApi';
-import type { DayRouteSummary, ItineraryItem, TripDay, TripSummary } from '@/api/tripApi';
+import type {
+  DayRouteSegment,
+  DayRouteSummary,
+  ItineraryItem,
+  TripDay,
+  TripSummary,
+} from '@/api/tripApi';
 import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -56,12 +62,13 @@ export interface TripPlanningSlice {
   dayItemsStatusByDayNumber: Record<number, LoadStatus>;
   dayItemsErrorByDayNumber: Record<number, string | null>;
   dayRouteByDayNumber: Record<number, DayRouteSummary | null>;
+  dayRouteSegmentsByDayNumber: Record<number, DayRouteSegment[]>;
+  dayRouteStatusByDayNumber: Record<number, LoadStatus>;
+  dayRouteErrorByDayNumber: Record<number, string | null>;
   tripStatus: LoadStatus;
   daysStatus: LoadStatus;
-  dayRouteStatus: LoadStatus;
   tripError: string | null;
   daysError: string | null;
-  dayRouteError: string | null;
   bootstrapTrip: (tripId: number) => Promise<void>;
   fetchTrip: (tripId: number) => Promise<void>;
   fetchTripDays: (tripId: number) => Promise<void>;
