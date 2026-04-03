@@ -9,7 +9,10 @@ export default function ItinerarySection() {
     dayItemsByDayNumber,
     dayItemsErrorByDayNumber,
     dayItemsStatusByDayNumber,
+    dayRouteByDayNumber,
+    dayRouteStatusByDayNumber,
     fetchDayItems,
+    generateDayRoute,
     selectedDayNumber,
   } = useAppStore(
     useShallow((state) => ({
@@ -17,7 +20,10 @@ export default function ItinerarySection() {
       dayItemsByDayNumber: state.dayItemsByDayNumber,
       dayItemsErrorByDayNumber: state.dayItemsErrorByDayNumber,
       dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
+      dayRouteByDayNumber: state.dayRouteByDayNumber,
+      dayRouteStatusByDayNumber: state.dayRouteStatusByDayNumber,
       fetchDayItems: state.fetchDayItems,
+      generateDayRoute: state.generateDayRoute,
       selectedDayNumber: state.selectedDayNumber,
     })),
   );
@@ -36,6 +42,24 @@ export default function ItinerarySection() {
     selectedDayNumber !== null ? (dayItemsErrorByDayNumber[selectedDayNumber] ?? null) : null;
   const currentDayItems =
     selectedDayNumber !== null ? (dayItemsByDayNumber[selectedDayNumber] ?? []) : [];
+  const currentDayRouteStatus =
+    selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+  const hasCachedRoute =
+    selectedDayNumber !== null &&
+    Object.prototype.hasOwnProperty.call(dayRouteByDayNumber, selectedDayNumber);
+  const canGenerateRoute =
+    currentTrip !== null &&
+    selectedDayNumber !== null &&
+    currentDayRouteStatus !== 'loading' &&
+    !hasCachedRoute;
+
+  const handleGenerateRoute = () => {
+    if (!currentTrip || selectedDayNumber === null || !canGenerateRoute) {
+      return;
+    }
+
+    void generateDayRoute(currentTrip.tripId, selectedDayNumber);
+  };
 
   return (
     <section className="space-y-3">
@@ -47,16 +71,38 @@ export default function ItinerarySection() {
             currently selected day.
           </p>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-          Selected-Day Data
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={handleGenerateRoute}
+            disabled={!canGenerateRoute}
+            className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
+          >
+            {currentTrip === null || selectedDayNumber === null
+              ? 'Generate Route'
+              : currentDayRouteStatus === 'loading'
+                ? 'Generating Route'
+                : hasCachedRoute
+                  ? 'Route Ready'
+                  : 'Generate Route'}
+          </button>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+            Selected-Day Data
+          </span>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
-          {selectedDayNumber !== null
-            ? `Showing itinerary data for Day ${selectedDayNumber}.`
-            : 'Waiting for the planner context to determine a selected day.'}
+          {selectedDayNumber === null
+            ? 'Waiting for the planner context to determine a selected day.'
+            : currentTrip === null
+              ? 'Route generation will stay disabled until the planner context is ready.'
+              : currentDayRouteStatus === 'loading'
+                ? `Generating route data for Day ${selectedDayNumber}.`
+                : hasCachedRoute
+                  ? `Day ${selectedDayNumber} already has cached route data. Route display will appear in a dedicated section.`
+                  : `Showing itinerary data for Day ${selectedDayNumber}. Route generation is available from this section header.`}
         </div>
 
         {!currentTrip || selectedDayNumber === null ? (
