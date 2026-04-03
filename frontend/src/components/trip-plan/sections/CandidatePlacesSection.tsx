@@ -1,14 +1,34 @@
-import BookmarkList from '@/components/bookmark/BookmarkList';
+import { useShallow } from 'zustand/react/shallow';
+import CandidatePlaceList from '@/components/trip-plan/candidate/CandidatePlaceList';
+import { useAppStore } from '@/stores/useAppStore';
 
 export default function CandidatePlacesSection() {
+  const { currentTrip, days, daysStatus, selectedDayNumber, tripStatus } = useAppStore(
+    useShallow((state) => ({
+      currentTrip: state.currentTrip,
+      days: state.days,
+      daysStatus: state.daysStatus,
+      selectedDayNumber: state.selectedDayNumber,
+      tripStatus: state.tripStatus,
+    })),
+  );
+
+  const isSelectedDayReady =
+    currentTrip !== null &&
+    tripStatus === 'ready' &&
+    daysStatus === 'ready' &&
+    selectedDayNumber !== null &&
+    days.some((day) => day.dayNumber === selectedDayNumber);
+
   return (
     <section className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Candidate Places</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Preview only. Saved bookmarks are shown here as a future candidate-place source for trip
-            planning.
+            {isSelectedDayReady
+              ? `Saved bookmarks are available here as candidate places for Day ${selectedDayNumber}.`
+              : 'Saved bookmarks remain available as a candidate-place source, but planner context is not ready for a selected day yet.'}
           </p>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
@@ -21,17 +41,24 @@ export default function CandidatePlacesSection() {
           <div>
             <div className="text-sm font-medium text-gray-800">Saved Bookmarks</div>
             <div className="mt-1 text-xs text-gray-500">
-              Bookmark data remains unchanged. This section only reframes the list as a candidate
-              source.
+              Bookmark data remains unchanged. Planner context only changes the candidate wording,
+              not the bookmark source state.
             </div>
           </div>
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-            No day actions yet
+            {isSelectedDayReady
+              ? `Day ${selectedDayNumber} context ready`
+              : 'Planner context pending'}
           </span>
         </div>
 
         <div className="px-4 py-3">
-          <BookmarkList />
+          <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+            {isSelectedDayReady
+              ? `Selected-day awareness is active for Day ${selectedDayNumber}. Bookmark loading and removal still belong only to the bookmark source.`
+              : 'Bookmark loading, empty state, and removal still belong only to the bookmark source. Candidate day-specific affordances will wait until planner context is ready.'}
+          </div>
+          <CandidatePlaceList />
         </div>
       </div>
     </section>
