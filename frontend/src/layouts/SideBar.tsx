@@ -1,3 +1,4 @@
+import type { PointerEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import TripPlanSidebarShell from '@/components/trip-plan/TripPlanSidebarShell';
 import CandidatePlacesSection from '@/components/trip-plan/sections/CandidatePlacesSection';
@@ -8,7 +9,12 @@ import TripDayNavigationSection from '@/components/trip-plan/sections/TripDayNav
 import TripOverviewSection from '@/components/trip-plan/sections/TripOverviewSection';
 import { useAppStore } from '@/stores/useAppStore';
 
-export default function SideBar() {
+type SideBarProps = {
+  width: number;
+  onResizeStart: (event: PointerEvent<HTMLButtonElement>) => void;
+};
+
+export default function SideBar({ onResizeStart, width }: SideBarProps) {
   const { currentTrip, tripBootstrapError, tripBootstrapStatus } = useAppStore(
     useShallow((state) => ({
       currentTrip: state.currentTrip,
@@ -18,7 +24,7 @@ export default function SideBar() {
   );
 
   return (
-    <TripPlanSidebarShell>
+    <TripPlanSidebarShell onResizeStart={onResizeStart} width={width}>
       {tripBootstrapStatus === 'loading' ? (
         <section className="space-y-3">
           <div className="flex items-start justify-between gap-3">
