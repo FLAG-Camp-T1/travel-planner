@@ -16,8 +16,20 @@ spring:
 app:
   current-user:
     fixed-id: ${APP_CURRENT_USER_FIXED_ID:00000000-0000-0000-0000-000000000001}
+  bootstrap:
+    seed-enabled: false
 
 google:
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY}
     routes-api-url: https://routes.googleapis.com/directions/v2:computeRoutes
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+app:
+  bootstrap:
+    seed-enabled: true
