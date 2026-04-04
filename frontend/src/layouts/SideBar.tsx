@@ -1,9 +1,20 @@
 import BookmarkList from '@/components/bookmark/BookmarkList';
+import POISearchPanel from '@/components/poi/POISearchPanel';
+import POIResultList from '@/components/poi/POIResultList';
 
 export default function SideBar() {
   return (
     <aside className="w-80 shrink-0 bg-white border-r border-gray-200 overflow-y-auto z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col">
       <div className="p-5 flex-1">
+        {/* POI Search */}
+        <h2 className="text-lg font-semibold mb-4 text-gray-700">Search Places</h2>
+        <POISearchPanel />
+        <div className="mt-4">
+          <POIResultList />
+        </div>
+
+        <hr className="my-6 border-gray-100" />
+
         <h2 className="text-lg font-semibold mb-4 text-gray-700">My Schedule</h2>
 
         {/* Plan Items Placeholder */}

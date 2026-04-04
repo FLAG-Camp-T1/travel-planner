@@ -2,6 +2,7 @@ import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
 import DebugRoutePanel from '../components/map/DebugRoutePanel';
+import POIMarkers from '../components/map/POIMarkers';
 
 const DEFAULT_COORDINATES = { lat: 38.8977, lng: -77.0365 };
 const DEFAULT_ZOOM = 13;
@@ -39,6 +40,7 @@ export default function PlannerPage() {
           >
             <CustomZoomControl />
             <RoutePolyline />
+            <POIMarkers />
           </Map>
         </div>
       </APIProvider>
