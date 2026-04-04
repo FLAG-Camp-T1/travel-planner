@@ -57,6 +57,7 @@ export interface AuthSlice {
 
 export interface TripPlanningSlice {
   currentTrip: TripSummary | null;
+  lastBootstrapTripId: number | null;
   days: TripDay[];
   selectedDayNumber: number | null;
   dayItemsByDayNumber: Record<number, ItineraryItem[]>;

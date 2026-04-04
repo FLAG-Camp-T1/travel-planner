@@ -15,9 +15,19 @@ type SideBarProps = {
 };
 
 export default function SideBar({ onResizeStart, width }: SideBarProps) {
-  const { currentTrip, tripBootstrapError, tripBootstrapStatus } = useAppStore(
+  const {
+    bootstrapTrip,
+    clearTripPlanning,
+    currentTrip,
+    lastBootstrapTripId,
+    tripBootstrapError,
+    tripBootstrapStatus,
+  } = useAppStore(
     useShallow((state) => ({
+      bootstrapTrip: state.bootstrapTrip,
+      clearTripPlanning: state.clearTripPlanning,
       currentTrip: state.currentTrip,
+      lastBootstrapTripId: state.lastBootstrapTripId,
       tripBootstrapError: state.tripBootstrapError,
       tripBootstrapStatus: state.tripBootstrapStatus,
     })),
@@ -64,6 +74,33 @@ export default function SideBar({ onResizeStart, width }: SideBarProps) {
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 shadow-sm">
             {tripBootstrapError ?? 'Failed to bootstrap the active trip.'}
           </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (lastBootstrapTripId !== null) {
+                  void bootstrapTrip(lastBootstrapTripId);
+                }
+              }}
+              disabled={lastBootstrapTripId === null}
+              className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
+            >
+              Retry Bootstrap
+            </button>
+            <button
+              type="button"
+              onClick={clearTripPlanning}
+              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+            >
+              Back to Trip Creation
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            After clearing a mock failure flag such as `tpMock=clear`, you can retry bootstrap
+            directly or return to the creation-first entry without refreshing the page.
+          </p>
         </section>
       ) : null}
 

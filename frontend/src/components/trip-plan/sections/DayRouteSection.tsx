@@ -1,8 +1,12 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
+import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
 import DayRouteSummaryCard from '@/components/trip-plan/route/DayRouteSummaryCard';
 import RouteSegmentList from '@/components/trip-plan/route/RouteSegmentList';
+
+const EMPTY_DAY_ITEMS: ItineraryItem[] = [];
+const EMPTY_DAY_ROUTE_SEGMENTS: DayRouteSegment[] = [];
 
 export default function DayRouteSection() {
   const {
@@ -32,14 +36,17 @@ export default function DayRouteSection() {
   const currentDayRouteSummary =
     selectedDayNumber !== null ? (dayRouteByDayNumber[selectedDayNumber] ?? null) : null;
   const currentDaySegments =
-    selectedDayNumber !== null ? (dayRouteSegmentsByDayNumber[selectedDayNumber] ?? []) : [];
+    selectedDayNumber !== null
+      ? (dayRouteSegmentsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ROUTE_SEGMENTS)
+      : EMPTY_DAY_ROUTE_SEGMENTS;
+  const currentDayItems =
+    selectedDayNumber !== null
+      ? (dayItemsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ITEMS)
+      : EMPTY_DAY_ITEMS;
 
   const itemsById = useMemo(() => {
-    const currentDayItems =
-      selectedDayNumber !== null ? (dayItemsByDayNumber[selectedDayNumber] ?? []) : [];
-
     return Object.fromEntries(currentDayItems.map((item) => [item.itemId, item]));
-  }, [dayItemsByDayNumber, selectedDayNumber]);
+  }, [currentDayItems]);
 
   return (
     <section className="space-y-3">
@@ -107,8 +114,9 @@ export default function DayRouteSection() {
 
             {currentDaySegments.length === 0 ? (
               <div className="px-4 pb-4 text-sm text-gray-500">
-                Route summary is ready, but no segment rows were returned for Day{' '}
-                {selectedDayNumber}.
+                {currentDayItems.length <= 1
+                  ? `Day ${selectedDayNumber} currently has ${currentDayItems.length === 1 ? 'one itinerary item' : 'no itinerary items'}, so the route summary is available without any between-stop segments.`
+                  : `Route summary is ready, but no segment rows were returned for Day ${selectedDayNumber}.`}
               </div>
             ) : (
               <RouteSegmentList itemsById={itemsById} segments={currentDaySegments} />

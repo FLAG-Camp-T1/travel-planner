@@ -12,6 +12,9 @@ async function enableMocks() {
     return;
   }
 
+  const { initializeMockScenario } = await import('./mocks/mockScenario');
+  initializeMockScenario();
+
   const { worker } = await import('./mocks/browser');
   return worker.start({ onUnhandledRequest: 'bypass' });
 }

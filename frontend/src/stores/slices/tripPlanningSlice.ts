@@ -13,6 +13,7 @@ const getErrorMessage = (error: unknown) => {
 
 const getEmptyTripPlanningData = () => ({
   currentTrip: null,
+  lastBootstrapTripId: null,
   days: [],
   selectedDayNumber: null,
   dayItemsByDayNumber: {},
@@ -43,6 +44,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         {
           tripBootstrapStatus: 'ready',
           tripBootstrapError: null,
+          lastBootstrapTripId: tripId,
         },
         false,
         'trip/bootstrap:success',
@@ -51,6 +53,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       set(
         {
           ...getEmptyTripPlanningData(),
+          lastBootstrapTripId: tripId,
           tripBootstrapStatus: 'error',
           tripBootstrapError: getErrorMessage(error),
         },
@@ -91,6 +94,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         set(
           {
             ...getEmptyTripPlanningData(),
+            lastBootstrapTripId: createdTrip.tripId,
             tripCreationStatus: 'ready',
             tripCreationError: null,
             tripBootstrapStatus: 'loading',
@@ -120,6 +124,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
       set(
         {
+          lastBootstrapTripId: tripId,
           tripBootstrapStatus: 'loading',
           tripBootstrapError: null,
         },
