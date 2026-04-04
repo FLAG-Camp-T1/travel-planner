@@ -20,8 +20,6 @@ type LegDefinition = {
 
 const DEFAULT_LEG_DISTANCE_METERS = 2400;
 const DEFAULT_LEG_DURATION_SECONDS = 840;
-const SINGLE_STOP_LOOP_DISTANCE_METERS = 350;
-const SINGLE_STOP_LOOP_DURATION_SECONDS = 480;
 
 const MOCK_PLACE_POINTS: Record<string, LatLng> = {
   'place-georgetown-waterfront': { lat: 38.90331, lng: -77.06794 },
@@ -128,16 +126,6 @@ const getLegDefinition = (fromPlaceId: string, toPlaceId: string): LegDefinition
   return LEG_ROUTE_DEFINITIONS[DEFAULT_LEG_KEY];
 };
 
-const getSingleStopLoopPoints = (center: LatLng): LatLng[] => {
-  return [
-    center,
-    { lat: center.lat + 0.00052, lng: center.lng + 0.00053 },
-    { lat: center.lat + 0.00004, lng: center.lng + 0.00113 },
-    { lat: center.lat - 0.00048, lng: center.lng + 0.00063 },
-    center,
-  ];
-};
-
 const buildSummaryFromPoints = (
   points: LatLng[],
   totalDistanceMeters: number,
@@ -156,7 +144,7 @@ const buildSegmentForItems = (
 ): DayRouteSegment => ({
   fromItemId: fromItem.itemId,
   toItemId: toItem.itemId,
-  travelMethod: toItem.travelMethod,
+  travelMethod: toItem.travelMethod ?? 'Drive',
   distanceMeters: legDefinition.distanceMeters,
   durationSeconds: legDefinition.durationSeconds,
   encodedPolyline: encodePolyline(legDefinition.points),
@@ -184,30 +172,11 @@ export const buildMockTripDayRouteResult = (
   dayNumber: number,
   items: ItineraryItem[],
 ): GenerateDayRouteResponse => {
-  if (items.length === 0) {
+  if (items.length < 2) {
     return {
       tripId,
       dayNumber,
-      items,
-      routeSummary: buildSummaryFromPoints([], 0, 0),
-      segments: [],
-    };
-  }
-
-  if (items.length === 1) {
-    const center =
-      MOCK_PLACE_POINTS[items[0].placeId] ?? MOCK_PLACE_POINTS['place-smithsonian-castle'];
-    const loopPoints = getSingleStopLoopPoints(center);
-
-    return {
-      tripId,
-      dayNumber,
-      items,
-      routeSummary: buildSummaryFromPoints(
-        loopPoints,
-        SINGLE_STOP_LOOP_DISTANCE_METERS,
-        SINGLE_STOP_LOOP_DURATION_SECONDS,
-      ),
+      routeSummary: null,
       segments: [],
     };
   }
@@ -224,7 +193,6 @@ export const buildMockTripDayRouteResult = (
   return {
     tripId,
     dayNumber,
-    items,
     routeSummary: buildSummaryFromPoints(summaryPath, totalDistanceMeters, totalDurationSeconds),
     segments,
   };

@@ -17,9 +17,11 @@ export default function ItineraryItemCard({ item }: ItineraryItemCardProps) {
         </div>
       </div>
 
-      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-        {item.travelMethod}
-      </span>
+      {item.travelMethod ? (
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+          {item.travelMethod}
+        </span>
+      ) : null}
     </div>
   );
 }

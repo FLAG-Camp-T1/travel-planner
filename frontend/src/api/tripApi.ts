@@ -30,7 +30,7 @@ export interface ItineraryItem {
   placeId: string;
   name: string;
   visitOrder: number;
-  travelMethod: string;
+  travelMethod: string | null;
 }
 
 export interface TripDayItemsResponse {
@@ -70,8 +70,7 @@ export interface DayRouteSegment {
 export interface GenerateDayRouteResponse {
   tripId: number;
   dayNumber: number;
-  items: ItineraryItem[];
-  routeSummary: DayRouteSummary;
+  routeSummary: DayRouteSummary | null;
   segments: DayRouteSegment[];
 }
 

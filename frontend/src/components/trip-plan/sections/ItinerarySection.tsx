@@ -9,7 +9,6 @@ export default function ItinerarySection() {
     dayItemsByDayNumber,
     dayItemsErrorByDayNumber,
     dayItemsStatusByDayNumber,
-    dayRouteByDayNumber,
     dayRouteStatusByDayNumber,
     fetchDayItems,
     generateDayRoute,
@@ -20,7 +19,6 @@ export default function ItinerarySection() {
       dayItemsByDayNumber: state.dayItemsByDayNumber,
       dayItemsErrorByDayNumber: state.dayItemsErrorByDayNumber,
       dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
-      dayRouteByDayNumber: state.dayRouteByDayNumber,
       dayRouteStatusByDayNumber: state.dayRouteStatusByDayNumber,
       fetchDayItems: state.fetchDayItems,
       generateDayRoute: state.generateDayRoute,
@@ -44,14 +42,82 @@ export default function ItinerarySection() {
     selectedDayNumber !== null ? (dayItemsByDayNumber[selectedDayNumber] ?? []) : [];
   const currentDayRouteStatus =
     selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
-  const hasCachedRoute =
+  const hasDisplayableRoute =
     selectedDayNumber !== null &&
-    Object.prototype.hasOwnProperty.call(dayRouteByDayNumber, selectedDayNumber);
+    (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') === 'ready';
   const canGenerateRoute =
     currentTrip !== null &&
     selectedDayNumber !== null &&
+    currentDayStatus === 'ready' &&
+    currentDayItems.length >= 2 &&
     currentDayRouteStatus !== 'loading' &&
-    !hasCachedRoute;
+    !hasDisplayableRoute;
+  const generateRouteButtonLabel = (() => {
+    if (currentTrip === null || selectedDayNumber === null) {
+      return 'Generate Route';
+    }
+
+    if (currentDayStatus === 'error') {
+      return 'Route Unavailable';
+    }
+
+    if (currentDayRouteStatus === 'loading') {
+      return 'Generating Route';
+    }
+
+    if (hasDisplayableRoute) {
+      return 'Route Ready';
+    }
+
+    if (currentDayStatus !== 'ready') {
+      return 'Loading Itinerary';
+    }
+
+    if (currentDayItems.length === 0) {
+      return 'No Itinerary Yet';
+    }
+
+    if (currentDayItems.length === 1) {
+      return 'Route Not Needed';
+    }
+
+    return 'Generate Route';
+  })();
+  const itineraryStatusMessage = (() => {
+    if (selectedDayNumber === null) {
+      return 'Waiting for the planner context to determine a selected day.';
+    }
+
+    if (currentTrip === null) {
+      return 'Route generation will stay disabled until the planner context is ready.';
+    }
+
+    if (currentDayStatus === 'idle' || currentDayStatus === 'loading') {
+      return `Loading itinerary items for Day ${selectedDayNumber}.`;
+    }
+
+    if (currentDayStatus === 'error') {
+      return `Itinerary data for Day ${selectedDayNumber} failed to load. Route generation stays unavailable until the request succeeds.`;
+    }
+
+    if (currentDayRouteStatus === 'loading') {
+      return `Generating route data for Day ${selectedDayNumber}.`;
+    }
+
+    if (hasDisplayableRoute) {
+      return `Day ${selectedDayNumber} already has generated route data. Route display will appear in a dedicated section.`;
+    }
+
+    if (currentDayItems.length === 0) {
+      return `Day ${selectedDayNumber} has no itinerary items yet. Route generation becomes available after at least two stops exist.`;
+    }
+
+    if (currentDayItems.length === 1) {
+      return `Day ${selectedDayNumber} has one itinerary item, so no between-stop route is needed.`;
+    }
+
+    return `Showing itinerary data for Day ${selectedDayNumber}. Route generation is available from this section header.`;
+  })();
 
   const handleGenerateRoute = () => {
     if (!currentTrip || selectedDayNumber === null || !canGenerateRoute) {
@@ -78,13 +144,7 @@ export default function ItinerarySection() {
             disabled={!canGenerateRoute}
             className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
           >
-            {currentTrip === null || selectedDayNumber === null
-              ? 'Generate Route'
-              : currentDayRouteStatus === 'loading'
-                ? 'Generating Route'
-                : hasCachedRoute
-                  ? 'Route Ready'
-                  : 'Generate Route'}
+            {generateRouteButtonLabel}
           </button>
           <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
             Selected-Day Data
@@ -94,15 +154,7 @@ export default function ItinerarySection() {
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
-          {selectedDayNumber === null
-            ? 'Waiting for the planner context to determine a selected day.'
-            : currentTrip === null
-              ? 'Route generation will stay disabled until the planner context is ready.'
-              : currentDayRouteStatus === 'loading'
-                ? `Generating route data for Day ${selectedDayNumber}.`
-                : hasCachedRoute
-                  ? `Day ${selectedDayNumber} already has cached route data. Route display will appear in a dedicated section.`
-                  : `Showing itinerary data for Day ${selectedDayNumber}. Route generation is available from this section header.`}
+          {itineraryStatusMessage}
         </div>
 
         {!currentTrip || selectedDayNumber === null ? (

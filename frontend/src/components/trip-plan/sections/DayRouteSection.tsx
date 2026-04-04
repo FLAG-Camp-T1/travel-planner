@@ -12,6 +12,7 @@ export default function DayRouteSection() {
   const {
     currentTrip,
     dayItemsByDayNumber,
+    dayItemsStatusByDayNumber,
     dayRouteByDayNumber,
     dayRouteErrorByDayNumber,
     dayRouteSegmentsByDayNumber,
@@ -21,6 +22,7 @@ export default function DayRouteSection() {
     useShallow((state) => ({
       currentTrip: state.currentTrip,
       dayItemsByDayNumber: state.dayItemsByDayNumber,
+      dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
       dayRouteByDayNumber: state.dayRouteByDayNumber,
       dayRouteErrorByDayNumber: state.dayRouteErrorByDayNumber,
       dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
@@ -43,6 +45,32 @@ export default function DayRouteSection() {
     selectedDayNumber !== null
       ? (dayItemsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ITEMS)
       : EMPTY_DAY_ITEMS;
+  const currentDayItemsStatus =
+    selectedDayNumber !== null ? (dayItemsStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+  const currentDayItemCount = currentDayItems.length;
+  const routeEmptyStateMessage = (() => {
+    if (selectedDayNumber === null) {
+      return null;
+    }
+
+    if (currentDayItemsStatus === 'idle' || currentDayItemsStatus === 'loading') {
+      return `Loading itinerary context for Day ${selectedDayNumber} before evaluating route state.`;
+    }
+
+    if (currentDayItemsStatus === 'error') {
+      return `Itinerary data for Day ${selectedDayNumber} is unavailable, so route state cannot be determined yet.`;
+    }
+
+    if (currentDayItemCount === 0) {
+      return `Day ${selectedDayNumber} does not have any itinerary items yet, so a route cannot be generated.`;
+    }
+
+    if (currentDayItemCount === 1) {
+      return `Day ${selectedDayNumber} has one itinerary item, so no between-stop route is needed.`;
+    }
+
+    return `Day ${selectedDayNumber} does not have route data yet. Use the itinerary section to generate a route.`;
+  })();
 
   const itemsById = useMemo(() => {
     return Object.fromEntries(currentDayItems.map((item) => [item.itemId, item]));
@@ -93,10 +121,7 @@ export default function DayRouteSection() {
         currentDayRouteSummary === null &&
         currentDayRouteStatus !== 'loading' &&
         currentDayRouteStatus !== 'error' ? (
-          <div className="px-4 py-4 text-sm text-gray-500">
-            Day {selectedDayNumber} does not have route data yet. Use the itinerary section to
-            generate a route.
-          </div>
+          <div className="px-4 py-4 text-sm text-gray-500">{routeEmptyStateMessage}</div>
         ) : null}
 
         {currentTrip && selectedDayNumber !== null && currentDayRouteSummary !== null ? (
@@ -114,9 +139,7 @@ export default function DayRouteSection() {
 
             {currentDaySegments.length === 0 ? (
               <div className="px-4 pb-4 text-sm text-gray-500">
-                {currentDayItems.length <= 1
-                  ? `Day ${selectedDayNumber} currently has ${currentDayItems.length === 1 ? 'one itinerary item' : 'no itinerary items'}, so the route summary is available without any between-stop segments.`
-                  : `Route summary is ready, but no segment rows were returned for Day ${selectedDayNumber}.`}
+                {`Route summary is ready, but no segment rows were returned for Day ${selectedDayNumber}.`}
               </div>
             ) : (
               <RouteSegmentList itemsById={itemsById} segments={currentDaySegments} />

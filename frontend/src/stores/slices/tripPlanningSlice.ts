@@ -297,12 +297,8 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     generateDayRoute: async (tripId, dayNumber) => {
       const currentState = get();
       const currentDayRouteStatus = currentState.dayRouteStatusByDayNumber[dayNumber] ?? 'idle';
-      const hasCachedRoute = Object.prototype.hasOwnProperty.call(
-        currentState.dayRouteByDayNumber,
-        dayNumber,
-      );
 
-      if (currentDayRouteStatus === 'loading' || hasCachedRoute) {
+      if (currentDayRouteStatus === 'loading' || currentDayRouteStatus === 'ready') {
         return;
       }
 
@@ -336,7 +332,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
             },
             dayRouteStatusByDayNumber: {
               ...state.dayRouteStatusByDayNumber,
-              [dayNumber]: 'ready',
+              [dayNumber]: response.routeSummary !== null ? 'ready' : 'idle',
             },
             dayRouteErrorByDayNumber: {
               ...state.dayRouteErrorByDayNumber,

@@ -190,7 +190,7 @@ const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
         placeId: 'place-smithsonian-castle',
         name: 'Smithsonian Castle',
         visitOrder: 1,
-        travelMethod: 'Transit',
+        travelMethod: null,
       },
     ],
     3: [],
