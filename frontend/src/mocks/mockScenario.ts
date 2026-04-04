@@ -29,6 +29,27 @@ const parseMockFlags = (rawValue: string | null) => {
 
 const serializeMockFlags = (flags: MockFailureFlag[]) => flags.join(',');
 
+const syncStoredFlagsFromQueryValue = (queryValue: string) => {
+  if (typeof window === 'undefined') {
+    return [] as MockFailureFlag[];
+  }
+
+  if (queryValue === CLEAR_VALUE) {
+    window.sessionStorage.removeItem(MOCK_STORAGE_KEY);
+    return [] as MockFailureFlag[];
+  }
+
+  const flags = parseMockFlags(queryValue);
+
+  if (flags.length === 0) {
+    window.sessionStorage.removeItem(MOCK_STORAGE_KEY);
+    return [] as MockFailureFlag[];
+  }
+
+  window.sessionStorage.setItem(MOCK_STORAGE_KEY, serializeMockFlags(flags));
+  return flags;
+};
+
 const getQueryParamValue = () => {
   if (typeof window === 'undefined') {
     return null;
@@ -55,30 +76,14 @@ export const initializeMockScenario = () => {
     return;
   }
 
-  if (queryValue === CLEAR_VALUE) {
-    window.sessionStorage.removeItem(MOCK_STORAGE_KEY);
-    return;
-  }
-
-  const flags = parseMockFlags(queryValue);
-
-  if (flags.length === 0) {
-    window.sessionStorage.removeItem(MOCK_STORAGE_KEY);
-    return;
-  }
-
-  window.sessionStorage.setItem(MOCK_STORAGE_KEY, serializeMockFlags(flags));
+  syncStoredFlagsFromQueryValue(queryValue);
 };
 
 export const getActiveMockFlags = () => {
   const queryValue = getQueryParamValue();
 
   if (queryValue !== null) {
-    if (queryValue === CLEAR_VALUE) {
-      return [] as MockFailureFlag[];
-    }
-
-    return parseMockFlags(queryValue);
+    return syncStoredFlagsFromQueryValue(queryValue);
   }
 
   return getStoredFlags();

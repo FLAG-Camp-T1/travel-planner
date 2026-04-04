@@ -43,6 +43,7 @@ const createErrorResponse = (message: string, code = 40000) => {
 };
 
 const MOCK_DELAY_MS = 250;
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const waitForMockDelay = async () => {
   await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
@@ -67,6 +68,50 @@ const getMockFlagsFromRequest = (request: Request) => {
     );
 
   return new Set<MockFailureFlag>(flags);
+};
+
+const parseUtcDateString = (rawValue: string) => {
+  const match = ISO_DATE_PATTERN.exec(rawValue);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() !== month - 1 ||
+    utcDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return utcDate;
+};
+
+const formatUtcDateString = (date: Date) => {
+  return date.toISOString().slice(0, 10);
+};
+
+const buildMockTripDays = (durationDays: number, startDate?: string | null): TripDay[] => {
+  const parsedStartDate =
+    typeof startDate === 'string' && startDate.trim().length > 0
+      ? parseUtcDateString(startDate)
+      : null;
+
+  return Array.from({ length: durationDays }, (_, index) => {
+    const currentDate = parsedStartDate
+      ? new Date(parsedStartDate.getTime() + index * 24 * 60 * 60 * 1000)
+      : null;
+
+    return {
+      dayNumber: index + 1,
+      date: currentDate ? formatUtcDateString(currentDate) : null,
+    };
+  });
 };
 
 let nextBookmarkSequence = 3;
@@ -295,10 +340,10 @@ export const handlers = [
       };
 
       mockTrips = [...mockTrips, newTrip];
-      mockTripDaysByTripId[newTrip.tripId] = Array.from({ length: durationDays }, (_, index) => ({
-        dayNumber: index + 1,
-        date: null,
-      }));
+      mockTripDaysByTripId[newTrip.tripId] = buildMockTripDays(
+        durationDays,
+        requestBody.startDate ?? null,
+      );
       mockTripItemsByTripId[newTrip.tripId] = Object.fromEntries(
         Array.from({ length: durationDays }, (_, index) => [index + 1, []]),
       );
