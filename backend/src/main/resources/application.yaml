@@ -7,9 +7,15 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
 
   application:
     name: backend
+
+app:
+  current-user:
+    fixed-id: ${APP_CURRENT_USER_FIXED_ID:00000000-0000-0000-0000-000000000001}
 
 google:
   maps:
