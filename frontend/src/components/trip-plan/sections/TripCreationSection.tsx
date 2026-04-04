@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { type SubmitEvent, useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -30,7 +30,7 @@ export default function TripCreationSection() {
       : 'Leaving start date empty will initialize the trip in Flexible scheduling mode.';
   }, [startDate]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!canSubmit) {
