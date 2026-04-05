@@ -3,6 +3,7 @@ import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type {
+  CreateTripDayItemRequest,
   CreateTripRequest,
   DayRouteSegment,
   DayRouteSummary,
@@ -77,6 +78,9 @@ export interface TripPlanningSlice {
   tripDeletionStatus: LoadStatus;
   tripDeletionError: string | null;
   tripDeletionTargetId: number | null;
+  dayItemCreationStatus: LoadStatus;
+  dayItemCreationError: string | null;
+  dayItemCreationTargetPlaceId: string | null;
   dayItemUpdateStatus: LoadStatus;
   dayItemUpdateError: string | null;
   dayItemUpdateTargetId: number | null;
@@ -95,6 +99,11 @@ export interface TripPlanningSlice {
   fetchTripDays: (tripId: number) => Promise<void>;
   selectDay: (dayNumber: number) => void;
   fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
+  createDayItem: (
+    tripId: number,
+    dayNumber: number,
+    request: CreateTripDayItemRequest,
+  ) => Promise<void>;
   updateDayItem: (
     tripId: number,
     dayNumber: number,

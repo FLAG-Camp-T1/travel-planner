@@ -14,17 +14,37 @@ const formatRatingCount = (count: number | null) => {
 export default function PlaceDetailOverlay() {
   const {
     activeDetailOverlay,
+    createDayItem,
+    currentTrip,
+    dayItemCreationError,
+    dayItemCreationStatus,
+    dayItemCreationTargetPlaceId,
+    days,
+    daysStatus,
     closePlaceDetail,
     placeDetail,
     placeDetailError,
     placeDetailStatus,
+    selectedDayNumber,
+    setActivePlannerPanel,
+    tripStatus,
   } = useAppStore(
     useShallow((state) => ({
       activeDetailOverlay: state.activeDetailOverlay,
+      createDayItem: state.createDayItem,
+      currentTrip: state.currentTrip,
+      dayItemCreationError: state.dayItemCreationError,
+      dayItemCreationStatus: state.dayItemCreationStatus,
+      dayItemCreationTargetPlaceId: state.dayItemCreationTargetPlaceId,
+      days: state.days,
+      daysStatus: state.daysStatus,
       closePlaceDetail: state.closePlaceDetail,
       placeDetail: state.placeDetail,
       placeDetailError: state.placeDetailError,
       placeDetailStatus: state.placeDetailStatus,
+      selectedDayNumber: state.selectedDayNumber,
+      setActivePlannerPanel: state.setActivePlannerPanel,
+      tripStatus: state.tripStatus,
     })),
   );
 
@@ -44,6 +64,33 @@ export default function PlaceDetailOverlay() {
   const googleMapsUri = placeDetail?.googleMapsUri;
   const websiteUri = placeDetail?.websiteUri;
   const canBookmark = latitude != null && longitude != null;
+  const isSelectedDayReady =
+    currentTrip !== null &&
+    tripStatus === 'ready' &&
+    daysStatus === 'ready' &&
+    selectedDayNumber !== null &&
+    days.some((day) => day.dayNumber === selectedDayNumber);
+  const canAddToDay = activeDetailOverlay.kind === 'poi' && isSelectedDayReady;
+  const isAddingThisPlace =
+    dayItemCreationStatus === 'loading' &&
+    dayItemCreationTargetPlaceId === activeDetailOverlay.placeId;
+  const creationErrorForThisPlace =
+    dayItemCreationTargetPlaceId === activeDetailOverlay.placeId ? dayItemCreationError : null;
+
+  const handleAddToDay = async () => {
+    if (!currentTrip || selectedDayNumber === null || activeDetailOverlay.kind !== 'poi') {
+      return;
+    }
+
+    try {
+      await createDayItem(currentTrip.tripId, selectedDayNumber, {
+        placeId: activeDetailOverlay.placeId,
+      });
+      setActivePlannerPanel('trips');
+    } catch {
+      return;
+    }
+  };
 
   return (
     <div className="absolute inset-0 z-10 bg-white/72 backdrop-blur-sm">
@@ -115,6 +162,20 @@ export default function PlaceDetailOverlay() {
             <section className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
               <div className="text-sm font-semibold text-slate-800">Quick Actions</div>
               <div className="mt-3 flex flex-wrap gap-2">
+                {activeDetailOverlay.kind === 'poi' ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleAddToDay()}
+                    disabled={!canAddToDay || isAddingThisPlace}
+                    className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+                  >
+                    {isAddingThisPlace
+                      ? 'Adding...'
+                      : canAddToDay
+                        ? `Add to Day ${selectedDayNumber}`
+                        : 'Select a Trip Day'}
+                  </button>
+                ) : null}
                 {googleMapsUri ? (
                   <a
                     href={googleMapsUri}
@@ -140,6 +201,23 @@ export default function PlaceDetailOverlay() {
                   </a>
                 ) : null}
               </div>
+              {activeDetailOverlay.kind === 'poi' && currentTrip && selectedDayNumber !== null ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  Adds this place to{' '}
+                  <span className="font-medium text-slate-700">{currentTrip.title}</span> on Day{' '}
+                  {selectedDayNumber}.
+                </p>
+              ) : null}
+              {activeDetailOverlay.kind === 'poi' && !canAddToDay ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  Choose a trip day before adding this place to your itinerary.
+                </p>
+              ) : null}
+              {activeDetailOverlay.kind === 'poi' && creationErrorForThisPlace ? (
+                <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                  {creationErrorForThisPlace}
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm">

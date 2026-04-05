@@ -13,6 +13,10 @@ export interface UpdateTripRequest {
   startDate?: DateString | null;
 }
 
+export interface CreateTripDayItemRequest {
+  placeId: string;
+}
+
 export type TripTravelMethodCommand =
   | 'DRIVE'
   | 'BICYCLE'
@@ -107,6 +111,14 @@ export const updateTrip = (tripId: number, request: UpdateTripRequest): Promise<
 
 export const deleteTrip = (tripId: number): Promise<void> => {
   return axiosClient.delete(`/trips/${tripId}`);
+};
+
+export const createTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  request: CreateTripDayItemRequest,
+): Promise<void> => {
+  return axiosClient.post(`/trips/${tripId}/days/${dayNumber}/items`, request);
 };
 
 export const updateTripDayItem = (

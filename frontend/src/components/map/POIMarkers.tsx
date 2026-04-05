@@ -28,6 +28,7 @@ const toPoiDetailOverlay = (poi: POIDto): ActiveDetailOverlay => ({
 });
 
 export default function POIMarkers() {
+  const activePlannerPanel = useAppStore((state) => state.activePlannerPanel);
   const poiResults = useAppStore((state) => state.poiResults);
   const selectedPOI = useAppStore((state) => state.selectedPOI);
   const hoveredPOI = useAppStore((state) => state.hoveredPOI);
@@ -35,12 +36,20 @@ export default function POIMarkers() {
   const openPlaceDetail = useAppStore((state) => state.openPlaceDetail);
   const map = useMap();
   const animationFrameRef = useRef<number | null>(null);
+  const isExploreActive = activePlannerPanel === 'explore';
   const visiblePoiResults = poiResults.flatMap((poi, index) =>
-    poi.latitude != null && poi.longitude != null ? [{ poi, index }] : [],
+    isExploreActive && poi.latitude != null && poi.longitude != null ? [{ poi, index }] : [],
   );
 
   useEffect(() => {
-    if (!map || selectedPOI?.latitude == null || selectedPOI?.longitude == null) return;
+    if (
+      !isExploreActive ||
+      !map ||
+      selectedPOI?.latitude == null ||
+      selectedPOI?.longitude == null
+    ) {
+      return;
+    }
 
     const startCenter = map.getCenter();
     const targetCenter = { lat: selectedPOI.latitude, lng: selectedPOI.longitude };
@@ -92,7 +101,7 @@ export default function POIMarkers() {
     };
 
     animationFrameRef.current = requestAnimationFrame(animatePan);
-  }, [map, selectedPOI]);
+  }, [isExploreActive, map, selectedPOI]);
 
   useEffect(() => {
     return () => {

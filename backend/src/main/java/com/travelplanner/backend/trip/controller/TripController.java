@@ -1,6 +1,7 @@
 package com.travelplanner.backend.trip.controller;
 
 import com.travelplanner.backend.common.api.ApiResponse;
+import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
@@ -117,6 +118,25 @@ public class TripController {
             @Parameter(description = "Day number within the trip", example = "1") @PathVariable
                     Integer dayNumber) {
         return ApiResponse.success(tripQueryService.getTripDayItems(tripId, dayNumber));
+    }
+
+    @PostMapping("/{tripId}/days/{dayNumber}/items")
+    @Operation(
+            summary = "Add a day itinerary item",
+            description =
+                    "Adds one place to the selected trip day and appends it to the current stop order.")
+    public ApiResponse<Void> createTripDayItem(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "Place reference used to create a new itinerary item",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    CreateItineraryItemRequestDto request) {
+        tripCommandService.createTripDayItem(tripId, dayNumber, request);
+        return ApiResponse.success();
     }
 
     @PatchMapping("/{tripId}/days/{dayNumber}/items/{itemId}")

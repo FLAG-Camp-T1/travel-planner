@@ -4,6 +4,7 @@ import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type {
+  CreateTripDayItemRequest,
   CreateTripRequest,
   GenerateDayRouteResponse,
   ItineraryItem,
@@ -118,6 +119,7 @@ const buildMockTripDays = (durationDays: number, startDate?: string | null): Tri
 };
 
 let nextBookmarkSequence = 3;
+let nextItineraryItemSequence = 1000;
 let nextTripSequence = 1002;
 
 let mockUsers: Array<{ username: string; password: string }> = [
@@ -625,6 +627,56 @@ export const handlers = [
 
     return createSuccessResponse(response);
   }),
+
+  http.post<{ tripId: string; dayNumber: string }, CreateTripDayItemRequest, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const dayNumber = Number(params.dayNumber);
+      const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!items) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      const requestBody = (await request.json()) as CreateTripDayItemRequest;
+      const placeId = requestBody.placeId?.trim();
+
+      if (!placeId) {
+        return createErrorResponse('Place ID is required.', 40002);
+      }
+
+      const sourceDetail = mockPlaceDetailsById[placeId];
+      const sourcePoi = mockPoiResults.find((poi) => poi.placeId === placeId);
+
+      if (!sourceDetail && !sourcePoi) {
+        return createErrorResponse(`Place ${placeId} not found.`, 40404);
+      }
+
+      const name = sourceDetail?.name ?? sourcePoi?.name ?? 'Selected Place';
+
+      mockTripItemsByTripId[tripId][dayNumber] = [
+        ...items,
+        {
+          itemId: nextItineraryItemSequence,
+          placeId,
+          name,
+          visitOrder: items.length + 1,
+          travelMethod: 'Drive',
+        },
+      ];
+
+      nextItineraryItemSequence += 1;
+
+      return createSuccessResponse(null);
+    },
+  ),
 
   http.patch<
     { tripId: string; dayNumber: string; itemId: string },

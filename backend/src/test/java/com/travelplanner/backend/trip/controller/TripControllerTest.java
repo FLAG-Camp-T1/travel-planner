@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.common.exception.GlobalExceptionHandler;
+import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
@@ -136,6 +137,30 @@ class TripControllerTest {
     }
 
     @Test
+    void createTripDayItem_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .createTripDayItem(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(CreateItineraryItemRequestDto.class));
+
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "placeId": "poi-search-1"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void updateTripDayItem_ReturnsSuccessPayload() throws Exception {
         doNothing()
                 .when(tripCommandService)
@@ -197,6 +222,22 @@ class TripControllerTest {
                                         """
                                         {
                                           "title": " "
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void createTripDayItem_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "placeId": " "
                                         }
                                         """))
                 .andExpect(status().isOk())

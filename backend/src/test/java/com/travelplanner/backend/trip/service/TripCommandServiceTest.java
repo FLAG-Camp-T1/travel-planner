@@ -12,14 +12,18 @@ import static org.mockito.Mockito.when;
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
+import com.travelplanner.backend.place.service.PlaceLookupService;
+import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.model.ItineraryEntity;
+import com.travelplanner.backend.trip.model.PoiEntity;
 import com.travelplanner.backend.trip.model.TripDayEntity;
 import com.travelplanner.backend.trip.model.TripEntity;
 import com.travelplanner.backend.trip.repository.ItineraryRepository;
+import com.travelplanner.backend.trip.repository.PoiRepository;
 import com.travelplanner.backend.trip.repository.TripDayRepository;
 import com.travelplanner.backend.trip.repository.TripRepository;
 import java.time.LocalDate;
@@ -43,6 +47,8 @@ class TripCommandServiceTest {
     @Mock private TripRepository tripRepository;
     @Mock private TripDayRepository tripDayRepository;
     @Mock private ItineraryRepository itineraryRepository;
+    @Mock private PoiRepository poiRepository;
+    @Mock private PlaceLookupService placeLookupService;
     @Mock private CurrentUserProvider currentUserProvider;
 
     @InjectMocks private TripCommandService tripCommandService;
@@ -50,6 +56,7 @@ class TripCommandServiceTest {
     @Captor private ArgumentCaptor<List<TripDayEntity>> tripDaysCaptor;
     @Captor private ArgumentCaptor<TripEntity> tripCaptor;
     @Captor private ArgumentCaptor<List<ItineraryEntity>> itineraryItemsCaptor;
+    @Captor private ArgumentCaptor<ItineraryEntity> itineraryItemCaptor;
 
     @Test
     void createTrip_PersistsTripAndGeneratesOrderedDays() {
@@ -188,6 +195,126 @@ class TripCommandServiceTest {
 
         assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
         verify(tripRepository, never()).delete(any(TripEntity.class));
+    }
+
+    @Test
+    void createTripDayItem_AppendsNewStopUsingExistingPoi() {
+        CreateItineraryItemRequestDto request = new CreateItineraryItemRequestDto();
+        request.setPlaceId("poi-search-1");
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity lastItem = new ItineraryEntity();
+        lastItem.setId(5002L);
+        lastItem.setTripDayId(2001L);
+        lastItem.setVisitOrder(2);
+
+        PoiEntity poiEntity = new PoiEntity();
+        poiEntity.setId(3001L);
+        poiEntity.setPlacesId("poi-search-1");
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(placeLookupService.resolveDisplayName("poi-search-1"))
+                .thenReturn("National Air and Space Museum");
+        when(poiRepository.findByPlacesId("poi-search-1")).thenReturn(Optional.of(poiEntity));
+        when(itineraryRepository.findFirstByTripDayIdOrderByVisitOrderDesc(2001L))
+                .thenReturn(Optional.of(lastItem));
+
+        tripCommandService.createTripDayItem(1001L, 1, request);
+
+        verify(itineraryRepository).save(itineraryItemCaptor.capture());
+        ItineraryEntity savedItem = itineraryItemCaptor.getValue();
+        assertEquals(2001L, savedItem.getTripDayId());
+        assertEquals(3001L, savedItem.getPoiId());
+        assertEquals(3, savedItem.getVisitOrder());
+        assertEquals("DRIVE", savedItem.getTravelMethod());
+        verify(poiRepository, never()).save(any(PoiEntity.class));
+    }
+
+    @Test
+    void createTripDayItem_CreatesPoiWhenMissing() {
+        CreateItineraryItemRequestDto request = new CreateItineraryItemRequestDto();
+        request.setPlaceId("poi-search-9");
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        PoiEntity savedPoiEntity = new PoiEntity();
+        savedPoiEntity.setId(3009L);
+        savedPoiEntity.setPlacesId("poi-search-9");
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(placeLookupService.resolveDisplayName("poi-search-9")).thenReturn("Selected Place");
+        when(poiRepository.findByPlacesId("poi-search-9")).thenReturn(Optional.empty());
+        when(poiRepository.save(any(PoiEntity.class))).thenReturn(savedPoiEntity);
+        when(itineraryRepository.findFirstByTripDayIdOrderByVisitOrderDesc(2001L))
+                .thenReturn(Optional.empty());
+
+        tripCommandService.createTripDayItem(1001L, 1, request);
+
+        verify(poiRepository).save(any(PoiEntity.class));
+        verify(itineraryRepository).save(itineraryItemCaptor.capture());
+        ItineraryEntity savedItem = itineraryItemCaptor.getValue();
+        assertEquals(3009L, savedItem.getPoiId());
+        assertEquals(1, savedItem.getVisitOrder());
+        assertEquals("DRIVE", savedItem.getTravelMethod());
+    }
+
+    @Test
+    void createTripDayItem_WhenPlaceLookupFails_ThrowsBusinessException() {
+        CreateItineraryItemRequestDto request = new CreateItineraryItemRequestDto();
+        request.setPlaceId("missing-place");
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(placeLookupService.resolveDisplayName("missing-place"))
+                .thenThrow(
+                        new BusinessException(
+                                ResultCode.GOOGLE_PLACES_NOT_FOUND_ERROR,
+                                "Place missing-place not found."));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.createTripDayItem(1001L, 1, request));
+
+        assertEquals(ResultCode.GOOGLE_PLACES_NOT_FOUND_ERROR, exception.getResultCode());
+        verify(poiRepository, never()).findByPlacesId(any());
+        verify(poiRepository, never()).save(any(PoiEntity.class));
+        verify(itineraryRepository, never()).save(any(ItineraryEntity.class));
     }
 
     @Test
