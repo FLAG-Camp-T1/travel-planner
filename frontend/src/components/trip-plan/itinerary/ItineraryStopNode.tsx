@@ -6,13 +6,19 @@ import {
 } from './itineraryPresentation';
 
 type ItineraryStopNodeProps = {
+  isBusy: boolean;
+  isDeleting: boolean;
   item: ItineraryItem;
+  onDelete: () => void;
   showLineAbove: boolean;
   showLineBelow: boolean;
 };
 
 export default function ItineraryStopNode({
+  isBusy,
+  isDeleting,
   item,
+  onDelete,
   showLineAbove,
   showLineBelow,
 }: ItineraryStopNodeProps) {
@@ -39,10 +45,21 @@ export default function ItineraryStopNode({
       </div>
 
       <div
-        className="flex min-w-0 min-h-8 items-center pb-1"
+        className="flex min-h-8 min-w-0 items-center justify-between gap-3 pb-1"
         style={{ marginLeft: ITINERARY_CONTENT_START_X }}
       >
-        <div className="text-sm font-medium text-gray-900">{item.name}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isBusy}
+          className="shrink-0 rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+        >
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </button>
       </div>
     </div>
   );

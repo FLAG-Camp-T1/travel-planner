@@ -14,9 +14,12 @@ import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
+import com.travelplanner.backend.trip.model.ItineraryEntity;
 import com.travelplanner.backend.trip.model.TripDayEntity;
 import com.travelplanner.backend.trip.model.TripEntity;
+import com.travelplanner.backend.trip.repository.ItineraryRepository;
 import com.travelplanner.backend.trip.repository.TripDayRepository;
 import com.travelplanner.backend.trip.repository.TripRepository;
 import java.time.LocalDate;
@@ -39,12 +42,14 @@ class TripCommandServiceTest {
 
     @Mock private TripRepository tripRepository;
     @Mock private TripDayRepository tripDayRepository;
+    @Mock private ItineraryRepository itineraryRepository;
     @Mock private CurrentUserProvider currentUserProvider;
 
     @InjectMocks private TripCommandService tripCommandService;
 
     @Captor private ArgumentCaptor<List<TripDayEntity>> tripDaysCaptor;
     @Captor private ArgumentCaptor<TripEntity> tripCaptor;
+    @Captor private ArgumentCaptor<List<ItineraryEntity>> itineraryItemsCaptor;
 
     @Test
     void createTrip_PersistsTripAndGeneratesOrderedDays() {
@@ -183,5 +188,147 @@ class TripCommandServiceTest {
 
         assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
         verify(tripRepository, never()).delete(any(TripEntity.class));
+    }
+
+    @Test
+    void updateTripDayItem_UpdatesTravelMethod() {
+        UpdateItineraryItemRequestDto request = new UpdateItineraryItemRequestDto();
+        request.setTravelMethod("TRANSIT");
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity itineraryEntity = new ItineraryEntity();
+        itineraryEntity.setId(5001L);
+        itineraryEntity.setTripDayId(2001L);
+        itineraryEntity.setTravelMethod("DRIVE");
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findById(5001L)).thenReturn(Optional.of(itineraryEntity));
+
+        tripCommandService.updateTripDayItem(1001L, 1, 5001L, request);
+
+        verify(itineraryRepository).save(itineraryEntity);
+        assertEquals("TRANSIT", itineraryEntity.getTravelMethod());
+    }
+
+    @Test
+    void updateTripDayItem_ClearsTravelMethodWhenUnspecified() {
+        UpdateItineraryItemRequestDto request = new UpdateItineraryItemRequestDto();
+        request.setTravelMethod("TRAVEL_MODE_UNSPECIFIED");
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity itineraryEntity = new ItineraryEntity();
+        itineraryEntity.setId(5001L);
+        itineraryEntity.setTripDayId(2001L);
+        itineraryEntity.setTravelMethod("WALK");
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findById(5001L)).thenReturn(Optional.of(itineraryEntity));
+
+        tripCommandService.updateTripDayItem(1001L, 1, 5001L, request);
+
+        verify(itineraryRepository).save(itineraryEntity);
+        assertNull(itineraryEntity.getTravelMethod());
+    }
+
+    @Test
+    void deleteTripDayItem_RemovesItemAndReordersRemainingStops() {
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity deletedItem = new ItineraryEntity();
+        deletedItem.setId(5002L);
+        deletedItem.setTripDayId(2001L);
+        deletedItem.setVisitOrder(2);
+
+        ItineraryEntity firstRemainingItem = new ItineraryEntity();
+        firstRemainingItem.setId(5001L);
+        firstRemainingItem.setTripDayId(2001L);
+        firstRemainingItem.setVisitOrder(1);
+
+        ItineraryEntity secondRemainingItem = new ItineraryEntity();
+        secondRemainingItem.setId(5003L);
+        secondRemainingItem.setTripDayId(2001L);
+        secondRemainingItem.setVisitOrder(3);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findById(5002L)).thenReturn(Optional.of(deletedItem));
+        when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(2001L))
+                .thenReturn(List.of(firstRemainingItem, secondRemainingItem));
+
+        tripCommandService.deleteTripDayItem(1001L, 1, 5002L);
+
+        verify(itineraryRepository).delete(deletedItem);
+        verify(itineraryRepository).saveAll(itineraryItemsCaptor.capture());
+
+        List<ItineraryEntity> reorderedItems = itineraryItemsCaptor.getValue();
+        assertEquals(2, reorderedItems.size());
+        assertEquals(1, reorderedItems.get(0).getVisitOrder());
+        assertEquals(2, reorderedItems.get(1).getVisitOrder());
+    }
+
+    @Test
+    void deleteTripDayItem_WhenItemDoesNotBelongToDay_ThrowsBusinessException() {
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity itineraryEntity = new ItineraryEntity();
+        itineraryEntity.setId(5002L);
+        itineraryEntity.setTripDayId(2002L);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findById(5002L)).thenReturn(Optional.of(itineraryEntity));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.deleteTripDayItem(1001L, 1, 5002L));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(itineraryRepository, never()).delete(any(ItineraryEntity.class));
+        verify(itineraryRepository, never()).saveAll(any());
     }
 }

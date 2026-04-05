@@ -9,6 +9,7 @@ import type {
   ItineraryItem,
   TripDay,
   TripSummary,
+  UpdateTripDayItemRequest,
   UpdateTripRequest,
 } from '@/api/tripApi';
 import type { StateCreator } from 'zustand';
@@ -76,6 +77,12 @@ export interface TripPlanningSlice {
   tripDeletionStatus: LoadStatus;
   tripDeletionError: string | null;
   tripDeletionTargetId: number | null;
+  dayItemUpdateStatus: LoadStatus;
+  dayItemUpdateError: string | null;
+  dayItemUpdateTargetId: number | null;
+  dayItemDeletionStatus: LoadStatus;
+  dayItemDeletionError: string | null;
+  dayItemDeletionTargetId: number | null;
   tripBootstrapStatus: LoadStatus;
   tripBootstrapError: string | null;
   fetchTrips: () => Promise<void>;
@@ -88,6 +95,13 @@ export interface TripPlanningSlice {
   fetchTripDays: (tripId: number) => Promise<void>;
   selectDay: (dayNumber: number) => void;
   fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
+  updateDayItem: (
+    tripId: number,
+    dayNumber: number,
+    itemId: number,
+    request: UpdateTripDayItemRequest,
+  ) => Promise<void>;
+  deleteDayItem: (tripId: number, dayNumber: number, itemId: number) => Promise<void>;
   generateDayRoute: (tripId: number, dayNumber: number) => Promise<void>;
   clearTripPlanning: () => void;
 }

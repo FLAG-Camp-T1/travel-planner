@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import type { TripTravelMethodCommand } from '@/api/tripApi';
 import { useAppStore } from '@/stores/useAppStore';
 import ItineraryList from '@/components/trip-plan/itinerary/ItineraryList';
 import {
@@ -13,22 +14,38 @@ export default function ItinerarySection() {
   const {
     currentTrip,
     dayItemsByDayNumber,
+    dayItemDeletionError,
+    dayItemDeletionStatus,
+    dayItemDeletionTargetId,
+    dayItemUpdateError,
+    dayItemUpdateStatus,
+    dayItemUpdateTargetId,
     dayItemsErrorByDayNumber,
     dayItemsStatusByDayNumber,
     dayRouteStatusByDayNumber,
+    deleteDayItem,
     fetchDayItems,
     generateDayRoute,
     selectedDayNumber,
+    updateDayItem,
   } = useAppStore(
     useShallow((state) => ({
       currentTrip: state.currentTrip,
       dayItemsByDayNumber: state.dayItemsByDayNumber,
+      dayItemDeletionError: state.dayItemDeletionError,
+      dayItemDeletionStatus: state.dayItemDeletionStatus,
+      dayItemDeletionTargetId: state.dayItemDeletionTargetId,
+      dayItemUpdateError: state.dayItemUpdateError,
+      dayItemUpdateStatus: state.dayItemUpdateStatus,
+      dayItemUpdateTargetId: state.dayItemUpdateTargetId,
       dayItemsErrorByDayNumber: state.dayItemsErrorByDayNumber,
       dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
       dayRouteStatusByDayNumber: state.dayRouteStatusByDayNumber,
+      deleteDayItem: state.deleteDayItem,
       fetchDayItems: state.fetchDayItems,
       generateDayRoute: state.generateDayRoute,
       selectedDayNumber: state.selectedDayNumber,
+      updateDayItem: state.updateDayItem,
     })),
   );
 
@@ -77,6 +94,7 @@ export default function ItinerarySection() {
     selectedDayNumber,
     tripReady,
   });
+  const itineraryMutationError = dayItemDeletionError ?? dayItemUpdateError;
 
   const handleGenerateRoute = () => {
     if (!currentTrip || selectedDayNumber === null || !canGenerateRoute) {
@@ -84,6 +102,22 @@ export default function ItinerarySection() {
     }
 
     void generateDayRoute(currentTrip.tripId, selectedDayNumber);
+  };
+
+  const handleDeleteItem = (itemId: number) => {
+    if (!currentTrip || selectedDayNumber === null) {
+      return;
+    }
+
+    void deleteDayItem(currentTrip.tripId, selectedDayNumber, itemId);
+  };
+
+  const handleUpdateTravelMethod = (itemId: number, travelMethod: TripTravelMethodCommand) => {
+    if (!currentTrip || selectedDayNumber === null) {
+      return;
+    }
+
+    void updateDayItem(currentTrip.tripId, selectedDayNumber, itemId, { travelMethod });
   };
 
   return (
@@ -102,13 +136,21 @@ export default function ItinerarySection() {
             </button>
           </div>
         </div>
-        <p className="text-sm text-gray-500">View the stops planned for the selected day.</p>
+        <p className="text-sm text-gray-500">
+          View the stops planned for the selected day. Click a travel method to edit it.
+        </p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
           {itineraryStatusMessage}
         </div>
+
+        {itineraryMutationError ? (
+          <div className="border-b border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {itineraryMutationError}
+          </div>
+        ) : null}
 
         {!tripReady || selectedDayNumber === null ? (
           <div className="px-4 py-4 text-sm text-gray-500">
@@ -134,7 +176,15 @@ export default function ItinerarySection() {
         selectedDayNumber !== null &&
         currentDayStatus === 'ready' &&
         currentDayItems.length > 0 ? (
-          <ItineraryList items={currentDayItems} />
+          <ItineraryList
+            deletingTargetItemId={dayItemDeletionTargetId}
+            deletionStatus={dayItemDeletionStatus}
+            items={currentDayItems}
+            onDeleteItem={handleDeleteItem}
+            onUpdateTravelMethod={handleUpdateTravelMethod}
+            updatingTargetItemId={dayItemUpdateTargetId}
+            updateStatus={dayItemUpdateStatus}
+          />
         ) : null}
       </div>
     </section>

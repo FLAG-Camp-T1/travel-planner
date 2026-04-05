@@ -6,6 +6,7 @@ import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
@@ -116,6 +117,41 @@ public class TripController {
             @Parameter(description = "Day number within the trip", example = "1") @PathVariable
                     Integer dayNumber) {
         return ApiResponse.success(tripQueryService.getTripDayItems(tripId, dayNumber));
+    }
+
+    @PatchMapping("/{tripId}/days/{dayNumber}/items/{itemId}")
+    @Operation(
+            summary = "Update a day itinerary item",
+            description = "Updates editable fields for one itinerary item within the selected day.")
+    public ApiResponse<Void> updateTripDayItem(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber,
+            @Parameter(description = "Itinerary item identifier", example = "5001") @PathVariable
+                    Long itemId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "Editable fields for the selected itinerary item",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    UpdateItineraryItemRequestDto request) {
+        tripCommandService.updateTripDayItem(tripId, dayNumber, itemId, request);
+        return ApiResponse.success();
+    }
+
+    @DeleteMapping("/{tripId}/days/{dayNumber}/items/{itemId}")
+    @Operation(
+            summary = "Delete a day itinerary item",
+            description =
+                    "Deletes one itinerary item from the selected trip day and reorders the remaining stops.")
+    public ApiResponse<Void> deleteTripDayItem(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber,
+            @Parameter(description = "Itinerary item identifier", example = "5001") @PathVariable
+                    Long itemId) {
+        tripCommandService.deleteTripDayItem(tripId, dayNumber, itemId);
+        return ApiResponse.success();
     }
 
     @PostMapping("/{tripId}/days/{dayNumber}/route/generate")

@@ -5,9 +5,12 @@ import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
+import com.travelplanner.backend.trip.model.ItineraryEntity;
 import com.travelplanner.backend.trip.model.TripDayEntity;
 import com.travelplanner.backend.trip.model.TripEntity;
+import com.travelplanner.backend.trip.repository.ItineraryRepository;
 import com.travelplanner.backend.trip.repository.TripDayRepository;
 import com.travelplanner.backend.trip.repository.TripRepository;
 import java.util.ArrayList;
@@ -23,6 +26,7 @@ public class TripCommandService {
 
     private final TripRepository tripRepository;
     private final TripDayRepository tripDayRepository;
+    private final ItineraryRepository itineraryRepository;
     private final CurrentUserProvider currentUserProvider;
 
     @Transactional
@@ -62,6 +66,28 @@ public class TripCommandService {
         tripRepository.delete(getOwnedTripEntity(tripId));
     }
 
+    @Transactional
+    public void updateTripDayItem(
+            Long tripId, Integer dayNumber, Long itemId, UpdateItineraryItemRequestDto request) {
+        TripDayEntity tripDayEntity = getOwnedTripDayEntity(tripId, dayNumber);
+        ItineraryEntity itineraryEntity =
+                getOwnedItineraryEntity(tripId, dayNumber, tripDayEntity.getId(), itemId);
+
+        itineraryEntity.setTravelMethod(
+                TripTravelMethodMapper.toStoredValue(request.getTravelMethod()));
+        itineraryRepository.save(itineraryEntity);
+    }
+
+    @Transactional
+    public void deleteTripDayItem(Long tripId, Integer dayNumber, Long itemId) {
+        TripDayEntity tripDayEntity = getOwnedTripDayEntity(tripId, dayNumber);
+        ItineraryEntity itineraryEntity =
+                getOwnedItineraryEntity(tripId, dayNumber, tripDayEntity.getId(), itemId);
+
+        itineraryRepository.delete(itineraryEntity);
+        reorderTripDayItems(tripDayEntity.getId());
+    }
+
     private List<TripDayEntity> createTripDays(Long tripId, Integer durationDays) {
         List<TripDayEntity> tripDays = new ArrayList<>();
         for (int dayNumber = 1; dayNumber <= durationDays; dayNumber += 1) {
@@ -82,5 +108,50 @@ public class TripCommandService {
                                 new BusinessException(
                                         ResultCode.BAD_REQUEST,
                                         "Trip %d not found.".formatted(tripId)));
+    }
+
+    private TripDayEntity getOwnedTripDayEntity(Long tripId, Integer dayNumber) {
+        getOwnedTripEntity(tripId);
+
+        return tripDayRepository
+                .findByTripIdAndDayNumber(tripId, dayNumber)
+                .orElseThrow(
+                        () ->
+                                new BusinessException(
+                                        ResultCode.BAD_REQUEST,
+                                        "Trip day %d not found for trip %d."
+                                                .formatted(dayNumber, tripId)));
+    }
+
+    private ItineraryEntity getOwnedItineraryEntity(
+            Long tripId, Integer dayNumber, Long tripDayId, Long itemId) {
+        ItineraryEntity itineraryEntity =
+                itineraryRepository
+                        .findById(itemId)
+                        .orElseThrow(
+                                () ->
+                                        new BusinessException(
+                                                ResultCode.BAD_REQUEST,
+                                                "Itinerary item %d not found.".formatted(itemId)));
+
+        if (!tripDayId.equals(itineraryEntity.getTripDayId())) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST,
+                    "Itinerary item %d not found for day %d of trip %d."
+                            .formatted(itemId, dayNumber, tripId));
+        }
+
+        return itineraryEntity;
+    }
+
+    private void reorderTripDayItems(Long tripDayId) {
+        List<ItineraryEntity> remainingItems =
+                itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(tripDayId);
+
+        for (int index = 0; index < remainingItems.size(); index += 1) {
+            remainingItems.get(index).setVisitOrder(index + 1);
+        }
+
+        itineraryRepository.saveAll(remainingItems);
     }
 }

@@ -11,11 +11,13 @@ import type {
   TripDayItemsResponse,
   TripDaysResponse,
   TripSummary,
+  UpdateTripDayItemRequest,
   UpdateTripRequest,
 } from '@/api/tripApi';
 import type { MockFailureFlag } from './mockScenario';
 import { MOCK_FLAGS_HEADER } from './mockScenario';
 import { buildMockTripDayRouteResult } from './routeFixtures';
+import { toDisplayedTripTravelMethod } from '@/utils/tripTravelMethod';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -623,6 +625,74 @@ export const handlers = [
 
     return createSuccessResponse(response);
   }),
+
+  http.patch<
+    { tripId: string; dayNumber: string; itemId: string },
+    UpdateTripDayItemRequest,
+    MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const itemId = Number(params.itemId);
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+    if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    if (!items) {
+      return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+    }
+
+    const itemIndex = items.findIndex((item) => item.itemId === itemId);
+    if (itemIndex < 0) {
+      return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as UpdateTripDayItemRequest;
+    const displayTravelMethod = toDisplayedTripTravelMethod(requestBody.travelMethod);
+
+    mockTripItemsByTripId[tripId][dayNumber] = items.map((item) =>
+      item.itemId === itemId ? { ...item, travelMethod: displayTravelMethod } : item,
+    );
+
+    return createSuccessResponse(null);
+  }),
+
+  http.delete<{ tripId: string; dayNumber: string; itemId: string }, never, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId`,
+    async ({ params }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const dayNumber = Number(params.dayNumber);
+      const itemId = Number(params.itemId);
+      const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!items) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      if (!items.some((item) => item.itemId === itemId)) {
+        return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+      }
+
+      mockTripItemsByTripId[tripId][dayNumber] = items
+        .filter((item) => item.itemId !== itemId)
+        .map((item, index) => ({
+          ...item,
+          visitOrder: index + 1,
+        }));
+
+      return createSuccessResponse(null);
+    },
+  ),
 
   http.post<
     { tripId: string; dayNumber: string },

@@ -5,6 +5,7 @@ import type {
   ItineraryItem,
   RouteViewport,
 } from '@/api/tripApi';
+import { DEFAULT_TRIP_TRAVEL_METHOD_LABEL } from '@/utils/tripTravelMethod';
 
 type LatLng = {
   lat: number;
@@ -140,7 +141,7 @@ const buildSegmentForItems = (
 ): DayRouteSegment => ({
   fromItemId: fromItem.itemId,
   toItemId: toItem.itemId,
-  travelMethod: toItem.travelMethod ?? 'Drive',
+  travelMethod: toItem.travelMethod ?? DEFAULT_TRIP_TRAVEL_METHOD_LABEL,
   distanceMeters: legDefinition.distanceMeters,
   durationSeconds: legDefinition.durationSeconds,
   encodedPolyline: encodePolyline(legDefinition.points),
