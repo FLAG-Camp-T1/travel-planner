@@ -1,0 +1,28 @@
+package com.travelplanner.backend.trip.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+
+@Data
+public class ItineraryItemDto {
+
+    @Schema(description = "Itinerary item identifier", example = "5001")
+    private Long itemId;
+
+    @Schema(
+            description = "Google Place ID for this itinerary item",
+            example = "ChIJVTPokywQkFQRmtVEaUZlJRA")
+    private String placeId;
+
+    @Schema(description = "Display name resolved for the place", example = "Pike Place Market")
+    private String name;
+
+    @Schema(description = "Visit order within the selected day", example = "1")
+    private Integer visitOrder;
+
+    @Schema(
+            description = "Display travel method, or null when not specified",
+            example = "Walk",
+            nullable = true)
+    private String travelMethod;
+}

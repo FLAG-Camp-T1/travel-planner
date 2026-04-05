@@ -2,6 +2,7 @@ package com.travelplanner.backend.trip.controller;
 
 import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
+import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
@@ -46,5 +47,12 @@ public class TripController {
     @Operation(summary = "Get ordered trip days")
     public ApiResponse<TripDaysResponseDto> getTripDays(@PathVariable Long tripId) {
         return ApiResponse.success(tripQueryService.getTripDays(tripId));
+    }
+
+    @GetMapping("/{tripId}/days/{dayNumber}/items")
+    @Operation(summary = "Get ordered itinerary items")
+    public ApiResponse<TripDayItemsResponseDto> getTripDayItems(
+            @PathVariable Long tripId, @PathVariable Integer dayNumber) {
+        return ApiResponse.success(tripQueryService.getTripDayItems(tripId, dayNumber));
     }
 }

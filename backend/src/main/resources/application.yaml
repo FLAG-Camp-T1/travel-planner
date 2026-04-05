@@ -23,6 +23,7 @@ google:
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY}
     routes-api-url: https://routes.googleapis.com/directions/v2:computeRoutes
+    places-api-url: https://places.googleapis.com/v1/places
 
 ---
 spring:
