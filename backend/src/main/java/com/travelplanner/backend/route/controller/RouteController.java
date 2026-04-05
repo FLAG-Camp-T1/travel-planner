@@ -3,7 +3,9 @@ package com.travelplanner.backend.route.controller;
 import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.route.dto.RouteRequest;
 import com.travelplanner.backend.route.dto.RouteSummaryDto;
-import com.travelplanner.backend.route.service.GoogleRouteService;
+import com.travelplanner.backend.route.model.ComputedRouteLeg;
+import com.travelplanner.backend.route.service.RouteProvider;
+import com.travelplanner.backend.route.util.RouteSummaryMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Routes", description = "APIs for retrieving map routes")
 public class RouteController {
 
-    private final GoogleRouteService googleRouteService;
+    private final RouteProvider routeProvider;
 
     @PostMapping("/request")
     @Operation(
@@ -29,7 +31,12 @@ public class RouteController {
                     "Request a route between two specified Google Place IDs using Google Routes API")
     public ApiResponse<RouteSummaryDto> requestRoute(@RequestBody RouteRequest request) {
         log.info("Inbound Route Request: {}", request);
-        RouteSummaryDto routeSummaryDto = googleRouteService.computeRoute(request);
+        ComputedRouteLeg computedRouteLeg =
+                routeProvider.computeLeg(
+                        request.getOriginPlaceId(),
+                        request.getDestinationPlaceId(),
+                        request.getTravelMode());
+        RouteSummaryDto routeSummaryDto = RouteSummaryMapper.toRouteSummaryDto(computedRouteLeg);
         return ApiResponse.success(routeSummaryDto);
     }
 }
