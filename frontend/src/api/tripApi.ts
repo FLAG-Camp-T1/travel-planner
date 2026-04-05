@@ -58,7 +58,9 @@ export interface TripDaysResponse {
 export interface ItineraryItem {
   itemId: number;
   placeId: string;
-  name: string;
+  name: string | null;
+  latitude: number | null;
+  longitude: number | null;
   visitOrder: number;
   travelMethod: string | null;
 }

@@ -115,7 +115,7 @@ export default function POIMarkers() {
             }}
           >
             <Pin
-              glyph={`${index + 1}`}
+              glyphText={`${index + 1}`}
               background={isSelected ? '#ef4444' : isHovered ? '#f59e0b' : '#3b82f6'}
               glyphColor="#fff"
               borderColor={isSelected ? '#b91c1c' : isHovered ? '#b45309' : '#1d4ed8'}

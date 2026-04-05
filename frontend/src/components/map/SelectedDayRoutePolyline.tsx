@@ -36,6 +36,18 @@ const cleanupMarkers = (markers: google.maps.marker.AdvancedMarkerElement[]) => 
   markers.length = 0;
 };
 
+const extendBoundsForMarkerPoints = (
+  bounds: google.maps.LatLngBounds,
+  markerPoints: Array<{ position: google.maps.LatLng }>,
+) => {
+  if (markerPoints.length === 0) {
+    return false;
+  }
+
+  markerPoints.forEach((markerPoint) => bounds.extend(markerPoint.position));
+  return true;
+};
+
 const SelectedDayRoutePolyline = () => {
   const map = useMap();
   const geometryLib = useMapsLibrary('geometry');
@@ -61,7 +73,9 @@ const SelectedDayRoutePolyline = () => {
   const polylineRefs = useRef<google.maps.Polyline[]>([]);
   const gapConnectorRefs = useRef<google.maps.Polyline[]>([]);
   const markerRefs = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const markerClickHandlerRefs = useRef<Array<(() => void) | null>>([]);
   const lastFittedSignatureRef = useRef<string | null>(null);
+  const lastMarkerAutoFitDayKeyRef = useRef<string | null>(null);
   const dayCacheKey =
     currentTrip && selectedDayNumber !== null ? `${currentTrip.tripId}:${selectedDayNumber}` : null;
 
@@ -86,13 +100,11 @@ const SelectedDayRoutePolyline = () => {
   useEffect(() => {
     if (!map || !geometryLib || !mapModel.routeSignature) {
       cleanupPolylines(polylineRefs.current);
-      lastFittedSignatureRef.current = null;
       return;
     }
 
     if (mapModel.decodedSegments.length === 0) {
       cleanupPolylines(polylineRefs.current);
-      lastFittedSignatureRef.current = null;
       return;
     }
 
@@ -119,13 +131,13 @@ const SelectedDayRoutePolyline = () => {
       .forEach((polyline) => polyline.setMap(null));
     polylineRefs.current.length = mapModel.decodedSegments.length;
 
-    if (lastFittedSignatureRef.current !== mapModel.routeSignature) {
+    if (lastFittedSignatureRef.current !== `route:${mapModel.routeSignature}`) {
       const bounds = new google.maps.LatLngBounds();
       const hasBounds = extendBoundsForSelectedDayRoute(bounds, mapModel.decodedSegments);
 
       if (hasBounds) {
         map.fitBounds(bounds);
-        lastFittedSignatureRef.current = mapModel.routeSignature;
+        lastFittedSignatureRef.current = `route:${mapModel.routeSignature}`;
       }
     }
   }, [geometryLib, map, mapModel]);
@@ -192,7 +204,7 @@ const SelectedDayRoutePolyline = () => {
         background: MARKER_BACKGROUND,
         borderColor: MARKER_BORDER,
         glyphColor: MARKER_GLYPH_COLOR,
-        glyph: String(markerPoint.visitOrder),
+        glyphText: String(markerPoint.visitOrder),
         scale: 0.9,
       });
 
@@ -200,10 +212,15 @@ const SelectedDayRoutePolyline = () => {
       markerRefs.current[markerIndex].position = markerPoint.position;
       markerRefs.current[markerIndex].title = markerPoint.title;
       markerRefs.current[markerIndex].content = pinElement.element;
-      google.maps.event.clearInstanceListeners(markerRefs.current[markerIndex]);
+
+      const previousClickHandler = markerClickHandlerRefs.current[markerIndex];
+      if (previousClickHandler) {
+        markerRefs.current[markerIndex].removeEventListener('gmp-click', previousClickHandler);
+        markerClickHandlerRefs.current[markerIndex] = null;
+      }
 
       if (markerPoint.placeId) {
-        markerRefs.current[markerIndex].addListener('click', () => {
+        const handleMarkerClick = () => {
           const matchedItem = currentDayItems.find((item) => item.itemId === markerPoint.itemId);
 
           if (!matchedItem) {
@@ -217,25 +234,60 @@ const SelectedDayRoutePolyline = () => {
               longitude: markerPoint.position.lng(),
             }),
           );
-        });
+        };
+
+        markerRefs.current[markerIndex].addEventListener('gmp-click', handleMarkerClick);
+        markerClickHandlerRefs.current[markerIndex] = handleMarkerClick;
       }
     });
 
-    markerRefs.current.slice(mapModel.markerPoints.length).forEach((marker) => {
+    markerRefs.current.slice(mapModel.markerPoints.length).forEach((marker, index) => {
+      const handlerIndex = mapModel.markerPoints.length + index;
+      const clickHandler = markerClickHandlerRefs.current[handlerIndex];
+      if (clickHandler) {
+        marker.removeEventListener('gmp-click', clickHandler);
+      }
       marker.map = null;
     });
     markerRefs.current.length = mapModel.markerPoints.length;
+    markerClickHandlerRefs.current.length = mapModel.markerPoints.length;
   }, [currentDayItems, map, mapModel, markerLib, openPlaceDetail]);
+
+  useEffect(() => {
+    if (!map || !mapModel.markerSignature || mapModel.routeSignature) {
+      return;
+    }
+
+    if (!dayCacheKey || lastMarkerAutoFitDayKeyRef.current === dayCacheKey) {
+      return;
+    }
+
+    const bounds = new google.maps.LatLngBounds();
+    const hasBounds = extendBoundsForMarkerPoints(bounds, mapModel.markerPoints);
+
+    if (hasBounds) {
+      map.fitBounds(bounds);
+      lastFittedSignatureRef.current = `markers:${mapModel.markerSignature}`;
+      lastMarkerAutoFitDayKeyRef.current = dayCacheKey;
+    }
+  }, [dayCacheKey, map, mapModel]);
 
   useEffect(() => {
     const polylines = polylineRefs.current;
     const gapConnectors = gapConnectorRefs.current;
     const markers = markerRefs.current;
+    const markerClickHandlers = markerClickHandlerRefs.current;
 
     return () => {
+      markerClickHandlers.forEach((clickHandler, index) => {
+        if (clickHandler && markers[index]) {
+          markers[index].removeEventListener('gmp-click', clickHandler);
+        }
+      });
       cleanupPolylines(polylines);
       cleanupPolylines(gapConnectors);
       cleanupMarkers(markers);
+      markerClickHandlers.length = 0;
       lastFittedSignatureRef.current = null;
     };
   }, []);

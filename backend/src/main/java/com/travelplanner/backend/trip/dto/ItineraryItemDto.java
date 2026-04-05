@@ -18,6 +18,18 @@ public class ItineraryItemDto {
     @Schema(description = "Display name resolved for the place", example = "Pike Place Market")
     private String name;
 
+    @Schema(
+            description = "Latitude for this itinerary place",
+            example = "47.609722",
+            nullable = true)
+    private Double latitude;
+
+    @Schema(
+            description = "Longitude for this itinerary place",
+            example = "-122.342222",
+            nullable = true)
+    private Double longitude;
+
     @Schema(description = "Visit order within the selected day", example = "1")
     private Integer visitOrder;
 

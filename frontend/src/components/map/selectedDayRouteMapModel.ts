@@ -49,15 +49,45 @@ export const buildSelectedDayRouteMapModel = ({
   selectedDayNumber: number | null;
   colorMode: DayRouteColorMode;
 }): SelectedDayRouteMapModel => {
+  const markerPoints: ItineraryMarkerPoint[] = items
+    .filter((item) => item.latitude != null && item.longitude != null)
+    .map((item) => ({
+      itemId: item.itemId,
+      placeId: item.placeId,
+      name: item.name ?? null,
+      visitOrder: item.visitOrder,
+      title: item.name ?? `Stop ${item.visitOrder}`,
+      position: new google.maps.LatLng(item.latitude as number, item.longitude as number),
+    }));
+
+  const markerSignature =
+    selectedDayNumber === null
+      ? null
+      : `${selectedDayNumber}:${markerPoints
+          .map(
+            (markerPoint) =>
+              `${markerPoint.itemId}:${markerPoint.visitOrder}:${markerPoint.position.lat()}:${markerPoint.position.lng()}`,
+          )
+          .join('|')}`;
   const drawableSegments = segments.filter((segment) => segment.encodedPolyline.trim().length > 0);
 
-  if (!geometryLib || selectedDayNumber === null || drawableSegments.length === 0) {
+  if (selectedDayNumber === null) {
     return {
       routeSignature: null,
       markerSignature: null,
       decodedSegments: [],
       gapConnectors: [],
       markerPoints: [],
+    };
+  }
+
+  if (!geometryLib || drawableSegments.length === 0) {
+    return {
+      routeSignature: null,
+      markerSignature,
+      decodedSegments: [],
+      gapConnectors: [],
+      markerPoints,
     };
   }
 
@@ -85,38 +115,12 @@ export const buildSelectedDayRouteMapModel = ({
   if (decodedSegments.length === 0) {
     return {
       routeSignature: null,
-      markerSignature: null,
+      markerSignature,
       decodedSegments: [],
       gapConnectors: [],
-      markerPoints: [],
+      markerPoints,
     };
   }
-
-  const itemsById = new Map(items.map((item) => [item.itemId, item]));
-  const markerPoints: ItineraryMarkerPoint[] = [];
-  const firstSegment = decodedSegments[0];
-  const firstItem = itemsById.get(firstSegment.fromItemId);
-
-  markerPoints.push({
-    itemId: firstSegment.fromItemId,
-    placeId: firstItem?.placeId ?? '',
-    name: firstItem?.name ?? null,
-    visitOrder: firstItem?.visitOrder ?? 1,
-    title: firstItem?.name ?? `Stop ${firstItem?.visitOrder ?? 1}`,
-    position: firstSegment.path[0],
-  });
-
-  decodedSegments.forEach((segment, segmentIndex) => {
-    const toItem = itemsById.get(segment.toItemId);
-    markerPoints.push({
-      itemId: segment.toItemId,
-      placeId: toItem?.placeId ?? '',
-      name: toItem?.name ?? null,
-      visitOrder: toItem?.visitOrder ?? segmentIndex + 2,
-      title: toItem?.name ?? `Stop ${segmentIndex + 2}`,
-      position: segment.path[segment.path.length - 1],
-    });
-  });
 
   const gapConnectors: GapConnector[] = [];
   for (let segmentIndex = 0; segmentIndex < decodedSegments.length - 1; segmentIndex += 1) {
@@ -135,10 +139,6 @@ export const buildSelectedDayRouteMapModel = ({
       end: nextStart,
     });
   }
-
-  const markerSignature = `${routeSignature}:${markerPoints
-    .map((markerPoint) => `${markerPoint.itemId}:${markerPoint.visitOrder}:${markerPoint.title}`)
-    .join('|')}`;
 
   return {
     routeSignature,

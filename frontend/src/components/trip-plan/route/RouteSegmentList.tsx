@@ -14,7 +14,7 @@ type RouteSegmentListProps = {
 };
 
 const getItemLabel = (itemsById: Record<number, ItineraryItem>, itemId: number) => {
-  return itemsById[itemId]?.name ?? `Item ${itemId}`;
+  return itemsById[itemId]?.name ?? `Stop ${itemsById[itemId]?.visitOrder ?? itemId}`;
 };
 
 export default function RouteSegmentList({

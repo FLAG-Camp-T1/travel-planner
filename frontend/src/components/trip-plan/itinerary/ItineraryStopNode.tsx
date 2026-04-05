@@ -41,6 +41,7 @@ export default function ItineraryStopNode({
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   const hasMoveTargets = moveOptions.length > 0;
+  const itemLabel = item.name ?? `Stop ${item.visitOrder}`;
 
   useEffect(() => {
     if (!actionsMenuOpen) {
@@ -95,7 +96,7 @@ export default function ItineraryStopNode({
         style={{ marginLeft: ITINERARY_CONTENT_START_X }}
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
+          <div className="truncate text-sm font-medium text-gray-900">{itemLabel}</div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
