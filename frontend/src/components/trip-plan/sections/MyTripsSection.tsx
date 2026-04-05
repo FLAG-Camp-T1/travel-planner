@@ -1,5 +1,6 @@
-import { CalendarDays, RefreshCw } from 'lucide-react';
-import { useEffect } from 'react';
+import { CalendarDays, MoreHorizontal, PencilLine, RefreshCw, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import TripEditSection from '@/components/trip-plan/sections/TripEditSection';
 import TripCreationSection from '@/components/trip-plan/sections/TripCreationSection';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
@@ -57,6 +58,35 @@ export default function MyTripsSection() {
       void fetchTrips();
     }
   }, [fetchTrips, tripsStatus]);
+  const [openActionsTripId, setOpenActionsTripId] = useState<number | null>(null);
+  const [editingTrip, setEditingTrip] = useState<(typeof trips)[number] | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (openActionsTripId === null) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!actionsMenuRef.current?.contains(event.target as Node)) {
+        setOpenActionsTripId(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenActionsTripId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [openActionsTripId]);
 
   return (
     <section className="space-y-3">
@@ -83,7 +113,7 @@ export default function MyTripsSection() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         {tripsStatus === 'loading' && trips.length === 0 ? (
           <div className="px-4 py-4 text-sm text-gray-500">Loading your saved trips…</div>
         ) : null}
@@ -117,17 +147,24 @@ export default function MyTripsSection() {
 
         {trips.length > 0 ? (
           <ul className="divide-y divide-gray-100">
-            {trips.map((trip) => {
+            {trips.map((trip, tripIndex) => {
               const isSelected = currentTrip?.tripId === trip.tripId;
               const isLoadingTarget =
                 tripBootstrapStatus === 'loading' && lastBootstrapTripId === trip.tripId;
               const isDeletingTarget =
                 tripDeletionStatus === 'loading' && tripDeletionTargetId === trip.tripId;
+              const isActionsOpen = openActionsTripId === trip.tripId;
+              const rowEdgeRoundingClass =
+                tripIndex === 0
+                  ? 'rounded-t-2xl'
+                  : tripIndex === trips.length - 1
+                    ? 'rounded-b-2xl'
+                    : '';
 
               return (
-                <li key={trip.tripId}>
+                <li key={trip.tripId} className={isActionsOpen ? 'relative z-30' : 'relative'}>
                   <div
-                    className={`flex items-stretch gap-3 px-4 py-4 transition ${
+                    className={`flex items-stretch gap-3 px-4 py-4 transition ${rowEdgeRoundingClass} ${
                       isSelected ? 'bg-blue-50/70' : 'bg-white'
                     }`}
                   >
@@ -170,24 +207,67 @@ export default function MyTripsSection() {
                       </div>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete "${trip.title}"? This will remove its days and itinerary items.`,
-                          )
-                        ) {
-                          void deleteTrip(trip.tripId);
-                        }
-                      }}
-                      disabled={
-                        tripDeletionStatus === 'loading' || tripBootstrapStatus === 'loading'
-                      }
-                      className="shrink-0 self-start rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    <div
+                      className="relative shrink-0 self-start"
+                      ref={openActionsTripId === trip.tripId ? actionsMenuRef : undefined}
                     >
-                      {isDeletingTarget ? 'Removing…' : 'Delete'}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            tripDeletionStatus !== 'loading' &&
+                            tripBootstrapStatus !== 'loading'
+                          ) {
+                            setOpenActionsTripId((currentId) =>
+                              currentId === trip.tripId ? null : trip.tripId,
+                            );
+                          }
+                        }}
+                        disabled={
+                          tripDeletionStatus === 'loading' || tripBootstrapStatus === 'loading'
+                        }
+                        aria-expanded={openActionsTripId === trip.tripId}
+                        aria-haspopup="menu"
+                        aria-label={isDeletingTarget ? 'Removing trip' : 'Trip actions'}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-300"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+
+                      {isActionsOpen ? (
+                        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-40 min-w-44 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsTripId(null);
+                              setEditingTrip(trip);
+                            }}
+                            className="flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
+                          >
+                            <span>Edit Trip</span>
+                            <PencilLine className="h-4 w-4" />
+                          </button>
+                          <div className="my-2 h-px bg-gray-100" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOpenActionsTripId(null);
+                              if (
+                                window.confirm(
+                                  `Delete "${trip.title}"? This will remove its days and itinerary items.`,
+                                )
+                              ) {
+                                void deleteTrip(trip.tripId);
+                              }
+                            }}
+                            className="flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-left text-sm text-rose-600 transition hover:bg-rose-50"
+                          >
+                            <span>{isDeletingTarget ? 'Removing...' : 'Delete Trip'}</span>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </li>
               );
@@ -195,6 +275,16 @@ export default function MyTripsSection() {
           </ul>
         ) : null}
       </div>
+
+      <TripEditSection
+        trip={editingTrip}
+        open={editingTrip !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setEditingTrip(null);
+          }
+        }}
+      />
     </section>
   );
 }

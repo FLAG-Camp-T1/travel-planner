@@ -39,15 +39,21 @@ const SelectedDayRoutePolyline = () => {
   const map = useMap();
   const geometryLib = useMapsLibrary('geometry');
   const markerLib = useMapsLibrary('marker');
-  const { currentTrip, dayItemsByDayNumber, dayRouteSegmentsByDayNumber, selectedDayNumber } =
-    useAppStore(
-      useShallow((state) => ({
-        currentTrip: state.currentTrip,
-        dayItemsByDayNumber: state.dayItemsByDayNumber,
-        dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
-        selectedDayNumber: state.selectedDayNumber,
-      })),
-    );
+  const {
+    currentTrip,
+    dayItemsByDayNumber,
+    dayRouteColorMode,
+    dayRouteSegmentsByDayNumber,
+    selectedDayNumber,
+  } = useAppStore(
+    useShallow((state) => ({
+      currentTrip: state.currentTrip,
+      dayItemsByDayNumber: state.dayItemsByDayNumber,
+      dayRouteColorMode: state.dayRouteColorMode,
+      dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
+      selectedDayNumber: state.selectedDayNumber,
+    })),
+  );
 
   const polylineRefs = useRef<google.maps.Polyline[]>([]);
   const gapConnectorRefs = useRef<google.maps.Polyline[]>([]);
@@ -69,8 +75,9 @@ const SelectedDayRoutePolyline = () => {
         items: currentDayItems,
         segments: currentDaySegments,
         selectedDayNumber,
+        colorMode: dayRouteColorMode,
       }),
-    [currentDayItems, currentDaySegments, geometryLib, selectedDayNumber],
+    [currentDayItems, currentDaySegments, dayRouteColorMode, geometryLib, selectedDayNumber],
   );
 
   useEffect(() => {

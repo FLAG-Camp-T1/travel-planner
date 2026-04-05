@@ -30,6 +30,7 @@ import {
   getTripMutationState,
   pickDayItemMutationState,
 } from './tripPlanningState';
+import type { DayRouteColorMode } from '@/utils/dayRouteColorPresentation';
 import { toDisplayedTripTravelMethod } from '@/utils/tripTravelMethod';
 
 const getErrorMessage = (error: unknown) => {
@@ -282,6 +283,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       set(
         {
           ...getEmptyTripPlanningData(),
+          dayRouteColorMode: get().dayRouteColorMode,
           trips: get().trips,
           tripsStatus: get().tripsStatus,
           tripsError: get().tripsError,
@@ -399,6 +401,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         set(
           {
             ...getEmptyTripPlanningData(),
+            dayRouteColorMode: get().dayRouteColorMode,
             activePlannerPanel: 'trips',
             lastBootstrapTripId: createdTrip.tripId,
             tripCreationStatus: 'ready',
@@ -494,6 +497,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           set(
             {
               ...getEmptyTripPlanningData(),
+              dayRouteColorMode: get().dayRouteColorMode,
               trips: get().trips.filter((trip) => trip.tripId !== tripId),
               tripsStatus: get().tripsStatus,
               tripsError: get().tripsError,
@@ -652,6 +656,20 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         },
         false,
         'trip/day:select',
+      );
+    },
+
+    setDayRouteColorMode: (mode: DayRouteColorMode) => {
+      if (get().dayRouteColorMode === mode) {
+        return;
+      }
+
+      set(
+        {
+          dayRouteColorMode: mode,
+        },
+        false,
+        'trip/day-route-color:set',
       );
     },
 
@@ -936,6 +954,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       set(
         {
           ...getEmptyTripPlanningData(),
+          dayRouteColorMode: get().dayRouteColorMode,
           trips: get().trips,
           tripsStatus: get().tripsStatus,
           tripsError: get().tripsError,

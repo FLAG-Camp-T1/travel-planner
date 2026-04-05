@@ -1,21 +1,33 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
 import { getTravelMethodPalette } from '../travelMethodPresentation';
 import { formatDistance, formatSegmentDuration } from './routePresentation';
+import {
+  getDayRouteSegmentColors,
+  type DayRouteColorMode,
+} from '@/utils/dayRouteColorPresentation';
 
 type RouteSegmentListProps = {
   itemsById: Record<number, ItineraryItem>;
   segments: DayRouteSegment[];
+  colorMode: DayRouteColorMode;
 };
 
 const getItemLabel = (itemsById: Record<number, ItineraryItem>, itemId: number) => {
   return itemsById[itemId]?.name ?? `Item ${itemId}`;
 };
 
-export default function RouteSegmentList({ itemsById, segments }: RouteSegmentListProps) {
+export default function RouteSegmentList({
+  itemsById,
+  segments,
+  colorMode,
+}: RouteSegmentListProps) {
+  const segmentColors = getDayRouteSegmentColors(segments, colorMode);
+
   return (
     <div className="divide-y divide-gray-100">
       {segments.map((segment, index) => {
         const palette = getTravelMethodPalette(segment.travelMethod);
+        const segmentColor = segmentColors[index];
 
         return (
           <div key={`${segment.fromItemId}-${segment.toItemId}-${index}`} className="px-4 py-4">
@@ -28,11 +40,20 @@ export default function RouteSegmentList({ itemsById, segments }: RouteSegmentLi
                   to {getItemLabel(itemsById, segment.toItemId)}
                 </p>
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${palette.capsuleClassName} ${palette.textClassName}`}
-              >
-                {segment.travelMethod}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${palette.capsuleClassName} ${palette.textClassName}`}
+                >
+                  {segment.travelMethod}
+                </span>
+                {colorMode === 'contrast' ? (
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-gray-200"
+                    style={{ backgroundColor: segmentColor }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">

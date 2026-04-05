@@ -1,62 +1,64 @@
-import { type SubmitEvent, useEffect, useState } from 'react';
+import { type ReactNode, type SubmitEvent, useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
+import type { TripSummary } from '@/api/tripApi';
 
-export default function TripEditSection() {
-  const { currentTrip, tripBootstrapStatus, tripUpdateError, tripUpdateStatus, updateTrip } =
-    useAppStore(
-      useShallow((state) => ({
-        currentTrip: state.currentTrip,
-        tripBootstrapStatus: state.tripBootstrapStatus,
-        tripUpdateError: state.tripUpdateError,
-        tripUpdateStatus: state.tripUpdateStatus,
-        updateTrip: state.updateTrip,
-      })),
-    );
-  const [title, setTitle] = useState('');
-  const [durationDays, setDurationDays] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+type TripEditSectionProps = {
+  trip?: TripSummary | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: (options: { open: () => void; disabled: boolean }) => ReactNode;
+};
+
+type TripEditDialogProps = {
+  editableTrip: TripSummary;
+  onClose: () => void;
+  tripUpdateError: string | null;
+  tripUpdateStatus: 'idle' | 'loading' | 'ready' | 'error';
+  updateTrip: (
+    tripId: number,
+    request: {
+      title: string;
+      durationDays: number;
+      startDate?: string | null;
+    },
+  ) => Promise<void>;
+  saveBlocked: boolean;
+};
+
+function TripEditDialog({
+  editableTrip,
+  onClose,
+  tripUpdateError,
+  tripUpdateStatus,
+  updateTrip,
+  saveBlocked,
+}: TripEditDialogProps) {
+  const [title, setTitle] = useState(() => editableTrip.title);
+  const [durationDays, setDurationDays] = useState(() => String(editableTrip.durationDays));
+  const [startDate, setStartDate] = useState(() => editableTrip.startDate ?? '');
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && tripUpdateStatus !== 'loading') {
-        setIsOpen(false);
+        onClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, tripUpdateStatus]);
-
-  if (!currentTrip) {
-    return null;
-  }
+  }, [onClose, tripUpdateStatus]);
 
   const schedulingModeLabel = startDate ? 'Fixed' : 'Flexible';
   const parsedDurationDays = Number(durationDays);
   const durationIsValid =
     Number.isInteger(parsedDurationDays) && parsedDurationDays >= 1 && parsedDurationDays <= 15;
   const canSubmit =
-    title.trim().length > 0 &&
-    durationIsValid &&
-    tripUpdateStatus !== 'loading' &&
-    tripBootstrapStatus !== 'loading';
+    title.trim().length > 0 && durationIsValid && tripUpdateStatus !== 'loading' && !saveBlocked;
   const helperCopy = startDate
     ? 'A fixed start date will shift the trip into Fixed scheduling mode.'
     : 'Leaving start date empty keeps the trip in Flexible scheduling mode.';
-
-  const handleOpen = () => {
-    setTitle(currentTrip.title);
-    setDurationDays(String(currentTrip.durationDays));
-    setStartDate(currentTrip.startDate ?? '');
-    setIsOpen(true);
-  };
 
   const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -66,29 +68,17 @@ export default function TripEditSection() {
     }
 
     void (async () => {
-      await updateTrip(currentTrip.tripId, {
+      await updateTrip(editableTrip.tripId, {
         title: title.trim(),
         durationDays: parsedDurationDays,
         startDate: startDate || null,
       });
 
       if (useAppStore.getState().tripUpdateStatus === 'ready') {
-        setIsOpen(false);
+        onClose();
       }
     })();
   };
-
-  if (!isOpen) {
-    return (
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
-      >
-        Edit
-      </button>
-    );
-  }
 
   const modal = (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
@@ -96,7 +86,7 @@ export default function TripEditSection() {
         className="absolute inset-0"
         onClick={() => {
           if (tripUpdateStatus !== 'loading') {
-            setIsOpen(false);
+            onClose();
           }
         }}
       />
@@ -110,7 +100,7 @@ export default function TripEditSection() {
 
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
             disabled={tripUpdateStatus === 'loading'}
             className="shrink-0 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -202,4 +192,80 @@ export default function TripEditSection() {
   );
 
   return createPortal(modal, document.body);
+}
+
+export default function TripEditSection({
+  trip = null,
+  open,
+  onOpenChange,
+  trigger,
+}: TripEditSectionProps) {
+  const { currentTrip, tripBootstrapStatus, tripUpdateError, tripUpdateStatus, updateTrip } =
+    useAppStore(
+      useShallow((state) => ({
+        currentTrip: state.currentTrip,
+        tripBootstrapStatus: state.tripBootstrapStatus,
+        tripUpdateError: state.tripUpdateError,
+        tripUpdateStatus: state.tripUpdateStatus,
+        updateTrip: state.updateTrip,
+      })),
+    );
+  const editableTrip = trip ?? currentTrip;
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = open ?? internalIsOpen;
+
+  const setOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (!isControlled) {
+        setInternalIsOpen(nextOpen);
+      }
+
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  if (!editableTrip) {
+    return null;
+  }
+
+  const handleOpen = () => {
+    setOpen(true);
+  };
+
+  if (!isOpen) {
+    if (trigger) {
+      return trigger({
+        open: handleOpen,
+        disabled: tripUpdateStatus === 'loading' || (!trip && tripBootstrapStatus === 'loading'),
+      });
+    }
+
+    if (isControlled) {
+      return null;
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={handleOpen}
+        className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+      >
+        Edit
+      </button>
+    );
+  }
+
+  return (
+    <TripEditDialog
+      key={`${editableTrip.tripId}:${editableTrip.title}:${editableTrip.durationDays}:${editableTrip.startDate ?? ''}`}
+      editableTrip={editableTrip}
+      onClose={() => setOpen(false)}
+      tripUpdateError={tripUpdateError}
+      tripUpdateStatus={tripUpdateStatus}
+      updateTrip={updateTrip}
+      saveBlocked={!trip && tripBootstrapStatus === 'loading'}
+    />
+  );
 }

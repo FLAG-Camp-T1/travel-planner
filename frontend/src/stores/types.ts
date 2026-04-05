@@ -15,6 +15,7 @@ import type {
   UpdateTripDayItemRequest,
   UpdateTripRequest,
 } from '@/api/tripApi';
+import type { DayRouteColorMode } from '@/utils/dayRouteColorPresentation';
 import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -69,6 +70,7 @@ export interface TripPlanningSlice {
   dayRouteSegmentsByDayNumber: Record<TripDayCacheKey, DayRouteSegment[]>;
   dayRouteStatusByDayNumber: Record<TripDayCacheKey, LoadStatus>;
   dayRouteErrorByDayNumber: Record<TripDayCacheKey, string | null>;
+  dayRouteColorMode: DayRouteColorMode;
   tripStatus: LoadStatus;
   daysStatus: LoadStatus;
   tripError: string | null;
@@ -106,6 +108,7 @@ export interface TripPlanningSlice {
   fetchTrip: (tripId: number) => Promise<void>;
   fetchTripDays: (tripId: number) => Promise<void>;
   selectDay: (dayNumber: number) => void;
+  setDayRouteColorMode: (mode: DayRouteColorMode) => void;
   fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
   createDayItem: (
     tripId: number,

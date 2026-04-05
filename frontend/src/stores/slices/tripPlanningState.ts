@@ -12,6 +12,7 @@ export const getEmptyTripPlanningData = () => ({
   dayRouteSegmentsByDayNumber: {},
   dayRouteStatusByDayNumber: {},
   dayRouteErrorByDayNumber: {},
+  dayRouteColorMode: 'travelMethod' as const,
   tripStatus: 'idle' as const,
   daysStatus: 'idle' as const,
   tripError: null,

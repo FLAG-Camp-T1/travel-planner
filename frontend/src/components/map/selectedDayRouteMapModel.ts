@@ -1,5 +1,8 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
-import { getTravelMethodStrokeColor } from '../trip-plan/travelMethodPresentation';
+import {
+  getDayRouteSegmentColors,
+  type DayRouteColorMode,
+} from '@/utils/dayRouteColorPresentation';
 
 const GAP_DISTANCE_THRESHOLD_METERS = 20;
 
@@ -36,11 +39,13 @@ export const buildSelectedDayRouteMapModel = ({
   items,
   segments,
   selectedDayNumber,
+  colorMode,
 }: {
   geometryLib: typeof google.maps.geometry | null;
   items: ItineraryItem[];
   segments: DayRouteSegment[];
   selectedDayNumber: number | null;
+  colorMode: DayRouteColorMode;
 }): SelectedDayRouteMapModel => {
   const drawableSegments = segments.filter((segment) => segment.encodedPolyline.trim().length > 0);
 
@@ -57,23 +62,20 @@ export const buildSelectedDayRouteMapModel = ({
   const routeSignature = `${selectedDayNumber}:${drawableSegments
     .map((segment) => segment.encodedPolyline.trim())
     .join('|')}`;
-  let previousTravelMethod: string | null = null;
-  let methodVariantIndex = 0;
-  const decodedSegments = drawableSegments
-    .map((segment) => {
-      if (segment.travelMethod === previousTravelMethod) {
-        methodVariantIndex += 1;
-      } else {
-        previousTravelMethod = segment.travelMethod;
-        methodVariantIndex = 0;
-      }
-
+  const segmentColors = getDayRouteSegmentColors(segments, colorMode);
+  const decodedSegments = segments
+    .map((segment, index) => ({
+      segment,
+      strokeColor: segmentColors[index],
+    }))
+    .filter(({ segment }) => segment.encodedPolyline.trim().length > 0)
+    .map(({ segment, strokeColor }) => {
       return {
         fromItemId: segment.fromItemId,
         toItemId: segment.toItemId,
         path: geometryLib.encoding.decodePath(segment.encodedPolyline.trim()),
         viewport: segment.viewport,
-        strokeColor: getTravelMethodStrokeColor(segment.travelMethod, methodVariantIndex),
+        strokeColor,
       };
     })
     .filter((segment) => segment.path.length > 0);

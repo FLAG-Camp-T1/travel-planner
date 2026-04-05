@@ -19,20 +19,24 @@ export default function DayRouteSection() {
     currentTrip,
     dayItemsByDayNumber,
     dayItemsStatusByDayNumber,
+    dayRouteColorMode,
     dayRouteByDayNumber,
     dayRouteErrorByDayNumber,
     dayRouteSegmentsByDayNumber,
     dayRouteStatusByDayNumber,
+    setDayRouteColorMode,
     selectedDayNumber,
   } = useAppStore(
     useShallow((state) => ({
       currentTrip: state.currentTrip,
       dayItemsByDayNumber: state.dayItemsByDayNumber,
       dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
+      dayRouteColorMode: state.dayRouteColorMode,
       dayRouteByDayNumber: state.dayRouteByDayNumber,
       dayRouteErrorByDayNumber: state.dayRouteErrorByDayNumber,
       dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
       dayRouteStatusByDayNumber: state.dayRouteStatusByDayNumber,
+      setDayRouteColorMode: state.setDayRouteColorMode,
       selectedDayNumber: state.selectedDayNumber,
     })),
   );
@@ -73,11 +77,26 @@ export default function DayRouteSection() {
     return Object.fromEntries(currentDayItems.map((item) => [item.itemId, item]));
   }, [currentDayItems]);
   const showLongRouteWarning = shouldShowLongRouteWarning(currentDayRouteSummary);
+  const isContrastMode = dayRouteColorMode === 'contrast';
 
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
+          <button
+            type="button"
+            onClick={() => setDayRouteColorMode(isContrastMode ? 'travelMethod' : 'contrast')}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+              isContrastMode
+                ? 'border-gray-900 bg-gray-900 text-white'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
+            }`}
+            aria-pressed={isContrastMode}
+          >
+            {isContrastMode ? 'High Contrast On' : 'High Contrast Off'}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-gray-500">
           Travel time and route details for the selected day.
         </p>
@@ -113,7 +132,11 @@ export default function DayRouteSection() {
                 {`Route summary is ready, but no segment rows were returned for Day ${selectedDayNumber}.`}
               </div>
             ) : (
-              <RouteSegmentList itemsById={itemsById} segments={currentDaySegments} />
+              <RouteSegmentList
+                itemsById={itemsById}
+                segments={currentDaySegments}
+                colorMode={dayRouteColorMode}
+              />
             )}
           </>
         ) : null}
