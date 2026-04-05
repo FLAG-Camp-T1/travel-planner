@@ -3,12 +3,9 @@ package com.travelplanner.backend.route.service;
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.config.GoogleMapsProperties;
 import com.travelplanner.backend.common.exception.BusinessException;
-import com.travelplanner.backend.route.dto.RouteRequest;
-import com.travelplanner.backend.route.dto.RouteSummaryDto;
 import com.travelplanner.backend.route.enums.TravelMode;
 import com.travelplanner.backend.route.model.ComputedRouteLeg;
 import com.travelplanner.backend.route.util.RouteDurationParser;
-import com.travelplanner.backend.route.util.RouteSummaryMapper;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -36,14 +33,6 @@ public class GoogleRouteService implements RouteProvider {
 
     private static final String FIELD_MASK =
             "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.viewport";
-
-    public RouteSummaryDto computeRoute(@NonNull RouteRequest request) {
-        return RouteSummaryMapper.toRouteSummaryDto(
-                computeLeg(
-                        request.getOriginPlaceId(),
-                        request.getDestinationPlaceId(),
-                        request.getTravelMode()));
-    }
 
     @Override
     public ComputedRouteLeg computeLeg(

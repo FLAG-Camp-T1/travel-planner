@@ -7,7 +7,6 @@ const ALLOWED_FLAGS = [
   'trip-bootstrap-trip-error',
   'trip-bootstrap-days-error',
   'trip-day-route-error',
-  'legacy-route-error',
 ] as const;
 
 export type MockFailureFlag = (typeof ALLOWED_FLAGS)[number];

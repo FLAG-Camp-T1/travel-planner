@@ -2,7 +2,6 @@ import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
-import type { RouteSummary } from '@/api/routeApi';
 import type {
   CreateTripRequest,
   DayRouteSegment,
@@ -17,16 +16,6 @@ export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type AuthStatus = 'hydrating' | 'authenticated' | 'unauthenticated';
 export type PlannerPanel = 'trips' | 'explore' | 'bookmarks';
 export type TripDayCacheKey = string;
-
-export interface RouteSlice {
-  originId: string | null;
-  destinationId: string | null;
-  routeSummary: RouteSummary | null;
-  routeStatus: LoadStatus;
-  routeError: string | null;
-  requestRoute: (originId: string, destinationId: string) => Promise<void>;
-  clearRoute: () => void;
-}
 
 export interface BookmarkSlice {
   bookmarks: Bookmark[];
@@ -140,8 +129,7 @@ export interface PlaceDetailSlice {
   closePlaceDetail: () => void;
 }
 
-export type AppStore = RouteSlice &
-  BookmarkSlice &
+export type AppStore = BookmarkSlice &
   AuthSlice &
   TripPlanningSlice &
   MapViewSlice &

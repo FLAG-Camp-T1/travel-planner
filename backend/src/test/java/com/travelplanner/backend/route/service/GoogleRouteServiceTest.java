@@ -8,10 +8,8 @@ import static org.mockito.Mockito.eq;
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.config.GoogleMapsProperties;
 import com.travelplanner.backend.common.exception.BusinessException;
-import com.travelplanner.backend.route.dto.RouteRequest;
-import com.travelplanner.backend.route.dto.RouteSummaryDto;
 import com.travelplanner.backend.route.enums.TravelMode;
-import org.jspecify.annotations.NonNull;
+import com.travelplanner.backend.route.model.ComputedRouteLeg;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,18 +43,8 @@ public class GoogleRouteServiceTest {
                 .thenReturn("https://fake.google.com/duckstop");
     }
 
-    private @NonNull RouteRequest createValidRequest() {
-        RouteRequest request = new RouteRequest();
-        request.setOriginPlaceId("fake-origin");
-        request.setDestinationPlaceId("fake-dest");
-        request.setTravelMode(TravelMode.DRIVE);
-        return request;
-    }
-
     @Test
-    void requestRoute_Success_ShouldParseCorrectly() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_Success_ShouldParseCorrectly() {
         String fakeGoogleJson =
                 "{\n"
                         + "  \"routes\": [\n"
@@ -82,7 +70,8 @@ public class GoogleRouteServiceTest {
                                 Mockito.eq(String.class)))
                 .thenReturn(fakeResponse);
 
-        RouteSummaryDto result = googleRouteService.computeRoute(request);
+        ComputedRouteLeg result =
+                googleRouteService.computeLeg("fake-origin", "fake-dest", TravelMode.DRIVE);
 
         assertNotNull(result);
         assertEquals(6504, result.getDistanceMeters());
@@ -97,17 +86,16 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenGoogleApiFails_ShouldThrowBusinessException() {
-        RouteRequest request = createValidRequest();
+    void computeLeg_WhenGoogleApiFails_ShouldThrowBusinessException() {
         Mockito.when(restTemplate.postForEntity(any(String.class), any(), eq(String.class)))
                 .thenThrow(new RestClientException("Connection Timeout"));
 
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            googleRouteService.computeRoute(request);
-                        });
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
 
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_REQUEST_ERROR.getCode(),
@@ -115,9 +103,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenGoogleReturns4xxError_ShouldCatchHttpStatusCodeException() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenGoogleReturns4xxError_ShouldCatchHttpStatusCodeException() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(
                         new org.springframework.web.client.HttpClientErrorException(
@@ -138,9 +124,9 @@ public class GoogleRouteServiceTest {
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            googleRouteService.computeRoute(request);
-                        });
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
         assertNotNull(exception);
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_REQUEST_ERROR.getCode(),
@@ -151,9 +137,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenTravelModeIsUnsupported_ShouldExposeSpecificBusinessError() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenTravelModeIsUnsupported_ShouldExposeSpecificBusinessError() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(
                         new org.springframework.web.client.HttpClientErrorException(
@@ -173,7 +157,10 @@ public class GoogleRouteServiceTest {
 
         BusinessException exception =
                 assertThrows(
-                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+                        BusinessException.class,
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
 
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_UNSUPPORTED_TRAVEL_MODE_ERROR.getCode(),
@@ -184,9 +171,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenServiceCoverageIsUnsupported_ShouldExposeSpecificBusinessError() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenServiceCoverageIsUnsupported_ShouldExposeSpecificBusinessError() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(
                         new org.springframework.web.client.HttpClientErrorException(
@@ -206,7 +191,10 @@ public class GoogleRouteServiceTest {
 
         BusinessException exception =
                 assertThrows(
-                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+                        BusinessException.class,
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
 
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_UNSUPPORTED_REGION_ERROR.getCode(),
@@ -215,9 +203,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenPlaceReferenceIsInvalid_ShouldExposeSpecificBusinessError() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenPlaceReferenceIsInvalid_ShouldExposeSpecificBusinessError() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(
                         new org.springframework.web.client.HttpClientErrorException(
@@ -237,7 +223,10 @@ public class GoogleRouteServiceTest {
 
         BusinessException exception =
                 assertThrows(
-                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+                        BusinessException.class,
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
 
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_INVALID_PLACE_REFERENCE_ERROR.getCode(),
@@ -246,18 +235,16 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenNetworkCompletelyFails_ShouldCatchGeneralException() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenNetworkCompletelyFails_ShouldCatchGeneralException() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(new RuntimeException("DNS Resolution Failed"));
 
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            googleRouteService.computeRoute(request);
-                        });
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_REQUEST_ERROR.getCode(),
                 exception.getResultCode().getCode());
@@ -266,9 +253,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenProviderReturnsPlainTextErrorBody_ShouldStillExposeProviderMessage() {
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenProviderReturnsPlainTextErrorBody_ShouldStillExposeProviderMessage() {
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
                 .thenThrow(
                         new org.springframework.web.client.HttpClientErrorException(
@@ -280,7 +265,10 @@ public class GoogleRouteServiceTest {
 
         BusinessException exception =
                 assertThrows(
-                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+                        BusinessException.class,
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
 
         assertEquals(
                 ResultCode.GOOGLE_ROUTES_UNSUPPORTED_TRAVEL_MODE_ERROR.getCode(),
@@ -291,10 +279,7 @@ public class GoogleRouteServiceTest {
     }
 
     @Test
-    void computeRoute_WhenNoRoutesFound_ShouldThrowRouteNotFoundException() {
-        // Cover routesNode.isMissingNode() || routesNode.isEmpty() cases
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenNoRoutesFound_ShouldThrowRouteNotFoundException() {
         String emptyRoutesJson = "{ \"routes\": [] }";
         ResponseEntity<String> fakeResponse = new ResponseEntity<>(emptyRoutesJson, HttpStatus.OK);
 
@@ -304,17 +289,14 @@ public class GoogleRouteServiceTest {
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            googleRouteService.computeRoute(request);
-                        });
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
         assertNotNull(exception);
     }
 
     @Test
-    void computeRoute_WhenGoogleReturnsInvalidJson_ShouldCatchParseException() {
-        // Cover json decode error case
-        RouteRequest request = createValidRequest();
-
+    void computeLeg_WhenGoogleReturnsInvalidJson_ShouldCatchParseException() {
         String invalidJson = "<html>502 Bad Gateway</html>";
         ResponseEntity<String> fakeResponse = new ResponseEntity<>(invalidJson, HttpStatus.OK);
 
@@ -324,9 +306,9 @@ public class GoogleRouteServiceTest {
         BusinessException exception =
                 assertThrows(
                         BusinessException.class,
-                        () -> {
-                            googleRouteService.computeRoute(request);
-                        });
+                        () ->
+                                googleRouteService.computeLeg(
+                                        "fake-origin", "fake-dest", TravelMode.DRIVE));
         assertNotNull(exception);
     }
 }

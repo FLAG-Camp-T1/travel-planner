@@ -3,7 +3,6 @@ import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
-import type { RouteRequest, RouteSummary } from '@/api/routeApi';
 import type {
   CreateTripRequest,
   GenerateDayRouteResponse,
@@ -15,7 +14,7 @@ import type {
 } from '@/api/tripApi';
 import type { MockFailureFlag } from './mockScenario';
 import { MOCK_FLAGS_HEADER } from './mockScenario';
-import { buildLegacyRouteSummary, buildMockTripDayRouteResult } from './routeFixtures';
+import { buildMockTripDayRouteResult } from './routeFixtures';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -65,8 +64,7 @@ const getMockFlagsFromRequest = (request: Request) => {
         flag === 'trip-create-error' ||
         flag === 'trip-bootstrap-trip-error' ||
         flag === 'trip-bootstrap-days-error' ||
-        flag === 'trip-day-route-error' ||
-        flag === 'legacy-route-error',
+        flag === 'trip-day-route-error',
     );
 
   return new Set<MockFailureFlag>(flags);
@@ -377,27 +375,6 @@ export const handlers = [
   http.post(`${API_BASE_URL}/logout`, () => {
     return createSuccessResponse(null);
   }),
-
-  http.post<never, RouteRequest, MockApiResponse<RouteSummary> | MockApiResponse<null>>(
-    `${API_BASE_URL}/routes/request`,
-    async ({ request }) => {
-      await waitForMockDelay();
-
-      if (getMockFlagsFromRequest(request).has('legacy-route-error')) {
-        return createErrorResponse('Legacy debug route request failed in mock mode.', 50010);
-      }
-
-      const requestBody = (await request.json()) as RouteRequest;
-      const originPlaceId = requestBody.originPlaceId?.trim();
-      const destinationPlaceId = requestBody.destinationPlaceId?.trim();
-
-      if (!originPlaceId || !destinationPlaceId) {
-        return createErrorResponse('Origin and destination place IDs are required.', 40002);
-      }
-
-      return createSuccessResponse(buildLegacyRouteSummary(originPlaceId, destinationPlaceId));
-    },
-  ),
 
   http.post<never, POISearchRequest, MockApiResponse<POIDto[]> | MockApiResponse<null>>(
     `${API_BASE_URL}/poi/search`,

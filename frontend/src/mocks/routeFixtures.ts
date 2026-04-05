@@ -1,4 +1,3 @@
-import type { RouteSummary } from '@/api/routeApi';
 import type {
   DayRouteSegment,
   DayRouteSummary,
@@ -175,19 +174,5 @@ export const buildMockTripDayRouteResult = (
     dayNumber,
     routeSummary: buildSummary(totalDistanceMeters, totalDurationSeconds),
     segments,
-  };
-};
-
-export const buildLegacyRouteSummary = (
-  originPlaceId: string,
-  destinationPlaceId: string,
-): RouteSummary => {
-  const leg = getLegDefinition(originPlaceId, destinationPlaceId);
-
-  return {
-    distanceMeters: leg.distanceMeters,
-    duration: `${leg.durationSeconds}s`,
-    encodedPolyline: encodePolyline(leg.points),
-    viewport: getViewportFromPoints(leg.points),
   };
 };
