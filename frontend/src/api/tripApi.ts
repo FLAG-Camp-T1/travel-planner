@@ -53,8 +53,6 @@ export interface RouteViewport {
 export interface DayRouteSummary {
   totalDistanceMeters: number;
   totalDurationSeconds: number;
-  encodedPolyline: string;
-  viewport?: RouteViewport;
 }
 
 export interface DayRouteSegment {

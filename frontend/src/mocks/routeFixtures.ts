@@ -126,15 +126,12 @@ const getLegDefinition = (fromPlaceId: string, toPlaceId: string): LegDefinition
   return LEG_ROUTE_DEFINITIONS[DEFAULT_LEG_KEY];
 };
 
-const buildSummaryFromPoints = (
-  points: LatLng[],
+const buildSummary = (
   totalDistanceMeters: number,
   totalDurationSeconds: number,
 ): DayRouteSummary => ({
   totalDistanceMeters,
   totalDurationSeconds,
-  encodedPolyline: points.length > 0 ? encodePolyline(points) : '',
-  viewport: getViewportFromPoints(points),
 });
 
 const buildSegmentForItems = (
@@ -150,22 +147,6 @@ const buildSegmentForItems = (
   encodedPolyline: encodePolyline(legDefinition.points),
   viewport: getViewportFromPoints(legDefinition.points),
 });
-
-const buildSummaryPathFromItems = (items: ItineraryItem[]) => {
-  if (items.length === 0) {
-    return [];
-  }
-
-  return items.slice(0, -1).reduce<LatLng[]>((summaryPoints, item, segmentIndex) => {
-    const definition = getLegDefinition(item.placeId, items[segmentIndex + 1].placeId);
-
-    if (summaryPoints.length === 0) {
-      return [...definition.points];
-    }
-
-    return [...summaryPoints, ...definition.points.slice(1)];
-  }, []);
-};
 
 export const buildMockTripDayRouteResult = (
   tripId: number,
@@ -188,12 +169,11 @@ export const buildMockTripDayRouteResult = (
 
   const totalDistanceMeters = segments.reduce((sum, segment) => sum + segment.distanceMeters, 0);
   const totalDurationSeconds = segments.reduce((sum, segment) => sum + segment.durationSeconds, 0);
-  const summaryPath = buildSummaryPathFromItems(items);
 
   return {
     tripId,
     dayNumber,
-    routeSummary: buildSummaryFromPoints(summaryPath, totalDistanceMeters, totalDurationSeconds),
+    routeSummary: buildSummary(totalDistanceMeters, totalDurationSeconds),
     segments,
   };
 };
