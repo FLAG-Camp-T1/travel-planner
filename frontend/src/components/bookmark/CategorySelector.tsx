@@ -86,32 +86,36 @@ export default function CategorySelector({
       )}
 
       {showCreateCategory && (
-        <div className="mt-2 flex gap-2">
-          <input
-            type="text"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            placeholder="Enter category name..."
-            className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
-          />
-          <button
-            type="button"
-            onClick={handleCreateCategory}
-            disabled={creating || !newCategoryName.trim()}
-            className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {creating ? '...' : 'Create'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowCreateCategory(false);
-              setNewCategoryName('');
-            }}
-            className="text-sm px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Cancel
-          </button>
+        <div className="mt-2 flex flex-col gap-1">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              maxLength={20}
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="Enter category name..."
+              className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+            />
+            <button
+              type="button"
+              onClick={handleCreateCategory}
+              disabled={creating || !newCategoryName.trim()}
+              className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              {creating ? '...' : 'Create'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateCategory(false);
+                setNewCategoryName('');
+              }}
+              className="text-sm px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+          <span className="text-xs text-gray-400">{newCategoryName.length}/20</span>
         </div>
       )}
     </div>
