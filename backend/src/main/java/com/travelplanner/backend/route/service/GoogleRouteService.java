@@ -5,6 +5,10 @@ import com.travelplanner.backend.common.config.GoogleMapsProperties;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.route.dto.RouteRequest;
 import com.travelplanner.backend.route.dto.RouteSummaryDto;
+import com.travelplanner.backend.route.enums.TravelMode;
+import com.travelplanner.backend.route.model.ComputedRouteLeg;
+import com.travelplanner.backend.route.util.RouteDurationParser;
+import com.travelplanner.backend.route.util.RouteSummaryMapper;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GoogleRouteService {
+public class GoogleRouteService implements RouteProvider {
 
     private final RestTemplate restTemplate;
     private final GoogleMapsProperties googleMapsProperties;
@@ -33,15 +37,27 @@ public class GoogleRouteService {
             "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.viewport";
 
     public RouteSummaryDto computeRoute(@NonNull RouteRequest request) {
+        return RouteSummaryMapper.toRouteSummaryDto(
+                computeLeg(
+                        request.getOriginPlaceId(),
+                        request.getDestinationPlaceId(),
+                        request.getTravelMode()));
+    }
+
+    @Override
+    public ComputedRouteLeg computeLeg(
+            @NonNull String originPlaceId,
+            @NonNull String destinationPlaceId,
+            @NonNull TravelMode travelMode) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Goog-Api-Key", googleMapsProperties.getApiKey());
         headers.set("X-Goog-FieldMask", FIELD_MASK);
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("origin", Map.of("placeId", request.getOriginPlaceId()));
-        requestBody.put("destination", Map.of("placeId", request.getDestinationPlaceId()));
-        requestBody.put("travelMode", request.getTravelMode());
+        requestBody.put("origin", Map.of("placeId", originPlaceId));
+        requestBody.put("destination", Map.of("placeId", destinationPlaceId));
+        requestBody.put("travelMode", travelMode);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
@@ -62,48 +78,51 @@ public class GoogleRouteService {
         }
     }
 
-    private @NonNull RouteSummaryDto parseGoogleResponse(String jsonBody) {
+    private @NonNull ComputedRouteLeg parseGoogleResponse(String jsonBody) {
         log.info("Google Map Routes API Response: {}", jsonBody);
         try {
             JsonNode jsonNode = objectMapper.readTree(jsonBody);
             JsonNode routesNode = jsonNode.path("routes");
 
             if (routesNode.isMissingNode() || !routesNode.isArray() || routesNode.isEmpty()) {
-                throw new BusinessException(ResultCode.GOOGLE_ROUTES_REQUEST_ERROR);
+                throw new BusinessException(ResultCode.GOOGLE_ROUTES_NOT_FOUND_ERROR);
             }
 
             JsonNode route = routesNode.path(0);
 
-            RouteSummaryDto dto = new RouteSummaryDto();
-            dto.setDistanceMeters(route.path("distanceMeters").asInt());
-            dto.setDuration(route.path("duration").asString());
+            ComputedRouteLeg computedRouteLeg = new ComputedRouteLeg();
+            computedRouteLeg.setDistanceMeters(route.path("distanceMeters").asInt());
+            computedRouteLeg.setDuration(route.path("duration").asString());
+            computedRouteLeg.setDurationSeconds(
+                    RouteDurationParser.parseDurationSeconds(route.path("duration").asString()));
 
-            dto.setEncodedPolyline(route.path("polyline").path("encodedPolyline").asString());
+            computedRouteLeg.setEncodedPolyline(
+                    route.path("polyline").path("encodedPolyline").asString());
 
             JsonNode viewportNode = route.path("viewport");
             if (!viewportNode.isMissingNode()) {
-                RouteSummaryDto.Viewport viewport = new RouteSummaryDto.Viewport();
-                RouteSummaryDto.LatLng ne = new RouteSummaryDto.LatLng();
+                ComputedRouteLeg.Viewport viewport = new ComputedRouteLeg.Viewport();
+                ComputedRouteLeg.LatLng ne = new ComputedRouteLeg.LatLng();
                 ne.setLat(viewportNode.path("high").path("latitude").asDouble());
                 ne.setLng(viewportNode.path("high").path("longitude").asDouble());
                 viewport.setNortheast(ne);
 
-                RouteSummaryDto.LatLng sw = new RouteSummaryDto.LatLng();
+                ComputedRouteLeg.LatLng sw = new ComputedRouteLeg.LatLng();
                 sw.setLat(viewportNode.path("low").path("latitude").asDouble());
                 sw.setLng(viewportNode.path("low").path("longitude").asDouble());
                 viewport.setSouthwest(sw);
 
-                dto.setViewport(viewport);
+                computedRouteLeg.setViewport(viewport);
             }
 
-            return dto;
+            return computedRouteLeg;
 
         } catch (Exception e) {
             if (e instanceof BusinessException) {
                 throw (BusinessException) e;
             }
             log.error("Google Maps Routes API Response decoding error: ", e);
-            throw new BusinessException(ResultCode.GOOGLE_ROUTES_REQUEST_ERROR);
+            throw new BusinessException(ResultCode.GOOGLE_ROUTES_RESPONSE_DECODE_ERROR);
         }
     }
 }

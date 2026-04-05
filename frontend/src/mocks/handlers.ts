@@ -1,6 +1,19 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { RouteRequest, RouteSummary } from '@/api/routeApi';
+import type {
+  CreateTripRequest,
+  GenerateDayRouteResponse,
+  ItineraryItem,
+  TripDay,
+  TripDayItemsResponse,
+  TripDaysResponse,
+  TripSummary,
+} from '@/api/tripApi';
+import type { MockFailureFlag } from './mockScenario';
+import { MOCK_FLAGS_HEADER } from './mockScenario';
+import { buildLegacyRouteSummary, buildMockTripDayRouteResult } from './routeFixtures';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -29,7 +42,80 @@ const createErrorResponse = (message: string, code = 40000) => {
   });
 };
 
+const MOCK_DELAY_MS = 250;
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const waitForMockDelay = async () => {
+  await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS));
+};
+
+const getMockFlagsFromRequest = (request: Request) => {
+  const rawHeaderValue = request.headers.get(MOCK_FLAGS_HEADER);
+  if (!rawHeaderValue) {
+    return new Set<MockFailureFlag>();
+  }
+
+  const flags = rawHeaderValue
+    .split(',')
+    .map((flag) => flag.trim())
+    .filter(
+      (flag): flag is MockFailureFlag =>
+        flag === 'trip-create-error' ||
+        flag === 'trip-bootstrap-trip-error' ||
+        flag === 'trip-bootstrap-days-error' ||
+        flag === 'trip-day-route-error' ||
+        flag === 'legacy-route-error',
+    );
+
+  return new Set<MockFailureFlag>(flags);
+};
+
+const parseUtcDateString = (rawValue: string) => {
+  const match = ISO_DATE_PATTERN.exec(rawValue);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() !== month - 1 ||
+    utcDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return utcDate;
+};
+
+const formatUtcDateString = (date: Date) => {
+  return date.toISOString().slice(0, 10);
+};
+
+const buildMockTripDays = (durationDays: number, startDate?: string | null): TripDay[] => {
+  const parsedStartDate =
+    typeof startDate === 'string' && startDate.trim().length > 0
+      ? parseUtcDateString(startDate)
+      : null;
+
+  return Array.from({ length: durationDays }, (_, index) => {
+    const currentDate = parsedStartDate
+      ? new Date(parsedStartDate.getTime() + index * 24 * 60 * 60 * 1000)
+      : null;
+
+    return {
+      dayNumber: index + 1,
+      date: currentDate ? formatUtcDateString(currentDate) : null,
+    };
+  });
+};
+
 let nextBookmarkSequence = 3;
+let nextTripSequence = 1002;
 
 let mockUsers: Array<{ username: string; password: string }> = [
   {
@@ -62,6 +148,54 @@ let mockBookmarks: Bookmark[] = [
     category: 'landmark',
   },
 ];
+
+let mockTrips: TripSummary[] = [
+  {
+    tripId: 1001,
+    title: 'Spring DC Trip',
+    durationDays: 3,
+    startDate: null,
+  },
+];
+
+const mockTripDaysByTripId: Record<number, TripDay[]> = {
+  1001: [
+    { dayNumber: 1, date: null },
+    { dayNumber: 2, date: null },
+    { dayNumber: 3, date: null },
+  ],
+};
+
+const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
+  1001: {
+    1: [
+      {
+        itemId: 101,
+        placeId: 'place-georgetown-waterfront',
+        name: 'Georgetown Waterfront',
+        visitOrder: 1,
+        travelMethod: 'Walk',
+      },
+      {
+        itemId: 102,
+        placeId: 'place-lincoln-memorial',
+        name: 'Lincoln Memorial',
+        visitOrder: 2,
+        travelMethod: 'Drive',
+      },
+    ],
+    2: [
+      {
+        itemId: 201,
+        placeId: 'place-smithsonian-castle',
+        name: 'Smithsonian Castle',
+        visitOrder: 1,
+        travelMethod: null,
+      },
+    ],
+    3: [],
+  },
+};
 
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
@@ -118,6 +252,27 @@ export const handlers = [
     return createSuccessResponse(null);
   }),
 
+  http.post<never, RouteRequest, MockApiResponse<RouteSummary> | MockApiResponse<null>>(
+    `${API_BASE_URL}/routes/request`,
+    async ({ request }) => {
+      await waitForMockDelay();
+
+      if (getMockFlagsFromRequest(request).has('legacy-route-error')) {
+        return createErrorResponse('Legacy debug route request failed in mock mode.', 50010);
+      }
+
+      const requestBody = (await request.json()) as RouteRequest;
+      const originPlaceId = requestBody.originPlaceId?.trim();
+      const destinationPlaceId = requestBody.destinationPlaceId?.trim();
+
+      if (!originPlaceId || !destinationPlaceId) {
+        return createErrorResponse('Origin and destination place IDs are required.', 40002);
+      }
+
+      return createSuccessResponse(buildLegacyRouteSummary(originPlaceId, destinationPlaceId));
+    },
+  ),
+
   http.get(`${API_BASE_URL}/bookmarks`, () => {
     return createSuccessResponse(mockBookmarks);
   }),
@@ -158,5 +313,140 @@ export const handlers = [
     mockBookmarks = mockBookmarks.filter((bookmark) => bookmark.bookmarkId !== bookmarkId);
 
     return createSuccessResponse(null);
+  }),
+
+  http.post<never, CreateTripRequest, MockApiResponse<TripSummary> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/create`,
+    async ({ request }) => {
+      await waitForMockDelay();
+
+      if (getMockFlagsFromRequest(request).has('trip-create-error')) {
+        return createErrorResponse('Trip creation failed in mock mode.', 50011);
+      }
+
+      const requestBody = (await request.json()) as CreateTripRequest;
+      const title = requestBody.title?.trim();
+      const durationDays = requestBody.durationDays;
+
+      if (!title || !durationDays || durationDays < 1) {
+        return createErrorResponse('Trip title and durationDays are required.', 40002);
+      }
+
+      const newTrip: TripSummary = {
+        tripId: nextTripSequence,
+        title,
+        durationDays,
+        startDate: requestBody.startDate ?? null,
+      };
+
+      mockTrips = [...mockTrips, newTrip];
+      mockTripDaysByTripId[newTrip.tripId] = buildMockTripDays(
+        durationDays,
+        requestBody.startDate ?? null,
+      );
+      mockTripItemsByTripId[newTrip.tripId] = Object.fromEntries(
+        Array.from({ length: durationDays }, (_, index) => [index + 1, []]),
+      );
+
+      nextTripSequence += 1;
+
+      return createSuccessResponse(newTrip);
+    },
+  ),
+
+  http.get<{ tripId: string }, never, MockApiResponse<TripSummary> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      if (getMockFlagsFromRequest(request).has('trip-bootstrap-trip-error')) {
+        return createErrorResponse('Trip bootstrap failed during trip fetch in mock mode.', 50012);
+      }
+
+      const tripId = Number(params.tripId);
+      const trip = mockTrips.find((item) => item.tripId === tripId);
+
+      if (!trip) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      return createSuccessResponse(trip);
+    },
+  ),
+
+  http.get<{ tripId: string }, never, MockApiResponse<TripDaysResponse> | MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      if (getMockFlagsFromRequest(request).has('trip-bootstrap-days-error')) {
+        return createErrorResponse('Trip bootstrap failed during day fetch in mock mode.', 50013);
+      }
+
+      const tripId = Number(params.tripId);
+      const trip = mockTrips.find((item) => item.tripId === tripId);
+
+      if (!trip) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      const response: TripDaysResponse = {
+        tripId,
+        days: mockTripDaysByTripId[tripId] ?? [],
+      };
+
+      return createSuccessResponse(response);
+    },
+  ),
+
+  http.get<
+    { tripId: string; dayNumber: string },
+    never,
+    MockApiResponse<TripDayItemsResponse> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items`, ({ params }) => {
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const trip = mockTrips.find((item) => item.tripId === tripId);
+
+    if (!trip) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const response: TripDayItemsResponse = {
+      tripId,
+      dayNumber,
+      items: mockTripItemsByTripId[tripId]?.[dayNumber] ?? [],
+    };
+
+    return createSuccessResponse(response);
+  }),
+
+  http.post<
+    { tripId: string; dayNumber: string },
+    never,
+    MockApiResponse<GenerateDayRouteResponse> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/route/generate`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    if (getMockFlagsFromRequest(request).has('trip-day-route-error')) {
+      return createErrorResponse('Selected-day route generation failed in mock mode.', 50014);
+    }
+
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const trip = mockTrips.find((item) => item.tripId === tripId);
+
+    if (!trip) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber] ?? [];
+    const response: GenerateDayRouteResponse = buildMockTripDayRouteResult(
+      tripId,
+      dayNumber,
+      items,
+    );
+
+    return createSuccessResponse(response);
   }),
 ];

@@ -1,6 +1,14 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { RouteSummary } from '@/api/routeApi';
+import type {
+  CreateTripRequest,
+  DayRouteSegment,
+  DayRouteSummary,
+  ItineraryItem,
+  TripDay,
+  TripSummary,
+} from '@/api/tripApi';
 import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -47,6 +55,36 @@ export interface AuthSlice {
   }>;
 }
 
-export type AppStore = RouteSlice & BookmarkSlice & AuthSlice;
+export interface TripPlanningSlice {
+  currentTrip: TripSummary | null;
+  lastBootstrapTripId: number | null;
+  days: TripDay[];
+  selectedDayNumber: number | null;
+  dayItemsByDayNumber: Record<number, ItineraryItem[]>;
+  dayItemsStatusByDayNumber: Record<number, LoadStatus>;
+  dayItemsErrorByDayNumber: Record<number, string | null>;
+  dayRouteByDayNumber: Record<number, DayRouteSummary | null>;
+  dayRouteSegmentsByDayNumber: Record<number, DayRouteSegment[]>;
+  dayRouteStatusByDayNumber: Record<number, LoadStatus>;
+  dayRouteErrorByDayNumber: Record<number, string | null>;
+  tripStatus: LoadStatus;
+  daysStatus: LoadStatus;
+  tripError: string | null;
+  daysError: string | null;
+  tripCreationStatus: LoadStatus;
+  tripCreationError: string | null;
+  tripBootstrapStatus: LoadStatus;
+  tripBootstrapError: string | null;
+  createTrip: (request: CreateTripRequest) => Promise<void>;
+  bootstrapTrip: (tripId: number) => Promise<void>;
+  fetchTrip: (tripId: number) => Promise<void>;
+  fetchTripDays: (tripId: number) => Promise<void>;
+  selectDay: (dayNumber: number) => void;
+  fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
+  generateDayRoute: (tripId: number, dayNumber: number) => Promise<void>;
+  clearTripPlanning: () => void;
+}
+
+export type AppStore = RouteSlice & BookmarkSlice & AuthSlice & TripPlanningSlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;

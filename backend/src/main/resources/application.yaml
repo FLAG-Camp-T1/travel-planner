@@ -7,11 +7,30 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
 
   application:
     name: backend
+
+app:
+  current-user:
+    fixed-id: ${APP_CURRENT_USER_FIXED_ID:00000000-0000-0000-0000-000000000001}
+  bootstrap:
+    seed-enabled: false
 
 google:
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY}
     routes-api-url: https://routes.googleapis.com/directions/v2:computeRoutes
+    places-api-url: https://places.googleapis.com/v1/places
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+app:
+  bootstrap:
+    seed-enabled: true

@@ -10,4 +10,5 @@ import org.springframework.stereotype.Component;
 public class GoogleMapsProperties {
     private String apiKey;
     private String routesApiUrl;
+    private String placesApiUrl;
 }
