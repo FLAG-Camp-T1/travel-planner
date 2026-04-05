@@ -34,7 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/trips")
 @RequiredArgsConstructor
-@Tag(name = "Trips", description = "Create trips, browse trip data, and generate day routes")
+@Tag(
+        name = "Trips",
+        description =
+                "Manage trips, edit day itineraries, and generate route guidance for selected days")
 public class TripController {
 
     private final TripCommandService tripCommandService;
@@ -79,7 +82,7 @@ public class TripController {
     @Operation(
             summary = "Update a trip",
             description =
-                    "Updates the current user's editable trip fields, including title, duration, and optional start date.")
+                    "Updates the current user's editable trip fields, including title, duration, and optional start date. Trip duration can be safely reduced only when the trimmed days have no itinerary items.")
     public ApiResponse<TripSummaryDto> updateTrip(
             @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -115,7 +118,8 @@ public class TripController {
     @GetMapping("/{tripId}/days/{dayNumber}/items")
     @Operation(
             summary = "List day itinerary items",
-            description = "Returns ordered itinerary items for one day of the selected trip.")
+            description =
+                    "Returns ordered itinerary items for one day of the selected trip, including resolved place names and coordinates when available.")
     public ApiResponse<TripDayItemsResponseDto> getTripDayItems(
             @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
             @Parameter(description = "Day number within the trip", example = "1") @PathVariable

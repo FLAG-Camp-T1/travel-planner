@@ -26,7 +26,8 @@ public class UpdateTripRequestDto {
     @Min(1)
     @Max(15)
     @Schema(
-            description = "Trip duration in days",
+            description =
+                    "Trip duration in days. Increasing duration adds empty trip days; reducing duration is allowed only when the trimmed days are empty.",
             example = "5",
             requiredMode = RequiredMode.REQUIRED)
     private Integer durationDays;

@@ -15,7 +15,10 @@ public class ItineraryItemDto {
             example = "ChIJVTPokywQkFQRmtVEaUZlJRA")
     private String placeId;
 
-    @Schema(description = "Display name resolved for the place", example = "Pike Place Market")
+    @Schema(
+            description = "Resolved place name when available",
+            example = "Pike Place Market",
+            nullable = true)
     private String name;
 
     @Schema(
