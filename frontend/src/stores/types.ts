@@ -60,17 +60,21 @@ export interface AuthSlice {
 }
 
 export interface TripPlanningSlice {
+  trips: TripSummary[];
+  tripsStatus: LoadStatus;
+  tripsError: string | null;
+  activePlannerPanel: PlannerPanel;
   currentTrip: TripSummary | null;
   lastBootstrapTripId: number | null;
   days: TripDay[];
   selectedDayNumber: number | null;
-  dayItemsByDayNumber: Record<number, ItineraryItem[]>;
-  dayItemsStatusByDayNumber: Record<number, LoadStatus>;
-  dayItemsErrorByDayNumber: Record<number, string | null>;
-  dayRouteByDayNumber: Record<number, DayRouteSummary | null>;
-  dayRouteSegmentsByDayNumber: Record<number, DayRouteSegment[]>;
-  dayRouteStatusByDayNumber: Record<number, LoadStatus>;
-  dayRouteErrorByDayNumber: Record<number, string | null>;
+  dayItemsByDayNumber: Record<TripDayCacheKey, ItineraryItem[]>;
+  dayItemsStatusByDayNumber: Record<TripDayCacheKey, LoadStatus>;
+  dayItemsErrorByDayNumber: Record<TripDayCacheKey, string | null>;
+  dayRouteByDayNumber: Record<TripDayCacheKey, DayRouteSummary | null>;
+  dayRouteSegmentsByDayNumber: Record<TripDayCacheKey, DayRouteSegment[]>;
+  dayRouteStatusByDayNumber: Record<TripDayCacheKey, LoadStatus>;
+  dayRouteErrorByDayNumber: Record<TripDayCacheKey, string | null>;
   tripStatus: LoadStatus;
   daysStatus: LoadStatus;
   tripError: string | null;
@@ -79,6 +83,8 @@ export interface TripPlanningSlice {
   tripCreationError: string | null;
   tripBootstrapStatus: LoadStatus;
   tripBootstrapError: string | null;
+  fetchTrips: () => Promise<void>;
+  setActivePlannerPanel: (panel: PlannerPanel) => void;
   createTrip: (request: CreateTripRequest) => Promise<void>;
   bootstrapTrip: (tripId: number) => Promise<void>;
   fetchTrip: (tripId: number) => Promise<void>;

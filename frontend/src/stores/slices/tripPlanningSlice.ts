@@ -1,11 +1,14 @@
 import {
   createTrip as createTripApi,
   generateTripDayRoute,
+  getTrips,
   getTrip,
   getTripDayItems,
   getTripDays,
 } from '@/api/tripApi';
 import type { AppStoreCreator, TripPlanningSlice } from '../types';
+
+const getTripDayCacheKey = (tripId: number, dayNumber: number) => `${tripId}:${dayNumber}`;
 
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Trip planning request failed.';
@@ -27,6 +30,13 @@ const getEmptyTripPlanningData = () => ({
   daysStatus: 'idle' as const,
   tripError: null,
   daysError: null,
+});
+
+const getTripListState = () => ({
+  trips: [],
+  tripsStatus: 'idle' as const,
+  tripsError: null,
+  activePlannerPanel: 'trips' as const,
 });
 
 export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set, get) => {
@@ -53,6 +63,10 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       set(
         {
           ...getEmptyTripPlanningData(),
+          trips: get().trips,
+          tripsStatus: get().tripsStatus,
+          tripsError: get().tripsError,
+          activePlannerPanel: 'trips',
           lastBootstrapTripId: tripId,
           tripBootstrapStatus: 'error',
           tripBootstrapError: getErrorMessage(error),
@@ -65,10 +79,65 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
   return {
     ...getEmptyTripPlanningData(),
+    ...getTripListState(),
     tripCreationStatus: 'idle',
     tripCreationError: null,
     tripBootstrapStatus: 'idle',
     tripBootstrapError: null,
+
+    fetchTrips: async () => {
+      if (get().tripsStatus === 'loading') {
+        return;
+      }
+
+      set(
+        {
+          tripsStatus: 'loading',
+          tripsError: null,
+        },
+        false,
+        'trip/list:start',
+      );
+
+      try {
+        const trips = await getTrips();
+
+        set(
+          {
+            trips,
+            tripsStatus: 'ready',
+            tripsError: null,
+          },
+          false,
+          'trip/list:success',
+        );
+      } catch (error) {
+        set(
+          {
+            tripsStatus: 'error',
+            tripsError: getErrorMessage(error),
+          },
+          false,
+          'trip/list:error',
+        );
+      }
+    },
+
+    setActivePlannerPanel: (panel) => {
+      if (get().activePlannerPanel === panel) {
+        return;
+      }
+
+      get().closePlaceDetail();
+
+      set(
+        {
+          activePlannerPanel: panel,
+        },
+        false,
+        'planner/panel:set',
+      );
+    },
 
     createTrip: async (request) => {
       const currentState = get();
@@ -90,10 +159,14 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
       try {
         const createdTrip = await createTripApi(request);
+        const refreshTripsPromise = get()
+          .fetchTrips()
+          .catch(() => undefined);
 
         set(
           {
             ...getEmptyTripPlanningData(),
+            activePlannerPanel: 'trips',
             lastBootstrapTripId: createdTrip.tripId,
             tripCreationStatus: 'ready',
             tripCreationError: null,
@@ -105,6 +178,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         );
 
         await completeBootstrap(createdTrip.tripId);
+        await refreshTripsPromise;
       } catch (error) {
         set(
           {
@@ -124,6 +198,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
       set(
         {
+          activePlannerPanel: 'trips',
           lastBootstrapTripId: tripId,
           tripBootstrapStatus: 'loading',
           tripBootstrapError: null,
@@ -229,11 +304,12 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     },
 
     fetchDayItems: async (tripId, dayNumber) => {
+      const cacheKey = getTripDayCacheKey(tripId, dayNumber);
       const currentState = get();
-      const currentDayStatus = currentState.dayItemsStatusByDayNumber[dayNumber] ?? 'idle';
+      const currentDayStatus = currentState.dayItemsStatusByDayNumber[cacheKey] ?? 'idle';
       const hasCachedItems = Object.prototype.hasOwnProperty.call(
         currentState.dayItemsByDayNumber,
-        dayNumber,
+        cacheKey,
       );
 
       if (currentDayStatus === 'loading' || hasCachedItems) {
@@ -244,11 +320,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         (state) => ({
           dayItemsStatusByDayNumber: {
             ...state.dayItemsStatusByDayNumber,
-            [dayNumber]: 'loading',
+            [cacheKey]: 'loading',
           },
           dayItemsErrorByDayNumber: {
             ...state.dayItemsErrorByDayNumber,
-            [dayNumber]: null,
+            [cacheKey]: null,
           },
         }),
         false,
@@ -262,15 +338,15 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           (state) => ({
             dayItemsByDayNumber: {
               ...state.dayItemsByDayNumber,
-              [dayNumber]: response.items,
+              [cacheKey]: response.items,
             },
             dayItemsStatusByDayNumber: {
               ...state.dayItemsStatusByDayNumber,
-              [dayNumber]: 'ready',
+              [cacheKey]: 'ready',
             },
             dayItemsErrorByDayNumber: {
               ...state.dayItemsErrorByDayNumber,
-              [dayNumber]: null,
+              [cacheKey]: null,
             },
           }),
           false,
@@ -281,11 +357,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           (state) => ({
             dayItemsStatusByDayNumber: {
               ...state.dayItemsStatusByDayNumber,
-              [dayNumber]: 'error',
+              [cacheKey]: 'error',
             },
             dayItemsErrorByDayNumber: {
               ...state.dayItemsErrorByDayNumber,
-              [dayNumber]: getErrorMessage(error),
+              [cacheKey]: getErrorMessage(error),
             },
           }),
           false,
@@ -295,8 +371,9 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     },
 
     generateDayRoute: async (tripId, dayNumber) => {
+      const cacheKey = getTripDayCacheKey(tripId, dayNumber);
       const currentState = get();
-      const currentDayRouteStatus = currentState.dayRouteStatusByDayNumber[dayNumber] ?? 'idle';
+      const currentDayRouteStatus = currentState.dayRouteStatusByDayNumber[cacheKey] ?? 'idle';
 
       if (currentDayRouteStatus === 'loading' || currentDayRouteStatus === 'ready') {
         return;
@@ -306,11 +383,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         (state) => ({
           dayRouteStatusByDayNumber: {
             ...state.dayRouteStatusByDayNumber,
-            [dayNumber]: 'loading',
+            [cacheKey]: 'loading',
           },
           dayRouteErrorByDayNumber: {
             ...state.dayRouteErrorByDayNumber,
-            [dayNumber]: null,
+            [cacheKey]: null,
           },
         }),
         false,
@@ -324,19 +401,19 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           (state) => ({
             dayRouteByDayNumber: {
               ...state.dayRouteByDayNumber,
-              [dayNumber]: response.routeSummary,
+              [cacheKey]: response.routeSummary,
             },
             dayRouteSegmentsByDayNumber: {
               ...state.dayRouteSegmentsByDayNumber,
-              [dayNumber]: response.segments,
+              [cacheKey]: response.segments,
             },
             dayRouteStatusByDayNumber: {
               ...state.dayRouteStatusByDayNumber,
-              [dayNumber]: response.routeSummary !== null ? 'ready' : 'idle',
+              [cacheKey]: response.routeSummary !== null ? 'ready' : 'idle',
             },
             dayRouteErrorByDayNumber: {
               ...state.dayRouteErrorByDayNumber,
-              [dayNumber]: null,
+              [cacheKey]: null,
             },
           }),
           false,
@@ -347,11 +424,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           (state) => ({
             dayRouteStatusByDayNumber: {
               ...state.dayRouteStatusByDayNumber,
-              [dayNumber]: 'error',
+              [cacheKey]: 'error',
             },
             dayRouteErrorByDayNumber: {
               ...state.dayRouteErrorByDayNumber,
-              [dayNumber]: getErrorMessage(error),
+              [cacheKey]: getErrorMessage(error),
             },
           }),
           false,
@@ -364,6 +441,10 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       set(
         {
           ...getEmptyTripPlanningData(),
+          trips: get().trips,
+          tripsStatus: get().tripsStatus,
+          tripsError: get().tripsError,
+          activePlannerPanel: 'trips',
           tripCreationStatus: 'idle',
           tripCreationError: null,
           tripBootstrapStatus: 'idle',

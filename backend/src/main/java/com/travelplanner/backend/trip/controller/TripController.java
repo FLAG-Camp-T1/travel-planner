@@ -12,6 +12,7 @@ import com.travelplanner.backend.trip.service.TripRouteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,6 +39,12 @@ public class TripController {
             @Valid @RequestBody CreateTripRequestDto request) {
         log.info("Inbound Trip Create Request: {}", request);
         return ApiResponse.success(tripCommandService.createTrip(request));
+    }
+
+    @GetMapping
+    @Operation(summary = "List trips for the current user")
+    public ApiResponse<List<TripSummaryDto>> listTrips() {
+        return ApiResponse.success(tripQueryService.listTrips());
     }
 
     @GetMapping("/{tripId}")

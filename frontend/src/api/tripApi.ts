@@ -76,6 +76,10 @@ export const createTrip = (request: CreateTripRequest): Promise<TripSummary> => 
   return axiosClient.post('/trips/create', request);
 };
 
+export const getTrips = (): Promise<TripSummary[]> => {
+  return axiosClient.get('/trips');
+};
+
 export const getTrip = (tripId: number): Promise<TripSummary> => {
   return axiosClient.get(`/trips/${tripId}`);
 };

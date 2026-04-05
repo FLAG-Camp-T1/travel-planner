@@ -35,6 +35,13 @@ public class TripQueryService {
     private final PlaceLookupService placeLookupService;
     private final CurrentUserProvider currentUserProvider;
 
+    public List<TripSummaryDto> listTrips() {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        return tripRepository.findAllByUserIdOrderByIdDesc(currentUserId).stream()
+                .map(TripMapper::toTripSummaryDto)
+                .toList();
+    }
+
     public TripSummaryDto getTrip(Long tripId) {
         return TripMapper.toTripSummaryDto(getOwnedTripEntity(tripId));
     }

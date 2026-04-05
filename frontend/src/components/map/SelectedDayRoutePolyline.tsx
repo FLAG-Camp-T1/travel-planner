@@ -39,27 +39,29 @@ const SelectedDayRoutePolyline = () => {
   const map = useMap();
   const geometryLib = useMapsLibrary('geometry');
   const markerLib = useMapsLibrary('marker');
-  const { dayItemsByDayNumber, dayRouteSegmentsByDayNumber, selectedDayNumber } = useAppStore(
-    useShallow((state) => ({
-      dayItemsByDayNumber: state.dayItemsByDayNumber,
-      dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
-      selectedDayNumber: state.selectedDayNumber,
-    })),
-  );
+  const { currentTrip, dayItemsByDayNumber, dayRouteSegmentsByDayNumber, selectedDayNumber } =
+    useAppStore(
+      useShallow((state) => ({
+        currentTrip: state.currentTrip,
+        dayItemsByDayNumber: state.dayItemsByDayNumber,
+        dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
+        selectedDayNumber: state.selectedDayNumber,
+      })),
+    );
 
   const polylineRefs = useRef<google.maps.Polyline[]>([]);
   const gapConnectorRefs = useRef<google.maps.Polyline[]>([]);
   const markerRefs = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const lastFittedSignatureRef = useRef<string | null>(null);
+  const dayCacheKey =
+    currentTrip && selectedDayNumber !== null ? `${currentTrip.tripId}:${selectedDayNumber}` : null;
 
   const currentDaySegments =
-    selectedDayNumber !== null
-      ? (dayRouteSegmentsByDayNumber[selectedDayNumber] ?? EMPTY_SEGMENTS)
+    dayCacheKey !== null
+      ? (dayRouteSegmentsByDayNumber[dayCacheKey] ?? EMPTY_SEGMENTS)
       : EMPTY_SEGMENTS;
   const currentDayItems =
-    selectedDayNumber !== null
-      ? (dayItemsByDayNumber[selectedDayNumber] ?? EMPTY_ITEMS)
-      : EMPTY_ITEMS;
+    dayCacheKey !== null ? (dayItemsByDayNumber[dayCacheKey] ?? EMPTY_ITEMS) : EMPTY_ITEMS;
   const mapModel = useMemo(
     () =>
       buildSelectedDayRouteMapModel({

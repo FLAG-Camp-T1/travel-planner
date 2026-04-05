@@ -68,6 +68,29 @@ class TripControllerTest {
     }
 
     @Test
+    void listTrips_ReturnsSuccessPayload() throws Exception {
+        TripSummaryDto firstTrip = new TripSummaryDto();
+        firstTrip.setTripId(1002L);
+        firstTrip.setTitle("Summer Tokyo Trip");
+        firstTrip.setDurationDays(5);
+
+        TripSummaryDto secondTrip = new TripSummaryDto();
+        secondTrip.setTripId(1001L);
+        secondTrip.setTitle("Spring DC Trip");
+        secondTrip.setDurationDays(3);
+
+        when(tripQueryService.listTrips()).thenReturn(List.of(firstTrip, secondTrip));
+
+        mockMvc.perform(get("/api/v1/trips"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].tripId").value(1002))
+                .andExpect(jsonPath("$.data[0].title").value("Summer Tokyo Trip"));
+    }
+
+    @Test
     void createTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
         mockMvc.perform(
                         post("/api/v1/trips/create")

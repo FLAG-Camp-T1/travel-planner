@@ -46,6 +46,35 @@ class TripQueryServiceTest {
     @InjectMocks private TripQueryService tripQueryService;
 
     @Test
+    void listTrips_ReturnsOwnedTripsInRepositoryOrder() {
+        TripEntity newestTrip = new TripEntity();
+        newestTrip.setId(1002L);
+        newestTrip.setUserId(CURRENT_USER_ID);
+        newestTrip.setTitle("Summer Tokyo Trip");
+        newestTrip.setDuration(5);
+        newestTrip.setStartDate(LocalDate.of(2026, 7, 1));
+
+        TripEntity olderTrip = new TripEntity();
+        olderTrip.setId(1001L);
+        olderTrip.setUserId(CURRENT_USER_ID);
+        olderTrip.setTitle("Spring DC Trip");
+        olderTrip.setDuration(3);
+        olderTrip.setStartDate(LocalDate.of(2026, 4, 10));
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findAllByUserIdOrderByIdDesc(CURRENT_USER_ID))
+                .thenReturn(List.of(newestTrip, olderTrip));
+
+        List<TripSummaryDto> result = tripQueryService.listTrips();
+
+        assertEquals(2, result.size());
+        assertEquals(1002L, result.get(0).getTripId());
+        assertEquals("Summer Tokyo Trip", result.get(0).getTitle());
+        assertEquals(1001L, result.get(1).getTripId());
+        assertEquals("Spring DC Trip", result.get(1).getTitle());
+    }
+
+    @Test
     void getTrip_ReturnsOwnedTripSummary() {
         TripEntity tripEntity = new TripEntity();
         tripEntity.setId(1001L);
