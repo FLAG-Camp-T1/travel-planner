@@ -1,6 +1,6 @@
 package com.travelplanner.backend.trip.bootstrap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -53,7 +53,7 @@ class DevelopmentTripSeedServiceTest {
     @Captor private ArgumentCaptor<ItineraryEntity> itineraryCaptor;
 
     @Test
-    void seedIfNeeded_CreatesDevUserTripsPoisAndItinerariesWhenMissing() {
+    void seedIfNeeded_CreatesTwoCityTripsPoisAndItinerariesWhenMissing() {
         AtomicLong poiSequence = new AtomicLong(200L);
 
         when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
@@ -62,37 +62,33 @@ class DevelopmentTripSeedServiceTest {
                 .thenReturn(Optional.empty())
                 .thenReturn(
                         Optional.of(
-                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 3)));
+                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 1)));
         when(tripRepository.findByUserIdAndTitle(
                         CURRENT_USER_ID, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE))
                 .thenReturn(Optional.empty())
                 .thenReturn(
                         Optional.of(
                                 tripEntity(
-                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 2)));
+                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 1)));
 
         when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
                 .thenReturn(
                         Optional.of(
-                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 3)));
+                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 1)));
         when(tripRepository.findByIdAndUserId(1002L, CURRENT_USER_ID))
                 .thenReturn(
                         Optional.of(
                                 tripEntity(
-                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 2)));
+                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 1)));
 
         when(tripCommandService.createTrip(any()))
-                .thenReturn(tripSummary(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 3))
-                .thenReturn(tripSummary(1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 2));
+                .thenReturn(tripSummary(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 1))
+                .thenReturn(tripSummary(1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 1));
 
         when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1001L))
-                .thenReturn(
-                        List.of(
-                                tripDay(11L, 1001L, 1),
-                                tripDay(12L, 1001L, 2),
-                                tripDay(13L, 1001L, 3)));
+                .thenReturn(List.of(tripDay(11L, 1001L, 1)));
         when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1002L))
-                .thenReturn(List.of(tripDay(21L, 1002L, 1), tripDay(22L, 1002L, 2)));
+                .thenReturn(List.of(tripDay(21L, 1002L, 1)));
 
         when(poiRepository.findByPlacesId(any())).thenReturn(Optional.empty());
         when(poiRepository.save(any(PoiEntity.class)))
@@ -109,16 +105,64 @@ class DevelopmentTripSeedServiceTest {
         developmentTripSeedService.seedIfNeeded();
 
         verify(jdbcTemplate).update(any(String.class), any(MapSqlParameterSource.class));
-        verify(tripCommandService, times(2)).createTrip(any());
-        verify(poiRepository, times(4)).save(any(PoiEntity.class));
-        verify(itineraryRepository, times(5)).save(itineraryCaptor.capture());
+        verify(tripCommandService, times(DevelopmentTripSeedService.SEEDED_TRIP_COUNT))
+                .createTrip(any());
+        verify(poiRepository, times(DevelopmentTripSeedService.SEEDED_POI_COUNT))
+                .save(any(PoiEntity.class));
+        verify(itineraryRepository, times(DevelopmentTripSeedService.SEEDED_ITINERARY_STOP_COUNT))
+                .save(itineraryCaptor.capture());
 
         List<ItineraryEntity> savedStops = itineraryCaptor.getAllValues();
-        assertEquals(11L, savedStops.get(0).getTripDayId());
-        assertEquals(1, savedStops.get(0).getVisitOrder());
-        assertEquals("TRAVEL_MODE_UNSPECIFIED", savedStops.get(0).getTravelMethod());
-        assertEquals(12L, savedStops.get(3).getTripDayId());
-        assertEquals(21L, savedStops.get(4).getTripDayId());
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(11L)
+                                                && stop.getVisitOrder().equals(1)
+                                                && "TRAVEL_MODE_UNSPECIFIED"
+                                                        .equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(11L)
+                                                && stop.getVisitOrder().equals(2)
+                                                && "WALK".equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(11L)
+                                                && stop.getVisitOrder().equals(3)
+                                                && "TRANSIT".equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(11L)
+                                                && stop.getVisitOrder().equals(4)
+                                                && "DRIVE".equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(21L)
+                                                && stop.getVisitOrder().equals(2)
+                                                && "BICYCLE".equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(21L)
+                                                && stop.getVisitOrder().equals(3)
+                                                && "DRIVE".equals(stop.getTravelMethod())));
+        assertTrue(
+                savedStops.stream()
+                        .anyMatch(
+                                stop ->
+                                        stop.getTripDayId().equals(21L)
+                                                && stop.getVisitOrder().equals(4)
+                                                && "WALK".equals(stop.getTravelMethod())));
     }
 
     @Test
@@ -128,31 +172,35 @@ class DevelopmentTripSeedServiceTest {
                         CURRENT_USER_ID, DevelopmentTripSeedService.FIXED_TRIP_TITLE))
                 .thenReturn(
                         Optional.of(
-                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 3)));
+                                tripEntity(1001L, DevelopmentTripSeedService.FIXED_TRIP_TITLE, 1)));
         when(tripRepository.findByUserIdAndTitle(
                         CURRENT_USER_ID, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE))
                 .thenReturn(
                         Optional.of(
                                 tripEntity(
-                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 2)));
+                                        1002L, DevelopmentTripSeedService.FLEXIBLE_TRIP_TITLE, 1)));
 
         when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1001L))
-                .thenReturn(
-                        List.of(
-                                tripDay(11L, 1001L, 1),
-                                tripDay(12L, 1001L, 2),
-                                tripDay(13L, 1001L, 3)));
+                .thenReturn(List.of(tripDay(11L, 1001L, 1)));
         when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1002L))
-                .thenReturn(List.of(tripDay(21L, 1002L, 1), tripDay(22L, 1002L, 2)));
+                .thenReturn(List.of(tripDay(21L, 1002L, 1)));
 
-        when(poiRepository.findByPlacesId(eq("ChIJVTPokywQkFQRmtVEaUZlJRA")))
-                .thenReturn(Optional.of(poiEntity(201L, "ChIJVTPokywQkFQRmtVEaUZlJRA")));
-        when(poiRepository.findByPlacesId(eq("ChIJN1t_tDeuEmsRUsoyG83frY4")))
-                .thenReturn(Optional.of(poiEntity(202L, "ChIJN1t_tDeuEmsRUsoyG83frY4")));
-        when(poiRepository.findByPlacesId(eq("ChIJVVVVVYx3j4ARP-3NGldc8qQ")))
-                .thenReturn(Optional.of(poiEntity(203L, "ChIJVVVVVYx3j4ARP-3NGldc8qQ")));
-        when(poiRepository.findByPlacesId(eq("ChIJJcSDXXx3j4ARRef7L0P3GpY")))
-                .thenReturn(Optional.of(poiEntity(204L, "ChIJJcSDXXx3j4ARRef7L0P3GpY")));
+        when(poiRepository.findByPlacesId(eq("ChIJldJnhJG3t4kRnJ3McC1qVyo")))
+                .thenReturn(Optional.of(poiEntity(201L, "ChIJldJnhJG3t4kRnJ3McC1qVyo")));
+        when(poiRepository.findByPlacesId(eq("ChIJCYr0k6i3t4kRJNOniIKWv4Y")))
+                .thenReturn(Optional.of(poiEntity(202L, "ChIJCYr0k6i3t4kRJNOniIKWv4Y")));
+        when(poiRepository.findByPlacesId(eq("ChIJbwqv9yK4t4kRGixTvXJNjK0")))
+                .thenReturn(Optional.of(poiEntity(203L, "ChIJbwqv9yK4t4kRGixTvXJNjK0")));
+        when(poiRepository.findByPlacesId(eq("ChIJIwHC3D-4t4kR7tGTisOikGM")))
+                .thenReturn(Optional.of(poiEntity(204L, "ChIJIwHC3D-4t4kR7tGTisOikGM")));
+        when(poiRepository.findByPlacesId(eq("ChIJmY9L9lCJGGAR3ydy0pQ5y8A")))
+                .thenReturn(Optional.of(poiEntity(205L, "ChIJmY9L9lCJGGAR3ydy0pQ5y8A")));
+        when(poiRepository.findByPlacesId(eq("ChIJv-sM5bGOGGARXL9S7cVu7jo")))
+                .thenReturn(Optional.of(poiEntity(206L, "ChIJv-sM5bGOGGARXL9S7cVu7jo")));
+        when(poiRepository.findByPlacesId(eq("ChIJ2f9BNp6OGGARfxtv1tT31dk")))
+                .thenReturn(Optional.of(poiEntity(207L, "ChIJ2f9BNp6OGGARfxtv1tT31dk")));
+        when(poiRepository.findByPlacesId(eq("ChIJ81MDY9SNGGARsEZEhfyZ2JQ")))
+                .thenReturn(Optional.of(poiEntity(208L, "ChIJ81MDY9SNGGARsEZEhfyZ2JQ")));
 
         when(itineraryRepository.existsByTripDayIdAndVisitOrder(anyLong(), any())).thenReturn(true);
 

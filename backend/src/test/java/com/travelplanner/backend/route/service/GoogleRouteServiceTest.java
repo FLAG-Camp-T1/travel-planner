@@ -116,7 +116,6 @@ public class GoogleRouteServiceTest {
 
     @Test
     void computeRoute_WhenGoogleReturns4xxError_ShouldCatchHttpStatusCodeException() {
-        // Cover HttpStatusCodeException case
         RouteRequest request = createValidRequest();
 
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
@@ -124,7 +123,16 @@ public class GoogleRouteServiceTest {
                         new org.springframework.web.client.HttpClientErrorException(
                                 HttpStatus.BAD_REQUEST,
                                 "Bad Request",
-                                "Invalid Key".getBytes(),
+                                """
+                                {
+                                  "error": {
+                                    "code": 400,
+                                    "message": "API key not valid. Please pass a valid API key.",
+                                    "status": "INVALID_ARGUMENT"
+                                  }
+                                }
+                                """
+                                        .getBytes(),
                                 java.nio.charset.Charset.defaultCharset()));
 
         BusinessException exception =
@@ -134,11 +142,111 @@ public class GoogleRouteServiceTest {
                             googleRouteService.computeRoute(request);
                         });
         assertNotNull(exception);
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_REQUEST_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals(
+                "Google Maps Routes request failed: API key not valid. Please pass a valid API key.",
+                exception.getMessage());
+    }
+
+    @Test
+    void computeRoute_WhenTravelModeIsUnsupported_ShouldExposeSpecificBusinessError() {
+        RouteRequest request = createValidRequest();
+
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenThrow(
+                        new org.springframework.web.client.HttpClientErrorException(
+                                HttpStatus.BAD_REQUEST,
+                                "Bad Request",
+                                """
+                                {
+                                  "error": {
+                                    "code": 400,
+                                    "message": "The requested travel mode is not supported in this region.",
+                                    "status": "FAILED_PRECONDITION"
+                                  }
+                                }
+                                """
+                                        .getBytes(),
+                                java.nio.charset.Charset.defaultCharset()));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_UNSUPPORTED_TRAVEL_MODE_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals(
+                "The requested travel mode is not supported in this region.",
+                exception.getMessage());
+    }
+
+    @Test
+    void computeRoute_WhenServiceCoverageIsUnsupported_ShouldExposeSpecificBusinessError() {
+        RouteRequest request = createValidRequest();
+
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenThrow(
+                        new org.springframework.web.client.HttpClientErrorException(
+                                HttpStatus.BAD_REQUEST,
+                                "Bad Request",
+                                """
+                                {
+                                  "error": {
+                                    "code": 400,
+                                    "message": "Routes service is not available in this region.",
+                                    "status": "FAILED_PRECONDITION"
+                                  }
+                                }
+                                """
+                                        .getBytes(),
+                                java.nio.charset.Charset.defaultCharset()));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_UNSUPPORTED_REGION_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals("Routes service is not available in this region.", exception.getMessage());
+    }
+
+    @Test
+    void computeRoute_WhenPlaceReferenceIsInvalid_ShouldExposeSpecificBusinessError() {
+        RouteRequest request = createValidRequest();
+
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenThrow(
+                        new org.springframework.web.client.HttpClientErrorException(
+                                HttpStatus.BAD_REQUEST,
+                                "Bad Request",
+                                """
+                                {
+                                  "error": {
+                                    "code": 400,
+                                    "message": "Origin place is invalid or not found.",
+                                    "status": "INVALID_ARGUMENT"
+                                  }
+                                }
+                                """
+                                        .getBytes(),
+                                java.nio.charset.Charset.defaultCharset()));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_INVALID_PLACE_REFERENCE_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals("Origin place is invalid or not found.", exception.getMessage());
     }
 
     @Test
     void computeRoute_WhenNetworkCompletelyFails_ShouldCatchGeneralException() {
-        // Cover Exception case
         RouteRequest request = createValidRequest();
 
         Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
@@ -150,7 +258,36 @@ public class GoogleRouteServiceTest {
                         () -> {
                             googleRouteService.computeRoute(request);
                         });
-        assertNotNull(exception);
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_REQUEST_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals(
+                "Google Maps Routes request failed: DNS Resolution Failed", exception.getMessage());
+    }
+
+    @Test
+    void computeRoute_WhenProviderReturnsPlainTextErrorBody_ShouldStillExposeProviderMessage() {
+        RouteRequest request = createValidRequest();
+
+        Mockito.when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
+                .thenThrow(
+                        new org.springframework.web.client.HttpClientErrorException(
+                                HttpStatus.BAD_REQUEST,
+                                "Bad Request",
+                                "The requested travel mode is not supported in this region."
+                                        .getBytes(),
+                                java.nio.charset.Charset.defaultCharset()));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class, () -> googleRouteService.computeRoute(request));
+
+        assertEquals(
+                ResultCode.GOOGLE_ROUTES_UNSUPPORTED_TRAVEL_MODE_ERROR.getCode(),
+                exception.getResultCode().getCode());
+        assertEquals(
+                "The requested travel mode is not supported in this region.",
+                exception.getMessage());
     }
 
     @Test

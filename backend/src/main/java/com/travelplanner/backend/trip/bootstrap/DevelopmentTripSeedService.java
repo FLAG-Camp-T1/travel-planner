@@ -30,39 +30,65 @@ public class DevelopmentTripSeedService {
     static final String FIXED_TRIP_TITLE = "Washington, D.C. Spring Weekend";
     static final String FLEXIBLE_TRIP_TITLE = "Flexible Tokyo Food Crawl";
 
+    static final int SEEDED_TRIP_COUNT = 2;
+    static final int SEEDED_POI_COUNT = 8;
+    static final int SEEDED_ITINERARY_STOP_COUNT = 8;
+
     private static final LocalDate FIXED_TRIP_START_DATE = LocalDate.of(2026, 4, 10);
     private static final String DEV_USER_NAME = "Trips Dev User";
     private static final String DEV_PASSWORD_HASH = "dev-bootstrap-not-for-auth";
 
-    private static final SeedPoi PIKE_PLACE_MARKET =
-            new SeedPoi("seattle-market", "ChIJVTPokywQkFQRmtVEaUZlJRA");
-    private static final SeedPoi SYDNEY_OPERA_HOUSE =
-            new SeedPoi("sydney-opera-house", "ChIJN1t_tDeuEmsRUsoyG83frY4");
-    private static final SeedPoi ROUTE_EXAMPLE_ORIGIN =
-            new SeedPoi("route-example-origin", "ChIJVVVVVYx3j4ARP-3NGldc8qQ");
-    private static final SeedPoi ROUTE_EXAMPLE_DESTINATION =
-            new SeedPoi("route-example-destination", "ChIJJcSDXXx3j4ARRef7L0P3GpY");
+    private static final SeedPoi DC_PLACE_ONE =
+            new SeedPoi("dc-place-1", "ChIJldJnhJG3t4kRnJ3McC1qVyo");
+    private static final SeedPoi DC_PLACE_TWO =
+            new SeedPoi("dc-place-2", "ChIJCYr0k6i3t4kRJNOniIKWv4Y");
+    private static final SeedPoi DC_PLACE_THREE =
+            new SeedPoi("dc-place-3", "ChIJbwqv9yK4t4kRGixTvXJNjK0");
+    private static final SeedPoi DC_PLACE_FOUR =
+            new SeedPoi("dc-place-4", "ChIJIwHC3D-4t4kR7tGTisOikGM");
+    private static final SeedPoi TOKYO_PLACE_ONE =
+            new SeedPoi("tokyo-place-1", "ChIJmY9L9lCJGGAR3ydy0pQ5y8A");
+    private static final SeedPoi TOKYO_PLACE_TWO =
+            new SeedPoi("tokyo-place-2", "ChIJv-sM5bGOGGARXL9S7cVu7jo");
+    private static final SeedPoi TOKYO_PLACE_THREE =
+            new SeedPoi("tokyo-place-3", "ChIJ2f9BNp6OGGARfxtv1tT31dk");
+    private static final SeedPoi TOKYO_PLACE_FOUR =
+            new SeedPoi("tokyo-place-4", "ChIJ81MDY9SNGGARsEZEhfyZ2JQ");
 
     private static final List<SeedPoi> DEV_POIS =
             List.of(
-                    PIKE_PLACE_MARKET,
-                    SYDNEY_OPERA_HOUSE,
-                    ROUTE_EXAMPLE_ORIGIN,
-                    ROUTE_EXAMPLE_DESTINATION);
+                    DC_PLACE_ONE,
+                    DC_PLACE_TWO,
+                    DC_PLACE_THREE,
+                    DC_PLACE_FOUR,
+                    TOKYO_PLACE_ONE,
+                    TOKYO_PLACE_TWO,
+                    TOKYO_PLACE_THREE,
+                    TOKYO_PLACE_FOUR);
 
     private static final List<SeedItineraryStop> FIXED_DAY_ONE_STOPS =
             List.of(
-                    new SeedItineraryStop(1, PIKE_PLACE_MARKET.key(), "TRAVEL_MODE_UNSPECIFIED"),
-                    new SeedItineraryStop(2, ROUTE_EXAMPLE_ORIGIN.key(), "WALK"),
-                    new SeedItineraryStop(3, ROUTE_EXAMPLE_DESTINATION.key(), "TRANSIT"));
-
-    private static final List<SeedItineraryStop> FIXED_DAY_TWO_STOPS =
-            List.of(new SeedItineraryStop(1, SYDNEY_OPERA_HOUSE.key(), "TRAVEL_MODE_UNSPECIFIED"));
+                    new SeedItineraryStop(1, DC_PLACE_ONE.key(), "TRAVEL_MODE_UNSPECIFIED"),
+                    new SeedItineraryStop(2, DC_PLACE_TWO.key(), "WALK"),
+                    new SeedItineraryStop(3, DC_PLACE_THREE.key(), "TRANSIT"),
+                    new SeedItineraryStop(4, DC_PLACE_FOUR.key(), "DRIVE"));
 
     private static final List<SeedItineraryStop> FLEXIBLE_DAY_ONE_STOPS =
             List.of(
-                    new SeedItineraryStop(
-                            1, ROUTE_EXAMPLE_DESTINATION.key(), "TRAVEL_MODE_UNSPECIFIED"));
+                    new SeedItineraryStop(1, TOKYO_PLACE_ONE.key(), "TRAVEL_MODE_UNSPECIFIED"),
+                    new SeedItineraryStop(2, TOKYO_PLACE_TWO.key(), "BICYCLE"),
+                    new SeedItineraryStop(3, TOKYO_PLACE_THREE.key(), "DRIVE"),
+                    new SeedItineraryStop(4, TOKYO_PLACE_FOUR.key(), "WALK"));
+
+    private static final List<SeedTripPlan> DEV_TRIPS =
+            List.of(
+                    new SeedTripPlan(
+                            FIXED_TRIP_TITLE,
+                            1,
+                            FIXED_TRIP_START_DATE,
+                            Map.of(1, FIXED_DAY_ONE_STOPS)),
+                    new SeedTripPlan(
+                            FLEXIBLE_TRIP_TITLE, 1, null, Map.of(1, FLEXIBLE_DAY_ONE_STOPS)));
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final CurrentUserProvider currentUserProvider;
@@ -78,15 +104,22 @@ public class DevelopmentTripSeedService {
 
         ensureDevelopmentUserExists(currentUserId);
 
-        TripEntity fixedTrip =
-                ensureTripExists(currentUserId, FIXED_TRIP_TITLE, 3, FIXED_TRIP_START_DATE);
-        TripEntity flexibleTrip = ensureTripExists(currentUserId, FLEXIBLE_TRIP_TITLE, 2, null);
-
         Map<String, Long> poiIdsByKey = ensurePoiIdsByKey();
 
-        seedTripDayStops(fixedTrip.getId(), 1, FIXED_DAY_ONE_STOPS, poiIdsByKey);
-        seedTripDayStops(fixedTrip.getId(), 2, FIXED_DAY_TWO_STOPS, poiIdsByKey);
-        seedTripDayStops(flexibleTrip.getId(), 1, FLEXIBLE_DAY_ONE_STOPS, poiIdsByKey);
+        for (SeedTripPlan seedTripPlan : DEV_TRIPS) {
+            TripEntity tripEntity =
+                    ensureTripExists(
+                            currentUserId,
+                            seedTripPlan.title(),
+                            seedTripPlan.durationDays(),
+                            seedTripPlan.startDate());
+
+            for (Map.Entry<Integer, List<SeedItineraryStop>> dayEntry :
+                    seedTripPlan.stopsByDayNumber().entrySet()) {
+                seedTripDayStops(
+                        tripEntity.getId(), dayEntry.getKey(), dayEntry.getValue(), poiIdsByKey);
+            }
+        }
     }
 
     private void ensureDevelopmentUserExists(UUID currentUserId) {
@@ -182,4 +215,10 @@ public class DevelopmentTripSeedService {
     record SeedPoi(String key, String placesId) {}
 
     record SeedItineraryStop(Integer visitOrder, String poiKey, String travelMethod) {}
+
+    record SeedTripPlan(
+            String title,
+            Integer durationDays,
+            LocalDate startDate,
+            Map<Integer, List<SeedItineraryStop>> stopsByDayNumber) {}
 }

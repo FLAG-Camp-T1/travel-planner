@@ -10,6 +10,7 @@ import com.travelplanner.backend.route.model.ComputedRouteLeg;
 import com.travelplanner.backend.route.util.RouteDurationParser;
 import com.travelplanner.backend.route.util.RouteSummaryMapper;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,12 +72,125 @@ public class GoogleRouteService implements RouteProvider {
         } catch (HttpStatusCodeException e) {
             log.error("Google Maps Routes API Error with status code: {}", e.getStatusCode());
             log.error("Google Maps Routes API Error message: {}", e.getResponseBodyAsString());
-            throw new BusinessException(ResultCode.GOOGLE_ROUTES_REQUEST_ERROR);
+            throw translateProviderError(e);
         } catch (Exception e) {
             log.error("Google Maps Routes API Error with exception: ", e);
+            if (e.getMessage() != null && !e.getMessage().isBlank()) {
+                throw new BusinessException(
+                        ResultCode.GOOGLE_ROUTES_REQUEST_ERROR,
+                        "Google Maps Routes request failed: " + e.getMessage());
+            }
             throw new BusinessException(ResultCode.GOOGLE_ROUTES_REQUEST_ERROR);
         }
     }
+
+    private BusinessException translateProviderError(HttpStatusCodeException e) {
+        String responseBody = e.getResponseBodyAsString();
+        ProviderError providerError = parseProviderError(responseBody);
+        String providerMessage = providerError.message();
+        String normalizedMessage =
+                providerMessage == null ? "" : providerMessage.toLowerCase(Locale.ROOT);
+        String normalizedStatus =
+                providerError.status() == null
+                        ? ""
+                        : providerError.status().toLowerCase(Locale.ROOT);
+
+        if (mentionsUnsupportedTravelMode(normalizedMessage)) {
+            return new BusinessException(
+                    ResultCode.GOOGLE_ROUTES_UNSUPPORTED_TRAVEL_MODE_ERROR,
+                    providerMessage != null
+                            ? providerMessage
+                            : "The selected travel mode is not supported for this route.");
+        }
+
+        if (mentionsUnsupportedRegion(normalizedMessage, normalizedStatus)) {
+            return new BusinessException(
+                    ResultCode.GOOGLE_ROUTES_UNSUPPORTED_REGION_ERROR,
+                    providerMessage != null
+                            ? providerMessage
+                            : "Google Maps Routes is not supported for the selected region.");
+        }
+
+        if (mentionsInvalidPlaceReference(normalizedMessage)) {
+            return new BusinessException(
+                    ResultCode.GOOGLE_ROUTES_INVALID_PLACE_REFERENCE_ERROR,
+                    providerMessage != null
+                            ? providerMessage
+                            : "One or more selected places cannot be used to generate a route.");
+        }
+
+        if (providerMessage != null) {
+            return new BusinessException(
+                    ResultCode.GOOGLE_ROUTES_REQUEST_ERROR,
+                    "Google Maps Routes request failed: " + providerMessage);
+        }
+
+        return new BusinessException(ResultCode.GOOGLE_ROUTES_REQUEST_ERROR);
+    }
+
+    private ProviderError parseProviderError(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return new ProviderError(null, null);
+        }
+
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode errorNode = root.path("error");
+            if (errorNode.isMissingNode() || errorNode.isNull()) {
+                return new ProviderError(null, responseBody.strip());
+            }
+
+            String status = asNullableText(errorNode.path("status"));
+            String message = asNullableText(errorNode.path("message"));
+            return new ProviderError(status, message != null ? message : responseBody.strip());
+        } catch (Exception parseException) {
+            log.warn("Unable to parse Google Maps Routes provider error body: {}", responseBody);
+            return new ProviderError(null, responseBody.strip());
+        }
+    }
+
+    private boolean mentionsUnsupportedTravelMode(String normalizedMessage) {
+        return normalizedMessage.contains("travel mode")
+                        && normalizedMessage.contains("not supported")
+                || normalizedMessage.contains("two-wheeler")
+                || normalizedMessage.contains("two_wheeler")
+                || normalizedMessage.contains("mode of travel is not supported");
+    }
+
+    private boolean mentionsUnsupportedRegion(String normalizedMessage, String normalizedStatus) {
+        return normalizedMessage.contains("not supported in this region")
+                || normalizedMessage.contains("not available in this region")
+                || normalizedMessage.contains("service area")
+                || normalizedMessage.contains("coverage")
+                || normalizedStatus.equals("failed_precondition")
+                        && normalizedMessage.contains("supported");
+    }
+
+    private boolean mentionsInvalidPlaceReference(String normalizedMessage) {
+        boolean mentionsPlace =
+                normalizedMessage.contains("place")
+                        || normalizedMessage.contains("origin")
+                        || normalizedMessage.contains("destination");
+        boolean mentionsInvalidity =
+                normalizedMessage.contains("invalid")
+                        || normalizedMessage.contains("not found")
+                        || normalizedMessage.contains("unknown")
+                        || normalizedMessage.contains("could not geocode")
+                        || normalizedMessage.contains("cannot be geocoded")
+                        || normalizedMessage.contains("cannot route");
+        return mentionsPlace && mentionsInvalidity;
+    }
+
+    private String asNullableText(JsonNode node) {
+        if (node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+
+        String text = node.asText();
+        return text.isBlank() ? null : text;
+    }
+
+    private record ProviderError(String status, String message) {}
 
     private @NonNull ComputedRouteLeg parseGoogleResponse(String jsonBody) {
         log.info("Google Map Routes API Response: {}", jsonBody);

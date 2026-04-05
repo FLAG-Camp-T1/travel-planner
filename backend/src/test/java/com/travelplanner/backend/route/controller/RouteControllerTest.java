@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.travelplanner.backend.common.api.ResultCode;
+import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.common.exception.GlobalExceptionHandler;
 import com.travelplanner.backend.route.enums.TravelMode;
 import com.travelplanner.backend.route.model.ComputedRouteLeg;
@@ -84,5 +85,35 @@ class RouteControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void requestRoute_WhenRouteProviderRaisesSpecificBusinessError_PropagatesMessage()
+            throws Exception {
+        when(routeProvider.computeLeg("origin-place", "destination-place", TravelMode.DRIVE))
+                .thenThrow(
+                        new BusinessException(
+                                ResultCode.GOOGLE_ROUTES_UNSUPPORTED_REGION_ERROR,
+                                "Routes service is not available in this region."));
+
+        mockMvc.perform(
+                        post("/api/v1/routes/request")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "originPlaceId": "origin-place",
+                                          "destinationPlaceId": "destination-place",
+                                          "travelMode": "DRIVE"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(
+                        jsonPath("$.code")
+                                .value(ResultCode.GOOGLE_ROUTES_UNSUPPORTED_REGION_ERROR.getCode()))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(
+                        jsonPath("$.message")
+                                .value("Routes service is not available in this region."));
     }
 }
