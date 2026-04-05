@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type { RouteRequest, RouteSummary } from '@/api/routeApi';
 import type {
   CreateTripRequest,
@@ -197,6 +198,45 @@ const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
   },
 };
 
+const mockPoiResults: POIDto[] = [
+  {
+    placeId: 'poi-search-1',
+    name: 'National Air and Space Museum',
+    address: '600 Independence Ave SW, Washington, DC 20560, USA',
+    latitude: 38.8882,
+    longitude: -77.0199,
+    poiType: 'Museum',
+    rating: 4.7,
+  },
+  {
+    placeId: 'poi-search-2',
+    name: 'Founding Farmers DC',
+    address: '1924 Pennsylvania Ave NW, Washington, DC 20006, USA',
+    latitude: 38.9007,
+    longitude: -77.0447,
+    poiType: 'Restaurant',
+    rating: 4.4,
+  },
+  {
+    placeId: 'poi-search-3',
+    name: 'The LINE DC',
+    address: '1770 Euclid St NW, Washington, DC 20009, USA',
+    latitude: 38.9235,
+    longitude: -77.0418,
+    poiType: 'Lodging',
+    rating: 4.5,
+  },
+  {
+    placeId: 'poi-search-4',
+    name: 'National Mall',
+    address: 'Washington, DC 20004, USA',
+    latitude: 38.8896,
+    longitude: -77.023,
+    poiType: 'Tourist Attraction',
+    rating: 4.8,
+  },
+];
+
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
     `${API_BASE_URL}/login`,
@@ -270,6 +310,27 @@ export const handlers = [
       }
 
       return createSuccessResponse(buildLegacyRouteSummary(originPlaceId, destinationPlaceId));
+    },
+  ),
+
+  http.post<never, POISearchRequest, MockApiResponse<POIDto[]> | MockApiResponse<null>>(
+    `${API_BASE_URL}/poi/search`,
+    async ({ request }) => {
+      await waitForMockDelay();
+
+      const requestBody = (await request.json()) as POISearchRequest;
+      const keyword = requestBody.keyword?.trim().toLowerCase();
+
+      if (!keyword) {
+        return createErrorResponse('Search keyword cannot be empty', 40002);
+      }
+
+      const results = mockPoiResults.filter((poi) => {
+        const haystacks = [poi.name, poi.address, poi.poiType].map((value) => value.toLowerCase());
+        return haystacks.some((value) => value.includes(keyword));
+      });
+
+      return createSuccessResponse(results);
     },
   ),
 

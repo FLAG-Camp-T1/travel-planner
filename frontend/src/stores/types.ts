@@ -1,5 +1,6 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
+import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type { RouteSummary } from '@/api/routeApi';
 import type {
   CreateTripRequest,
@@ -85,6 +86,29 @@ export interface TripPlanningSlice {
   clearTripPlanning: () => void;
 }
 
-export type AppStore = RouteSlice & BookmarkSlice & AuthSlice & TripPlanningSlice;
+export interface MapViewSlice {
+  mapCenter: google.maps.LatLngLiteral;
+  mapZoom: number;
+  setMapCamera: (camera: { center: google.maps.LatLngLiteral; zoom: number }) => void;
+}
+
+export interface POISlice {
+  poiResults: POIDto[];
+  poiStatus: LoadStatus;
+  poiError: string | null;
+  selectedPOI: POIDto | null;
+  hoveredPOI: POIDto | null;
+  searchPOI: (request: POISearchRequest) => Promise<void>;
+  selectPOI: (poi: POIDto | null) => void;
+  setHoveredPOI: (poi: POIDto | null) => void;
+  clearPOIResults: () => void;
+}
+
+export type AppStore = RouteSlice &
+  BookmarkSlice &
+  AuthSlice &
+  TripPlanningSlice &
+  MapViewSlice &
+  POISlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;

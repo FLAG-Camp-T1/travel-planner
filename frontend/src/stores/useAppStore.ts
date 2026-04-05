@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createAuthSlice } from './slices/authSlice';
 import { createBookmarkSlice } from './slices/bookmarkSlice';
+import { createMapViewSlice } from './slices/mapViewSlice';
+import { createPOISlice } from './slices/poiSlice';
 import { createRouteSlice } from './slices/routeSlice';
 import { createTripPlanningSlice } from './slices/tripPlanningSlice';
 import type { AppStore } from './types';
@@ -17,6 +19,8 @@ export const useAppStore = create<AppStore>()(
       ...createRouteSlice(...args),
       ...createBookmarkSlice(...args),
       ...createTripPlanningSlice(...args),
+      ...createMapViewSlice(...args),
+      ...createPOISlice(...args),
     }),
     {
       name: 'travel-planner-store',
