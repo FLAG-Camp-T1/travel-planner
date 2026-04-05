@@ -1,5 +1,6 @@
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
+import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type { RouteSummary } from '@/api/routeApi';
 import type {
@@ -14,6 +15,8 @@ import type { StateCreator } from 'zustand';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type AuthStatus = 'hydrating' | 'authenticated' | 'unauthenticated';
+export type PlannerPanel = 'trips' | 'explore' | 'bookmarks';
+export type TripDayCacheKey = string;
 
 export interface RouteSlice {
   originId: string | null;
@@ -104,11 +107,39 @@ export interface POISlice {
   clearPOIResults: () => void;
 }
 
+export type DetailOverlayKind = 'poi' | 'bookmark';
+
+export interface PlaceDetailSourceSummary {
+  placeId: string;
+  name: string;
+  address: string;
+  latitude: number | null;
+  longitude: number | null;
+  categoryLabel: string | null;
+  rating: number | null;
+}
+
+export interface ActiveDetailOverlay {
+  kind: DetailOverlayKind;
+  placeId: string;
+  sourceSummary: PlaceDetailSourceSummary;
+}
+
+export interface PlaceDetailSlice {
+  activeDetailOverlay: ActiveDetailOverlay | null;
+  placeDetail: PlaceDetailDto | null;
+  placeDetailStatus: LoadStatus;
+  placeDetailError: string | null;
+  openPlaceDetail: (overlay: ActiveDetailOverlay) => Promise<void>;
+  closePlaceDetail: () => void;
+}
+
 export type AppStore = RouteSlice &
   BookmarkSlice &
   AuthSlice &
   TripPlanningSlice &
   MapViewSlice &
-  POISlice;
+  POISlice &
+  PlaceDetailSlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;
