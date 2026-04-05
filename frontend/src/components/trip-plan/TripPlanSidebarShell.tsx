@@ -2,6 +2,7 @@ import type { PointerEvent, ReactNode } from 'react';
 
 type TripPlanSidebarShellProps = {
   children: ReactNode;
+  overlay?: ReactNode;
   width: number;
   onResizeStart: (event: PointerEvent<HTMLButtonElement>) => void;
 };
@@ -9,6 +10,7 @@ type TripPlanSidebarShellProps = {
 export default function TripPlanSidebarShell({
   children,
   onResizeStart,
+  overlay,
   width,
 }: TripPlanSidebarShellProps) {
   return (
@@ -17,6 +19,7 @@ export default function TripPlanSidebarShell({
       className="relative shrink-0 bg-white border-r border-gray-200 overflow-visible z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col"
     >
       <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-6">{children}</div>
+      {overlay}
       <button
         type="button"
         aria-label="Resize sidebar"

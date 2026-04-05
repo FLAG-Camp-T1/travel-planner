@@ -1,21 +1,42 @@
 import type { Bookmark } from '@/api/bookmarkApi';
 import BookmarkButton from '@/components/bookmark/BookmarkButton';
+import { useAppStore } from '@/stores/useAppStore';
+import type { ActiveDetailOverlay } from '@/stores/types';
 
-type CandidatePlaceCardProps = {
+type SavedBookmarkCardProps = {
   bookmark: Bookmark;
   ctaLabel: string;
   ctaHelperText: string;
   ctaTooltipText?: string;
 };
 
-export default function CandidatePlaceCard({
+const toBookmarkDetailOverlay = (bookmark: Bookmark): ActiveDetailOverlay => ({
+  kind: 'bookmark',
+  placeId: bookmark.googlePlaceId,
+  sourceSummary: {
+    placeId: bookmark.googlePlaceId,
+    name: bookmark.poiName,
+    address: bookmark.poiAddress,
+    latitude: bookmark.poiLatitude,
+    longitude: bookmark.poiLongitude,
+    categoryLabel: bookmark.category ?? null,
+    rating: null,
+  },
+});
+
+export default function SavedBookmarkCard({
   bookmark,
   ctaHelperText,
   ctaLabel,
   ctaTooltipText,
-}: CandidatePlaceCardProps) {
+}: SavedBookmarkCardProps) {
+  const openPlaceDetail = useAppStore((state) => state.openPlaceDetail);
+
   return (
-    <div className="relative px-4 py-4">
+    <div
+      className="relative cursor-pointer px-4 py-4 transition-colors hover:bg-slate-50/80"
+      onClick={() => void openPlaceDetail(toBookmarkDetailOverlay(bookmark))}
+    >
       <div className="absolute right-4 top-4">
         <BookmarkButton
           googlePlaceId={bookmark.googlePlaceId}
@@ -33,9 +54,6 @@ export default function CandidatePlaceCard({
           <h3 className="truncate text-sm font-medium text-gray-900">{bookmark.poiName}</h3>
           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
             Bookmark
-          </span>
-          <span className="rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-500">
-            Candidate for planning
           </span>
         </div>
 
