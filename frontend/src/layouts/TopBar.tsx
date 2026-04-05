@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import POISearchPanel from '@/components/poi/POISearchPanel';
 import type { AuthNoticeState } from '@/types/authNotice';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -23,28 +24,36 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-20 shadow-sm">
-      {/* Top Left Logo and Title */}
-      <div className="flex items-center gap-2">
-        {/* Logo Placeholder */}
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold">T</span>
+    <header className="shrink-0 border-b border-slate-200 bg-white/95 px-6 py-3 shadow-sm backdrop-blur">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-6">
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
+            <span className="text-white font-bold">T</span>
+          </div>
+          <div className="min-w-0">
+            <h1 className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-xl font-bold text-transparent">
+              Travel Planner
+            </h1>
+            <p className="text-xs text-slate-500">
+              Search around the map and compare places faster.
+            </p>
+          </div>
         </div>
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-teal-500">
-          Travel Planner
-        </h1>
-      </div>
 
-      {/* User Profile and Logout */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handleLogout}
-          className="text-sm font-medium text-gray-500 hover:text-red-600 transition-colors"
-        >
-          Log Out
-        </button>
-        <div className="w-9 h-9 bg-gray-200 rounded-full border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
-          <span className="text-sm text-gray-500">U</span>
+        <div className="flex min-w-0 flex-1 items-center">
+          <POISearchPanel layout="topbar" />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4 xl:self-start">
+          <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-gray-500 transition-colors hover:text-red-600"
+          >
+            Log Out
+          </button>
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gray-200 shadow-sm">
+            <span className="text-sm text-gray-500">U</span>
+          </div>
         </div>
       </div>
     </header>

@@ -4,7 +4,6 @@ export interface POISearchRequest {
   keyword: string;
   location?: string;
   radius?: number;
-  poiType?: string;
 }
 
 export interface POIDto {
@@ -13,7 +12,7 @@ export interface POIDto {
   address: string;
   latitude: number | null;
   longitude: number | null;
-  poiType: string;
+  poiType: string | null;
   rating: number | null;
 }
 

@@ -13,6 +13,7 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
     poiStatus: 'idle',
     poiError: null,
     selectedPOI: null,
+    hoveredPOI: null,
 
     searchPOI: async (request) => {
       activeRequestId += 1;
@@ -24,6 +25,7 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
           poiStatus: 'loading',
           poiError: null,
           selectedPOI: null,
+          hoveredPOI: null,
         },
         false,
         'poi/search:start',
@@ -41,6 +43,7 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
             poiStatus: 'ready',
             poiError: null,
             selectedPOI: null,
+            hoveredPOI: null,
           },
           false,
           'poi/search:success',
@@ -56,6 +59,7 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
             poiStatus: 'error',
             poiError: getErrorMessage(error),
             selectedPOI: null,
+            hoveredPOI: null,
           },
           false,
           'poi/search:error',
@@ -67,6 +71,10 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
       set({ selectedPOI: poi }, false, 'poi/select');
     },
 
+    setHoveredPOI: (poi) => {
+      set({ hoveredPOI: poi }, false, 'poi/hover');
+    },
+
     clearPOIResults: () => {
       activeRequestId += 1;
 
@@ -76,6 +84,7 @@ export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
           poiStatus: 'idle',
           poiError: null,
           selectedPOI: null,
+          hoveredPOI: null,
         },
         false,
         'poi/clear',

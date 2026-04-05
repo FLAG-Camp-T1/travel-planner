@@ -10,5 +10,4 @@ public class POISearchRequest {
 
     private String location;
     private Integer radius;
-    private String poiType;
 }

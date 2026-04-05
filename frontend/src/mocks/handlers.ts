@@ -205,7 +205,7 @@ const mockPoiResults: POIDto[] = [
     address: '600 Independence Ave SW, Washington, DC 20560, USA',
     latitude: 38.8882,
     longitude: -77.0199,
-    poiType: 'museum',
+    poiType: 'Museum',
     rating: 4.7,
   },
   {
@@ -214,7 +214,7 @@ const mockPoiResults: POIDto[] = [
     address: '1924 Pennsylvania Ave NW, Washington, DC 20006, USA',
     latitude: 38.9007,
     longitude: -77.0447,
-    poiType: 'restaurant',
+    poiType: 'Restaurant',
     rating: 4.4,
   },
   {
@@ -223,7 +223,7 @@ const mockPoiResults: POIDto[] = [
     address: '1770 Euclid St NW, Washington, DC 20009, USA',
     latitude: 38.9235,
     longitude: -77.0418,
-    poiType: 'lodging',
+    poiType: 'Lodging',
     rating: 4.5,
   },
   {
@@ -232,7 +232,7 @@ const mockPoiResults: POIDto[] = [
     address: 'Washington, DC 20004, USA',
     latitude: 38.8896,
     longitude: -77.023,
-    poiType: 'tourist_attraction',
+    poiType: 'Tourist Attraction',
     rating: 4.8,
   },
 ];
@@ -325,14 +325,10 @@ export const handlers = [
         return createErrorResponse('Search keyword cannot be empty', 40002);
       }
 
-      const results = mockPoiResults
-        .filter((poi) => !requestBody.poiType || poi.poiType === requestBody.poiType)
-        .filter((poi) => {
-          const haystacks = [poi.name, poi.address, poi.poiType].map((value) =>
-            value.toLowerCase(),
-          );
-          return haystacks.some((value) => value.includes(keyword));
-        });
+      const results = mockPoiResults.filter((poi) => {
+        const haystacks = [poi.name, poi.address, poi.poiType].map((value) => value.toLowerCase());
+        return haystacks.some((value) => value.includes(keyword));
+      });
 
       return createSuccessResponse(results);
     },

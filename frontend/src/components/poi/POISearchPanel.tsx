@@ -2,18 +2,12 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/stores/useAppStore';
 import { DEFAULT_POI_SEARCH_RADIUS_METERS } from '@/stores/slices/mapViewSlice';
 
-const POI_TYPES = [
-  { value: '', label: 'All Types' },
-  { value: 'restaurant', label: 'Restaurant' },
-  { value: 'museum', label: 'Museum' },
-  { value: 'lodging', label: 'Hotel' },
-  { value: 'tourist_attraction', label: 'Attraction' },
-  { value: 'park', label: 'Park' },
-];
+type POISearchPanelProps = {
+  layout?: 'sidebar' | 'topbar';
+};
 
-export default function POISearchPanel() {
+export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelProps) {
   const [keyword, setKeyword] = useState('');
-  const [poiType, setPoiType] = useState('');
 
   const searchPOI = useAppStore((state) => state.searchPOI);
   const clearPOIResults = useAppStore((state) => state.clearPOIResults);
@@ -23,9 +17,8 @@ export default function POISearchPanel() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildSearchRequest = useCallback(
-    (kw: string, type: string) => ({
+    (kw: string) => ({
       keyword: kw,
-      poiType: type || undefined,
       location: `${mapCenter.lat},${mapCenter.lng}`,
       radius: DEFAULT_POI_SEARCH_RADIUS_METERS,
     }),
@@ -33,12 +26,12 @@ export default function POISearchPanel() {
   );
 
   const debouncedSearch = useCallback(
-    (kw: string, type: string) => {
+    (kw: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         const trimmed = kw.trim();
         if (!trimmed) return;
-        void searchPOI(buildSearchRequest(trimmed, type));
+        void searchPOI(buildSearchRequest(trimmed));
       }, 400);
     },
     [buildSearchRequest, searchPOI],
@@ -49,28 +42,18 @@ export default function POISearchPanel() {
     const trimmed = keyword.trim();
     if (!trimmed) return;
 
-    void searchPOI(buildSearchRequest(trimmed, poiType));
+    void searchPOI(buildSearchRequest(trimmed));
   };
 
   const handleClear = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setKeyword('');
-    setPoiType('');
     clearPOIResults();
   };
 
   const handleKeywordChange = (value: string) => {
     setKeyword(value);
-    debouncedSearch(value, poiType);
-  };
-
-  const handlePoiTypeChange = (value: string) => {
-    setPoiType(value);
-    if (!keyword.trim()) {
-      return;
-    }
-
-    debouncedSearch(keyword, value);
+    debouncedSearch(value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -87,6 +70,36 @@ export default function POISearchPanel() {
     };
   }, []);
 
+  if (layout === 'topbar') {
+    return (
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 shadow-inner shadow-white/70">
+        <input
+          type="text"
+          className="min-w-0 basis-full rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:flex-1"
+          value={keyword}
+          onChange={(e) => handleKeywordChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Search places near the current map view..."
+        />
+
+        <button
+          onClick={handleSearch}
+          disabled={poiStatus === 'loading' || !keyword.trim()}
+          className="flex-1 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+        >
+          {poiStatus === 'loading' ? 'Searching...' : 'Search'}
+        </button>
+
+        <button
+          onClick={handleClear}
+          className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 sm:flex-none"
+        >
+          Clear
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -98,20 +111,6 @@ export default function POISearchPanel() {
           onKeyDown={handleKeyDown}
           placeholder="Search places..."
         />
-      </div>
-
-      <div>
-        <select
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-          value={poiType}
-          onChange={(e) => handlePoiTypeChange(e.target.value)}
-        >
-          {POI_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="flex gap-2">

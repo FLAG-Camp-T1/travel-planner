@@ -43,8 +43,7 @@ class POIControllerTest {
                                         {
                                           "keyword": "museum",
                                           "location": "38.89,-77.03",
-                                          "radius": 5000,
-                                          "poiType": "museum"
+                                          "radius": 5000
                                         }
                                         """))
                 .andExpect(status().isOk())

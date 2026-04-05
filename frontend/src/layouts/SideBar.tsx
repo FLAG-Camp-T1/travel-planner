@@ -1,7 +1,6 @@
 import type { PointerEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import POIResultList from '@/components/poi/POIResultList';
-import POISearchPanel from '@/components/poi/POISearchPanel';
 import TripPlanSidebarShell from '@/components/trip-plan/TripPlanSidebarShell';
 import CandidatePlacesSection from '@/components/trip-plan/sections/CandidatePlacesSection';
 import DayRouteSection from '@/components/trip-plan/sections/DayRouteSection';
@@ -22,6 +21,7 @@ export default function SideBar({ onResizeStart, width }: SideBarProps) {
     clearTripPlanning,
     currentTrip,
     lastBootstrapTripId,
+    poiStatus,
     tripBootstrapError,
     tripBootstrapStatus,
   } = useAppStore(
@@ -30,6 +30,7 @@ export default function SideBar({ onResizeStart, width }: SideBarProps) {
       clearTripPlanning: state.clearTripPlanning,
       currentTrip: state.currentTrip,
       lastBootstrapTripId: state.lastBootstrapTripId,
+      poiStatus: state.poiStatus,
       tripBootstrapError: state.tripBootstrapError,
       tripBootstrapStatus: state.tripBootstrapStatus,
     })),
@@ -96,23 +97,27 @@ export default function SideBar({ onResizeStart, width }: SideBarProps) {
           <ItinerarySection />
           <DayRouteSection />
 
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-700">Search Places</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Search nearby places and preview them on the map.
-              </p>
-            </div>
+          {poiStatus !== 'idle' ? (
+            <section className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-700">Search Results</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Review nearby matches from the current map-centered search.
+                  </p>
+                </div>
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600">
+                  Places
+                </span>
+              </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="border-b border-gray-100 px-4 py-4">
-                <POISearchPanel />
+              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="px-4 py-4">
+                  <POIResultList />
+                </div>
               </div>
-              <div className="px-4 py-4">
-                <POIResultList />
-              </div>
-            </div>
-          </section>
+            </section>
+          ) : null}
 
           <CandidatePlacesSection />
         </>

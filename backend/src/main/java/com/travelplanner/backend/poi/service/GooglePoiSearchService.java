@@ -5,7 +5,6 @@ import com.travelplanner.backend.common.config.GoogleMapsProperties;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.poi.dto.POIDto;
 import com.travelplanner.backend.poi.dto.POISearchRequest;
-import com.travelplanner.backend.poi.enums.POIType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,7 @@ public class GooglePoiSearchService implements POIService {
 
     private static final String FIELD_MASK =
             "places.id,places.displayName,places.formattedAddress,"
-                    + "places.location,places.primaryType,places.rating";
+                    + "places.location,places.primaryType,places.primaryTypeDisplayName,places.rating";
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final RestTemplate restTemplate;
@@ -78,12 +77,6 @@ public class GooglePoiSearchService implements POIService {
         requestBody.put("textQuery", request.getKeyword().trim());
         requestBody.put("pageSize", DEFAULT_PAGE_SIZE);
 
-        validatePoiType(request.getPoiType())
-                .ifPresent(type -> requestBody.put("includedType", type));
-        if (requestBody.containsKey("includedType")) {
-            requestBody.put("strictTypeFiltering", true);
-        }
-
         parseLocationBias(request.getLocation(), request.getRadius())
                 .ifPresent(locationBias -> requestBody.put("locationBias", locationBias));
 
@@ -120,9 +113,18 @@ public class GooglePoiSearchService implements POIService {
         dto.setAddress(asNullableText(placeNode.path("formattedAddress")));
         dto.setLatitude(asNullableDouble(placeNode.path("location").path("latitude")));
         dto.setLongitude(asNullableDouble(placeNode.path("location").path("longitude")));
-        dto.setPoiType(asNullableText(placeNode.path("primaryType")));
+        dto.setPoiType(resolvePoiTypeLabel(placeNode));
         dto.setRating(asNullableDouble(placeNode.path("rating")));
         return dto;
+    }
+
+    private String resolvePoiTypeLabel(JsonNode placeNode) {
+        String displayName = asNullableText(placeNode.path("primaryTypeDisplayName").path("text"));
+        if (displayName != null) {
+            return displayName;
+        }
+
+        return asNullableText(placeNode.path("primaryType"));
     }
 
     private Optional<Map<String, Object>> parseLocationBias(String location, Integer radius) {
@@ -158,18 +160,6 @@ public class GooglePoiSearchService implements POIService {
             throw new BusinessException(
                     ResultCode.PARAM_INVALID, "Search location must be in 'lat,lng' format");
         }
-    }
-
-    private Optional<String> validatePoiType(String poiType) {
-        Optional<POIType> resolvedType = POIType.fromRequestValue(poiType);
-        if (resolvedType.isPresent()) {
-            return resolvedType.map(POIType::getGoogleType);
-        }
-        if (poiType == null || poiType.isBlank()) {
-            return Optional.empty();
-        }
-
-        throw new BusinessException(ResultCode.PARAM_INVALID, "Unsupported POI type: " + poiType);
     }
 
     private String asNullableText(JsonNode node) {

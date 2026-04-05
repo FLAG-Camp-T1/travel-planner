@@ -97,8 +97,10 @@ export interface POISlice {
   poiStatus: LoadStatus;
   poiError: string | null;
   selectedPOI: POIDto | null;
+  hoveredPOI: POIDto | null;
   searchPOI: (request: POISearchRequest) => Promise<void>;
   selectPOI: (poi: POIDto | null) => void;
+  setHoveredPOI: (poi: POIDto | null) => void;
   clearPOIResults: () => void;
 }
 

@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.travelplanner.backend.common.api.ResultCode;
@@ -52,7 +51,6 @@ class GooglePoiSearchServiceTest {
         request.setKeyword("museum");
         request.setLocation("38.89,-77.03");
         request.setRadius(5000);
-        request.setPoiType("museum");
 
         String responseBody =
                 """
@@ -67,6 +65,9 @@ class GooglePoiSearchServiceTest {
                       "location": {
                         "latitude": 38.8882,
                         "longitude": -77.0199
+                      },
+                      "primaryTypeDisplayName": {
+                        "text": "Museum"
                       },
                       "primaryType": "museum",
                       "rating": 4
@@ -90,7 +91,7 @@ class GooglePoiSearchServiceTest {
         assertEquals("National Air and Space Museum", poiResults.getFirst().getName());
         assertEquals(38.8882, poiResults.getFirst().getLatitude());
         assertEquals(-77.0199, poiResults.getFirst().getLongitude());
-        assertEquals("museum", poiResults.getFirst().getPoiType());
+        assertEquals("Museum", poiResults.getFirst().getPoiType());
         assertEquals(4.0, poiResults.getFirst().getRating());
     }
 
@@ -110,25 +111,6 @@ class GooglePoiSearchServiceTest {
         List<POIDto> poiResults = googlePoiSearchService.searchPOI(request);
 
         assertEquals(List.of(), poiResults);
-    }
-
-    @Test
-    void searchPOI_WhenPoiTypeIsInvalid_ThrowsParamInvalidWithoutCallingProvider() {
-        POISearchRequest request = new POISearchRequest();
-        request.setKeyword("museum");
-        request.setPoiType("invalid-type");
-
-        BusinessException exception =
-                assertThrows(
-                        BusinessException.class, () -> googlePoiSearchService.searchPOI(request));
-
-        assertEquals(ResultCode.PARAM_INVALID, exception.getResultCode());
-        verify(restTemplate, org.mockito.Mockito.never())
-                .exchange(
-                        anyString(),
-                        eq(HttpMethod.POST),
-                        org.mockito.Mockito.any(),
-                        eq(String.class));
     }
 
     @Test
