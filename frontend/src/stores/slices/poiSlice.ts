@@ -5,62 +5,81 @@ const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Failed to search POI.';
 };
 
-export const createPOISlice: AppStoreCreator<POISlice> = (set) => ({
-  poiResults: [],
-  poiStatus: 'idle',
-  poiError: null,
-  selectedPOI: null,
+export const createPOISlice: AppStoreCreator<POISlice> = (set) => {
+  let activeRequestId = 0;
 
-  searchPOI: async (request) => {
-    set(
-      {
-        poiResults: [],
-        poiStatus: 'loading',
-        poiError: null,
-      },
-      false,
-      'poi/search:start',
-    );
+  return {
+    poiResults: [],
+    poiStatus: 'idle',
+    poiError: null,
+    selectedPOI: null,
 
-    try {
-      const results = await searchPOI(request);
+    searchPOI: async (request) => {
+      activeRequestId += 1;
+      const requestId = activeRequestId;
 
-      set(
-        {
-          poiResults: results,
-          poiStatus: 'ready',
-          poiError: null,
-        },
-        false,
-        'poi/search:success',
-      );
-    } catch (error) {
       set(
         {
           poiResults: [],
-          poiStatus: 'error',
-          poiError: getErrorMessage(error),
+          poiStatus: 'loading',
+          poiError: null,
+          selectedPOI: null,
         },
         false,
-        'poi/search:error',
+        'poi/search:start',
       );
-    }
-  },
 
-  selectPOI: (poi) => {
-    set({ selectedPOI: poi }, false, 'poi/select');
-  },
+      try {
+        const results = await searchPOI(request);
+        if (requestId !== activeRequestId) {
+          return;
+        }
 
-  clearPOIResults: () => {
-    set(
-      {
-        poiResults: [],
-        poiStatus: 'idle',
-        poiError: null,
-        selectedPOI: null,
-      },
-      false,
-      'poi/clear',
-    );
-  },
-});
+        set(
+          {
+            poiResults: results,
+            poiStatus: 'ready',
+            poiError: null,
+            selectedPOI: null,
+          },
+          false,
+          'poi/search:success',
+        );
+      } catch (error) {
+        if (requestId !== activeRequestId) {
+          return;
+        }
+
+        set(
+          {
+            poiResults: [],
+            poiStatus: 'error',
+            poiError: getErrorMessage(error),
+            selectedPOI: null,
+          },
+          false,
+          'poi/search:error',
+        );
+      }
+    },
+
+    selectPOI: (poi) => {
+      set({ selectedPOI: poi }, false, 'poi/select');
+    },
+
+    clearPOIResults: () => {
+      activeRequestId += 1;
+
+      set(
+        {
+          poiResults: [],
+          poiStatus: 'idle',
+          poiError: null,
+          selectedPOI: null,
+        },
+        false,
+        'poi/clear',
+      );
+    },
+  };
+};

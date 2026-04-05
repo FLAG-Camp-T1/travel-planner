@@ -1,20 +1,20 @@
 import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
-import { useShallow } from 'zustand/react/shallow';
-import POIMarkers from '@/components/map/PoiMarkers';
+import PlannerMapCameraSync from '@/components/map/PlannerMapCameraSync';
+import POIMarkers from '@/components/map/POIMarkers';
 import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
+import { useShallow } from 'zustand/react/shallow';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
 import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShell';
 import { useAppStore } from '@/stores/useAppStore';
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '@/stores/slices/mapViewSlice';
 
-const DEFAULT_COORDINATES = { lat: 38.8977, lng: -77.0365 };
-const DEFAULT_ZOOM = 13;
 const DEFAULT_MOCK_TRIP_ID = 1001;
 const defaultCameraProps = {
-  center: DEFAULT_COORDINATES,
-  zoom: DEFAULT_ZOOM,
+  center: DEFAULT_MAP_CENTER,
+  zoom: DEFAULT_MAP_ZOOM,
 };
 const SHOULD_ENABLE_DEV_FALLBACK =
   import.meta.env.DEV && import.meta.env.VITE_TRIP_PLAN_ENABLE_DEV_FALLBACK === 'true';
@@ -61,6 +61,7 @@ export default function PlannerPage() {
           gestureHandling={'greedy'}
           mapId={'DEMO_MAP_ID'}
         >
+          <PlannerMapCameraSync />
           <CustomZoomControl />
           <RoutePolyline />
           <SelectedDayRoutePolyline />

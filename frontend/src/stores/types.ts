@@ -86,6 +86,12 @@ export interface TripPlanningSlice {
   clearTripPlanning: () => void;
 }
 
+export interface MapViewSlice {
+  mapCenter: google.maps.LatLngLiteral;
+  mapZoom: number;
+  setMapCamera: (camera: { center: google.maps.LatLngLiteral; zoom: number }) => void;
+}
+
 export interface POISlice {
   poiResults: POIDto[];
   poiStatus: LoadStatus;
@@ -96,6 +102,11 @@ export interface POISlice {
   clearPOIResults: () => void;
 }
 
-export type AppStore = RouteSlice & BookmarkSlice & AuthSlice & TripPlanningSlice & POISlice;
+export type AppStore = RouteSlice &
+  BookmarkSlice &
+  AuthSlice &
+  TripPlanningSlice &
+  MapViewSlice &
+  POISlice;
 
 export type AppStoreCreator<T> = StateCreator<AppStore, [['zustand/devtools', never]], [], T>;

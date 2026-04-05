@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
+import type { POIDto } from '@/api/poiApi';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function POIMarkers() {
@@ -7,18 +8,22 @@ export default function POIMarkers() {
   const selectedPOI = useAppStore((state) => state.selectedPOI);
   const selectPOI = useAppStore((state) => state.selectPOI);
   const map = useMap();
+  const visiblePoiResults = poiResults.filter(
+    (poi): poi is POIDto & { latitude: number; longitude: number } =>
+      poi.latitude != null && poi.longitude != null,
+  );
 
   useEffect(() => {
-    if (!map || !selectedPOI) return;
+    if (!map || selectedPOI?.latitude == null || selectedPOI?.longitude == null) return;
     map.panTo({ lat: selectedPOI.latitude, lng: selectedPOI.longitude });
     map.setZoom(15);
   }, [map, selectedPOI]);
 
-  if (poiResults.length === 0) return null;
+  if (visiblePoiResults.length === 0) return null;
 
   return (
     <>
-      {poiResults.map((poi) => (
+      {visiblePoiResults.map((poi) => (
         <AdvancedMarker
           key={poi.placeId}
           position={{ lat: poi.latitude, lng: poi.longitude }}
