@@ -1,12 +1,13 @@
 import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
 import { useShallow } from 'zustand/react/shallow';
-import { useAppStore } from '@/stores/useAppStore';
+import POIMarkers from '@/components/map/PoiMarkers';
+import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import RoutePolyline from '../components/map/RoutePolyline';
-import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
 import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShell';
+import { useAppStore } from '@/stores/useAppStore';
 
 const DEFAULT_COORDINATES = { lat: 38.8977, lng: -77.0365 };
 const DEFAULT_ZOOM = 13;
@@ -63,6 +64,7 @@ export default function PlannerPage() {
           <CustomZoomControl />
           <RoutePolyline />
           <SelectedDayRoutePolyline />
+          <POIMarkers />
         </Map>
       </TripPlanMapShell>
     </TripPlanWorkspaceShell>

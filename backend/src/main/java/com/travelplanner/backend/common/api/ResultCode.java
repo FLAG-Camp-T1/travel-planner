@@ -23,6 +23,7 @@ public enum ResultCode {
     GOOGLE_PLACES_REQUEST_ERROR(50110, "Google Places API Request Error"),
     GOOGLE_PLACES_NOT_FOUND_ERROR(50111, "Place Not Found"),
     GOOGLE_PLACES_RESPONSE_DECODE_ERROR(50112, "Places Response Decode Error"),
+    POI_SEARCH_FAILED(50113, "POI Search Failed"),
     // Trip Errors
     TRIP_ROUTE_GENERATION_ERROR(50120, "Trip Route Generation Error"),
     TRIP_ROUTE_SEGMENT_BUILD_ERROR(50121, "Trip Route Segment Build Error"),
