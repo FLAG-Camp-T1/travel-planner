@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getActiveMockFlags, MOCK_FLAGS_HEADER } from '@/mocks/mockScenario';
 import { getStoredAuthToken } from '@/utils/authStorage';
 
 const axiosClient = axios.create({
@@ -15,6 +16,14 @@ axiosClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const activeMockFlags = getActiveMockFlags();
+    if (activeMockFlags.length > 0) {
+      config.headers[MOCK_FLAGS_HEADER] = activeMockFlags.join(',');
+    } else {
+      delete config.headers[MOCK_FLAGS_HEADER];
+    }
+
     return config;
   },
   (error) => {
