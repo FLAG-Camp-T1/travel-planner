@@ -78,7 +78,8 @@ public class TripController {
     @PatchMapping("/{tripId}")
     @Operation(
             summary = "Update a trip",
-            description = "Updates the current user's editable trip fields.")
+            description =
+                    "Updates the current user's editable trip fields, including title, duration, and optional start date.")
     public ApiResponse<TripSummaryDto> updateTrip(
             @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(

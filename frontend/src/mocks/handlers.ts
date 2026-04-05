@@ -542,22 +542,33 @@ export const handlers = [
 
     const requestBody = (await request.json()) as UpdateTripRequest;
     const title = requestBody.title?.trim();
+    const durationDays = requestBody.durationDays;
 
-    if (!title) {
-      return createErrorResponse('Trip title is required.', 40002);
+    if (!title || !durationDays || durationDays < 1 || durationDays > 15) {
+      return createErrorResponse('Trip title and durationDays are required.', 40002);
     }
 
     const existingTrip = mockTrips[tripIndex];
+    if (durationDays < existingTrip.durationDays) {
+      return createErrorResponse('Reducing trip duration is not supported yet.', 40000);
+    }
+
     const updatedTrip: TripSummary = {
       ...existingTrip,
       title,
+      durationDays,
       startDate: requestBody.startDate ?? null,
     };
 
     mockTrips = mockTrips.map((trip) => (trip.tripId === tripId ? updatedTrip : trip));
-    mockTripDaysByTripId[tripId] = buildMockTripDays(
-      existingTrip.durationDays,
-      requestBody.startDate ?? null,
+    mockTripDaysByTripId[tripId] = buildMockTripDays(durationDays, requestBody.startDate ?? null);
+
+    const existingDayItems = mockTripItemsByTripId[tripId] ?? {};
+    mockTripItemsByTripId[tripId] = Object.fromEntries(
+      Array.from({ length: durationDays }, (_, index) => {
+        const dayNumber = index + 1;
+        return [dayNumber, existingDayItems[dayNumber] ?? []];
+      }),
     );
 
     return createSuccessResponse(updatedTrip);

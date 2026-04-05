@@ -103,7 +103,7 @@ class TripControllerTest {
         TripSummaryDto response = new TripSummaryDto();
         response.setTripId(1001L);
         response.setTitle("Updated DC Trip");
-        response.setDurationDays(3);
+        response.setDurationDays(5);
         response.setStartDate(LocalDate.of(2026, 4, 12));
 
         when(tripCommandService.updateTrip(any(Long.class), any(UpdateTripRequestDto.class)))
@@ -116,6 +116,7 @@ class TripControllerTest {
                                         """
                                         {
                                           "title": "Updated DC Trip",
+                                          "durationDays": 5,
                                           "startDate": "2026-04-12"
                                         }
                                         """))
@@ -272,7 +273,8 @@ class TripControllerTest {
                                 .content(
                                         """
                                         {
-                                          "title": " "
+                                          "title": " ",
+                                          "durationDays": 0
                                         }
                                         """))
                 .andExpect(status().isOk())

@@ -10,6 +10,7 @@ export interface CreateTripRequest {
 
 export interface UpdateTripRequest {
   title: string;
+  durationDays: number;
   startDate?: DateString | null;
 }
 

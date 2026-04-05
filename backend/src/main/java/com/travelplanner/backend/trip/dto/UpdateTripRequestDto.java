@@ -2,7 +2,10 @@ package com.travelplanner.backend.trip.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import lombok.Data;
 
@@ -18,6 +21,15 @@ public class UpdateTripRequestDto {
             example = "Spring DC Trip",
             requiredMode = RequiredMode.REQUIRED)
     private String title;
+
+    @NotNull
+    @Min(1)
+    @Max(15)
+    @Schema(
+            description = "Trip duration in days",
+            example = "5",
+            requiredMode = RequiredMode.REQUIRED)
+    private Integer durationDays;
 
     @Schema(
             description =

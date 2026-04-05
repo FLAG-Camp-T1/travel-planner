@@ -64,13 +64,26 @@ public class TripCommandService {
     public TripSummaryDto updateTrip(Long tripId, UpdateTripRequestDto request) {
         TripEntity tripEntity = getOwnedTripEntity(tripId);
         String trimmedTitle = request.getTitle().trim();
+        Integer requestedDuration = request.getDurationDays();
+        Integer currentDuration = tripEntity.getDuration();
 
         if (trimmedTitle.isEmpty()) {
             throw new BusinessException(ResultCode.PARAM_INVALID, "Trip title must not be blank.");
         }
 
+        if (requestedDuration < currentDuration) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST, "Reducing trip duration is not supported yet.");
+        }
+
         tripEntity.setTitle(trimmedTitle);
+        tripEntity.setDuration(requestedDuration);
         tripEntity.setStartDate(request.getStartDate());
+
+        if (requestedDuration > currentDuration) {
+            tripDayRepository.saveAll(
+                    createTripDays(tripEntity.getId(), currentDuration + 1, requestedDuration));
+        }
 
         return TripMapper.toTripSummaryDto(tripRepository.save(tripEntity));
     }
@@ -171,8 +184,13 @@ public class TripCommandService {
     }
 
     private List<TripDayEntity> createTripDays(Long tripId, Integer durationDays) {
+        return createTripDays(tripId, 1, durationDays);
+    }
+
+    private List<TripDayEntity> createTripDays(
+            Long tripId, Integer startDayNumber, Integer endDayNumber) {
         List<TripDayEntity> tripDays = new ArrayList<>();
-        for (int dayNumber = 1; dayNumber <= durationDays; dayNumber += 1) {
+        for (int dayNumber = startDayNumber; dayNumber <= endDayNumber; dayNumber += 1) {
             TripDayEntity tripDayEntity = new TripDayEntity();
             tripDayEntity.setTripId(tripId);
             tripDayEntity.setDayNumber(dayNumber);

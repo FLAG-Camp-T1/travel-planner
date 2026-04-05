@@ -15,6 +15,7 @@ export default function TripEditSection() {
       })),
     );
   const [title, setTitle] = useState('');
+  const [durationDays, setDurationDays] = useState('');
   const [startDate, setStartDate] = useState('');
   const [isOpen, setIsOpen] = useState(false);
 
@@ -38,14 +39,23 @@ export default function TripEditSection() {
   }
 
   const schedulingModeLabel = startDate ? 'Fixed' : 'Flexible';
+  const parsedDurationDays = Number(durationDays);
+  const durationIsValid =
+    Number.isInteger(parsedDurationDays) &&
+    parsedDurationDays >= currentTrip.durationDays &&
+    parsedDurationDays <= 15;
   const canSubmit =
-    title.trim().length > 0 && tripUpdateStatus !== 'loading' && tripBootstrapStatus !== 'loading';
+    title.trim().length > 0 &&
+    durationIsValid &&
+    tripUpdateStatus !== 'loading' &&
+    tripBootstrapStatus !== 'loading';
   const helperCopy = startDate
     ? 'A fixed start date will shift the trip into Fixed scheduling mode.'
     : 'Leaving start date empty keeps the trip in Flexible scheduling mode.';
 
   const handleOpen = () => {
     setTitle(currentTrip.title);
+    setDurationDays(String(currentTrip.durationDays));
     setStartDate(currentTrip.startDate ?? '');
     setIsOpen(true);
   };
@@ -60,6 +70,7 @@ export default function TripEditSection() {
     void (async () => {
       await updateTrip(currentTrip.tripId, {
         title: title.trim(),
+        durationDays: parsedDurationDays,
         startDate: startDate || null,
       });
 
@@ -154,6 +165,22 @@ export default function TripEditSection() {
               >
                 Clear
               </button>
+            </div>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Duration</span>
+            <input
+              type="number"
+              min={currentTrip.durationDays}
+              max={15}
+              step={1}
+              value={durationDays}
+              onChange={(event) => setDurationDays(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+            <div className="text-xs text-gray-500">
+              You can extend this trip up to 15 days. Shortening it is not available yet.
             </div>
           </label>
 

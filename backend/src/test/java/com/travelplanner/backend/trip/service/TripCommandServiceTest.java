@@ -97,9 +97,10 @@ class TripCommandServiceTest {
     }
 
     @Test
-    void updateTrip_UpdatesTrimmedTitleAndStartDate() {
+    void updateTrip_UpdatesTrimmedTitleStartDateAndDuration() {
         UpdateTripRequestDto request = new UpdateTripRequestDto();
         request.setTitle("  Updated DC Trip  ");
+        request.setDurationDays(5);
         request.setStartDate(LocalDate.of(2026, 4, 12));
 
         TripEntity tripEntity = new TripEntity();
@@ -120,18 +121,26 @@ class TripCommandServiceTest {
         assertNotNull(result);
         assertEquals("Updated DC Trip", result.getTitle());
         assertEquals(LocalDate.of(2026, 4, 12), result.getStartDate());
-        assertEquals(3, result.getDurationDays());
+        assertEquals(5, result.getDurationDays());
 
         verify(tripRepository).save(tripCaptor.capture());
         TripEntity savedTrip = tripCaptor.getValue();
         assertEquals("Updated DC Trip", savedTrip.getTitle());
+        assertEquals(5, savedTrip.getDuration());
         assertEquals(LocalDate.of(2026, 4, 12), savedTrip.getStartDate());
+        verify(tripDayRepository).saveAll(tripDaysCaptor.capture());
+
+        List<TripDayEntity> savedTripDays = tripDaysCaptor.getValue();
+        assertEquals(2, savedTripDays.size());
+        assertEquals(4, savedTripDays.get(0).getDayNumber());
+        assertEquals(5, savedTripDays.get(1).getDayNumber());
     }
 
     @Test
     void updateTrip_ClearsStartDateWhenNullIsProvided() {
         UpdateTripRequestDto request = new UpdateTripRequestDto();
         request.setTitle("Spring DC Trip");
+        request.setDurationDays(3);
         request.setStartDate(null);
 
         TripEntity tripEntity = new TripEntity();
@@ -154,12 +163,40 @@ class TripCommandServiceTest {
 
         verify(tripRepository).save(tripCaptor.capture());
         assertNull(tripCaptor.getValue().getStartDate());
+        verify(tripDayRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void updateTrip_WhenDurationShrinks_ThrowsBusinessException() {
+        UpdateTripRequestDto request = new UpdateTripRequestDto();
+        request.setTitle("Updated DC Trip");
+        request.setDurationDays(2);
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+        tripEntity.setTitle("Spring DC Trip");
+        tripEntity.setDuration(3);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.updateTrip(1001L, request));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(tripRepository, never()).save(any(TripEntity.class));
+        verify(tripDayRepository, never()).saveAll(any());
     }
 
     @Test
     void updateTrip_WhenTripIsNotOwned_ThrowsBusinessException() {
         UpdateTripRequestDto request = new UpdateTripRequestDto();
         request.setTitle("Updated DC Trip");
+        request.setDurationDays(3);
 
         when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
         when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID)).thenReturn(Optional.empty());
