@@ -7,6 +7,7 @@ import com.travelplanner.backend.place.service.PlaceLookupService;
 import com.travelplanner.backend.route.enums.TravelMode;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
+import com.travelplanner.backend.trip.dto.MoveTripDayItemRequestDto;
 import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
@@ -141,6 +142,32 @@ public class TripCommandService {
                 requestedItemIds.stream().map(itemsById::get).toList();
 
         persistTripDayReorder(reorderedItems);
+    }
+
+    @Transactional
+    public void moveTripDayItem(
+            Long tripId, Integer dayNumber, Long itemId, MoveTripDayItemRequestDto request) {
+        TripDayEntity sourceTripDayEntity = getOwnedTripDayEntity(tripId, dayNumber);
+        Integer targetDayNumber = request.getTargetDayNumber();
+        if (dayNumber.equals(targetDayNumber)) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST,
+                    "Target day must differ from the source day for move operations.");
+        }
+
+        TripDayEntity targetTripDayEntity = getOwnedTripDayEntity(tripId, targetDayNumber);
+        ItineraryEntity itineraryEntity =
+                getOwnedItineraryEntity(tripId, dayNumber, sourceTripDayEntity.getId(), itemId);
+
+        itineraryEntity.setTripDayId(targetTripDayEntity.getId());
+        itineraryEntity.setVisitOrder(getNextVisitOrder(targetTripDayEntity.getId()));
+        itineraryRepository.save(itineraryEntity);
+
+        List<ItineraryEntity> sourceItems =
+                itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(
+                        sourceTripDayEntity.getId());
+        rewriteVisitOrder(sourceItems);
+        itineraryRepository.saveAll(sourceItems);
     }
 
     private List<TripDayEntity> createTripDays(Long tripId, Integer durationDays) {

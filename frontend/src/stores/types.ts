@@ -8,6 +8,7 @@ import type {
   DayRouteSegment,
   DayRouteSummary,
   ItineraryItem,
+  MoveTripDayItemRequest,
   ReorderTripDayItemsRequest,
   TripDay,
   TripSummary,
@@ -91,6 +92,9 @@ export interface TripPlanningSlice {
   dayItemReorderStatus: LoadStatus;
   dayItemReorderError: string | null;
   dayItemReorderTargetId: number | null;
+  dayItemMoveStatus: LoadStatus;
+  dayItemMoveError: string | null;
+  dayItemMoveTargetId: number | null;
   tripBootstrapStatus: LoadStatus;
   tripBootstrapError: string | null;
   fetchTrips: () => Promise<void>;
@@ -120,6 +124,12 @@ export interface TripPlanningSlice {
     dayNumber: number,
     request: ReorderTripDayItemsRequest,
     targetItemId: number,
+  ) => Promise<void>;
+  moveDayItem: (
+    tripId: number,
+    dayNumber: number,
+    itemId: number,
+    request: MoveTripDayItemRequest,
   ) => Promise<void>;
   generateDayRoute: (tripId: number, dayNumber: number) => Promise<void>;
   clearTripPlanning: () => void;

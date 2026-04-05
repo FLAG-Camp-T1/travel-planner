@@ -8,6 +8,7 @@ import type {
   CreateTripRequest,
   GenerateDayRouteResponse,
   ItineraryItem,
+  MoveTripDayItemRequest,
   ReorderTripDayItemsRequest,
   TripDay,
   TripDayItemsResponse,
@@ -727,6 +728,64 @@ export const handlers = [
 
     return createSuccessResponse(null);
   }),
+
+  http.post<
+    { tripId: string; dayNumber: string; itemId: string },
+    MoveTripDayItemRequest,
+    MockApiResponse<null>
+  >(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId/move`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const sourceDayNumber = Number(params.dayNumber);
+      const itemId = Number(params.itemId);
+      const sourceItems = mockTripItemsByTripId[tripId]?.[sourceDayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!sourceItems) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      const requestBody = (await request.json()) as MoveTripDayItemRequest;
+      const targetDayNumber = requestBody.targetDayNumber;
+      const targetItems = mockTripItemsByTripId[tripId]?.[targetDayNumber];
+
+      if (!targetItems) {
+        return createErrorResponse(`Trip day ${targetDayNumber} not found.`, 40404);
+      }
+
+      if (targetDayNumber === sourceDayNumber) {
+        return createErrorResponse('Target day must differ from the source day.', 40000);
+      }
+
+      const movedItem = sourceItems.find((item) => item.itemId === itemId);
+      if (!movedItem) {
+        return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+      }
+
+      mockTripItemsByTripId[tripId][sourceDayNumber] = sourceItems
+        .filter((item) => item.itemId !== itemId)
+        .map((item, index) => ({
+          ...item,
+          visitOrder: index + 1,
+        }));
+
+      mockTripItemsByTripId[tripId][targetDayNumber] = [
+        ...targetItems,
+        {
+          ...movedItem,
+          visitOrder: targetItems.length + 1,
+        },
+      ];
+
+      return createSuccessResponse(null);
+    },
+  ),
 
   http.patch<
     { tripId: string; dayNumber: string; itemId: string },

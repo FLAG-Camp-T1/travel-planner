@@ -33,6 +33,10 @@ export interface ReorderTripDayItemsRequest {
   itemIds: number[];
 }
 
+export interface MoveTripDayItemRequest {
+  targetDayNumber: number;
+}
+
 export interface TripSummary {
   tripId: number;
   title: string;
@@ -148,6 +152,15 @@ export const reorderTripDayItems = (
   request: ReorderTripDayItemsRequest,
 ): Promise<void> => {
   return axiosClient.patch(`/trips/${tripId}/days/${dayNumber}/items/reorder`, request);
+};
+
+export const moveTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  itemId: number,
+  request: MoveTripDayItemRequest,
+): Promise<void> => {
+  return axiosClient.post(`/trips/${tripId}/days/${dayNumber}/items/${itemId}/move`, request);
 };
 
 export const getTripDays = (tripId: number): Promise<TripDaysResponse> => {

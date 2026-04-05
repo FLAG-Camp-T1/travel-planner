@@ -4,6 +4,7 @@ import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
+import com.travelplanner.backend.trip.dto.MoveTripDayItemRequestDto;
 import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
@@ -192,6 +193,28 @@ public class TripController {
                     @RequestBody
                     ReorderTripDayItemsRequestDto request) {
         tripCommandService.reorderTripDayItems(tripId, dayNumber, request);
+        return ApiResponse.success();
+    }
+
+    @PostMapping("/{tripId}/days/{dayNumber}/items/{itemId}/move")
+    @Operation(
+            summary = "Move a day itinerary item",
+            description =
+                    "Moves one itinerary item to another day in the same trip and reorders both day lists.")
+    public ApiResponse<Void> moveTripDayItem(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Source day number within the trip", example = "1")
+                    @PathVariable
+                    Integer dayNumber,
+            @Parameter(description = "Itinerary item identifier", example = "5001") @PathVariable
+                    Long itemId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "Target day used for the move operation",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    MoveTripDayItemRequestDto request) {
+        tripCommandService.moveTripDayItem(tripId, dayNumber, itemId, request);
         return ApiResponse.success();
     }
 
