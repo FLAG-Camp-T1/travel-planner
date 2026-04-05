@@ -8,6 +8,7 @@ import {
   getTrip,
   getTripDayItems,
   getTripDays,
+  reorderTripDayItems as reorderTripDayItemsApi,
   updateTripDayItem as updateTripDayItemApi,
   updateTrip as updateTripApi,
 } from '@/api/tripApi';
@@ -63,6 +64,9 @@ const getDayItemMutationState = () => ({
   dayItemDeletionStatus: 'idle' as const,
   dayItemDeletionError: null,
   dayItemDeletionTargetId: null,
+  dayItemReorderStatus: 'idle' as const,
+  dayItemReorderError: null,
+  dayItemReorderTargetId: null,
 });
 
 const pickDayItemMutationState = (state: TripPlanningSlice) => ({
@@ -75,6 +79,9 @@ const pickDayItemMutationState = (state: TripPlanningSlice) => ({
   dayItemDeletionStatus: state.dayItemDeletionStatus,
   dayItemDeletionError: state.dayItemDeletionError,
   dayItemDeletionTargetId: state.dayItemDeletionTargetId,
+  dayItemReorderStatus: state.dayItemReorderStatus,
+  dayItemReorderError: state.dayItemReorderError,
+  dayItemReorderTargetId: state.dayItemReorderTargetId,
 });
 
 export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set, get) => {
@@ -89,6 +96,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         | 'dayItemCreationTargetPlaceId'
         | 'dayItemUpdateError'
         | 'dayItemDeletionError'
+        | 'dayItemReorderError'
       >
     >,
     action: string,
@@ -105,6 +113,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         | 'dayItemUpdateError'
         | 'dayItemUpdateTargetId'
         | 'dayItemDeletionError'
+        | 'dayItemReorderError'
       >
     >,
     action: string,
@@ -121,6 +130,24 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         | 'dayItemDeletionError'
         | 'dayItemDeletionTargetId'
         | 'dayItemUpdateError'
+        | 'dayItemReorderError'
+      >
+    >,
+    action: string,
+  ) => {
+    set(patch, false, action);
+  };
+
+  const setDayItemReorderState = (
+    patch: Partial<
+      Pick<
+        TripPlanningSlice,
+        | 'dayItemCreationError'
+        | 'dayItemUpdateError'
+        | 'dayItemDeletionError'
+        | 'dayItemReorderStatus'
+        | 'dayItemReorderError'
+        | 'dayItemReorderTargetId'
       >
     >,
     action: string,
@@ -270,6 +297,32 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       }),
       false,
       'trip/day-items:remove-cache',
+    );
+  };
+
+  const reorderCachedDayItems = (tripId: number, dayNumber: number, itemIds: number[]) => {
+    const cacheKey = getTripDayCacheKey(tripId, dayNumber);
+
+    set(
+      (state) => {
+        const currentItems = state.dayItemsByDayNumber[cacheKey] ?? [];
+        const itemsById = new Map(currentItems.map((item) => [item.itemId, item]));
+
+        return {
+          dayItemsByDayNumber: {
+            ...state.dayItemsByDayNumber,
+            [cacheKey]: itemIds
+              .map((itemId) => itemsById.get(itemId))
+              .filter((item): item is (typeof currentItems)[number] => item !== undefined)
+              .map((item, index) => ({
+                ...item,
+                visitOrder: index + 1,
+              })),
+          },
+        };
+      },
+      false,
+      'trip/day-items:reorder-cache',
     );
   };
 
@@ -681,6 +734,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           dayItemCreationTargetPlaceId: request.placeId,
           dayItemUpdateError: null,
           dayItemDeletionError: null,
+          dayItemReorderError: null,
         },
         'trip/day-item:create:start',
       );
@@ -720,6 +774,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           dayItemUpdateTargetId: itemId,
           dayItemCreationError: null,
           dayItemDeletionError: null,
+          dayItemReorderError: null,
         },
         'trip/day-item:update:start',
       );
@@ -761,6 +816,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           dayItemDeletionTargetId: itemId,
           dayItemCreationError: null,
           dayItemUpdateError: null,
+          dayItemReorderError: null,
         },
         'trip/day-item:delete:start',
       );
@@ -786,6 +842,44 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
             dayItemDeletionTargetId: null,
           },
           'trip/day-item:delete:error',
+        );
+      }
+    },
+
+    reorderDayItems: async (tripId, dayNumber, request, targetItemId) => {
+      setDayItemReorderState(
+        {
+          dayItemCreationError: null,
+          dayItemUpdateError: null,
+          dayItemDeletionError: null,
+          dayItemReorderStatus: 'loading',
+          dayItemReorderError: null,
+          dayItemReorderTargetId: targetItemId,
+        },
+        'trip/day-item:reorder:start',
+      );
+
+      try {
+        await reorderTripDayItemsApi(tripId, dayNumber, request);
+        invalidateDayRoute(tripId, dayNumber);
+        reorderCachedDayItems(tripId, dayNumber, request.itemIds);
+
+        setDayItemReorderState(
+          {
+            dayItemReorderStatus: 'ready',
+            dayItemReorderError: null,
+            dayItemReorderTargetId: null,
+          },
+          'trip/day-item:reorder:success',
+        );
+      } catch (error) {
+        setDayItemReorderState(
+          {
+            dayItemReorderStatus: 'error',
+            dayItemReorderError: getErrorMessage(error),
+            dayItemReorderTargetId: null,
+          },
+          'trip/day-item:reorder:error',
         );
       }
     },

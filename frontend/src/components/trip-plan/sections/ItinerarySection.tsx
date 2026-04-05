@@ -17,6 +17,8 @@ export default function ItinerarySection() {
     dayItemDeletionError,
     dayItemDeletionStatus,
     dayItemDeletionTargetId,
+    dayItemReorderError,
+    dayItemReorderStatus,
     dayItemUpdateError,
     dayItemUpdateStatus,
     dayItemUpdateTargetId,
@@ -26,6 +28,7 @@ export default function ItinerarySection() {
     deleteDayItem,
     fetchDayItems,
     generateDayRoute,
+    reorderDayItems,
     selectedDayNumber,
     updateDayItem,
   } = useAppStore(
@@ -35,6 +38,8 @@ export default function ItinerarySection() {
       dayItemDeletionError: state.dayItemDeletionError,
       dayItemDeletionStatus: state.dayItemDeletionStatus,
       dayItemDeletionTargetId: state.dayItemDeletionTargetId,
+      dayItemReorderError: state.dayItemReorderError,
+      dayItemReorderStatus: state.dayItemReorderStatus,
       dayItemUpdateError: state.dayItemUpdateError,
       dayItemUpdateStatus: state.dayItemUpdateStatus,
       dayItemUpdateTargetId: state.dayItemUpdateTargetId,
@@ -44,6 +49,7 @@ export default function ItinerarySection() {
       deleteDayItem: state.deleteDayItem,
       fetchDayItems: state.fetchDayItems,
       generateDayRoute: state.generateDayRoute,
+      reorderDayItems: state.reorderDayItems,
       selectedDayNumber: state.selectedDayNumber,
       updateDayItem: state.updateDayItem,
     })),
@@ -94,7 +100,7 @@ export default function ItinerarySection() {
     selectedDayNumber,
     tripReady,
   });
-  const itineraryMutationError = dayItemDeletionError ?? dayItemUpdateError;
+  const itineraryMutationError = dayItemReorderError ?? dayItemDeletionError ?? dayItemUpdateError;
 
   const handleGenerateRoute = () => {
     if (!currentTrip || selectedDayNumber === null || !canGenerateRoute) {
@@ -120,6 +126,33 @@ export default function ItinerarySection() {
     void updateDayItem(currentTrip.tripId, selectedDayNumber, itemId, { travelMethod });
   };
 
+  const handleMoveItem = (itemId: number, direction: 'up' | 'down') => {
+    if (!currentTrip || selectedDayNumber === null) {
+      return;
+    }
+
+    const currentIndex = currentDayItems.findIndex((item) => item.itemId === itemId);
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= currentDayItems.length) {
+      return;
+    }
+
+    const reorderedItems = [...currentDayItems];
+    const [movedItem] = reorderedItems.splice(currentIndex, 1);
+    reorderedItems.splice(targetIndex, 0, movedItem);
+
+    void reorderDayItems(
+      currentTrip.tripId,
+      selectedDayNumber,
+      { itemIds: reorderedItems.map((item) => item.itemId) },
+      itemId,
+    );
+  };
+
   return (
     <section className="space-y-3">
       <div className="space-y-2">
@@ -137,7 +170,8 @@ export default function ItinerarySection() {
           </div>
         </div>
         <p className="text-sm text-gray-500">
-          View the stops planned for the selected day. Click a travel method to edit it.
+          View the stops planned for the selected day. Click a travel method to edit it, or use
+          Up/Down to reorder stops.
         </p>
       </div>
 
@@ -181,7 +215,10 @@ export default function ItinerarySection() {
             deletionStatus={dayItemDeletionStatus}
             items={currentDayItems}
             onDeleteItem={handleDeleteItem}
+            onMoveItemDown={(itemId) => handleMoveItem(itemId, 'down')}
+            onMoveItemUp={(itemId) => handleMoveItem(itemId, 'up')}
             onUpdateTravelMethod={handleUpdateTravelMethod}
+            reorderStatus={dayItemReorderStatus}
             updatingTargetItemId={dayItemUpdateTargetId}
             updateStatus={dayItemUpdateStatus}
           />

@@ -29,6 +29,10 @@ export interface UpdateTripDayItemRequest {
   travelMethod: TripTravelMethodCommand;
 }
 
+export interface ReorderTripDayItemsRequest {
+  itemIds: number[];
+}
+
 export interface TripSummary {
   tripId: number;
   title: string;
@@ -136,6 +140,14 @@ export const deleteTripDayItem = (
   itemId: number,
 ): Promise<void> => {
   return axiosClient.delete(`/trips/${tripId}/days/${dayNumber}/items/${itemId}`);
+};
+
+export const reorderTripDayItems = (
+  tripId: number,
+  dayNumber: number,
+  request: ReorderTripDayItemsRequest,
+): Promise<void> => {
+  return axiosClient.patch(`/trips/${tripId}/days/${dayNumber}/items/reorder`, request);
 };
 
 export const getTripDays = (tripId: number): Promise<TripDaysResponse> => {

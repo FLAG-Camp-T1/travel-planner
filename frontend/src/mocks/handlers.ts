@@ -8,6 +8,7 @@ import type {
   CreateTripRequest,
   GenerateDayRouteResponse,
   ItineraryItem,
+  ReorderTripDayItemsRequest,
   TripDay,
   TripDayItemsResponse,
   TripDaysResponse,
@@ -677,6 +678,55 @@ export const handlers = [
       return createSuccessResponse(null);
     },
   ),
+
+  http.patch<
+    { tripId: string; dayNumber: string },
+    ReorderTripDayItemsRequest,
+    MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/reorder`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+    if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    if (!items) {
+      return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as ReorderTripDayItemsRequest;
+    const itemIds = requestBody.itemIds ?? [];
+
+    if (itemIds.length === 0) {
+      return createErrorResponse('Reorder item IDs are required.', 40002);
+    }
+
+    const uniqueItemIds = new Set(itemIds);
+    const currentItemIds = new Set(items.map((item) => item.itemId));
+    const isExactCurrentDaySet =
+      uniqueItemIds.size === itemIds.length &&
+      itemIds.length === items.length &&
+      itemIds.every((itemId) => currentItemIds.has(itemId));
+
+    if (!isExactCurrentDaySet) {
+      return createErrorResponse(
+        'Reorder request must include each itinerary item exactly once.',
+        40002,
+      );
+    }
+
+    const itemsById = new Map(items.map((item) => [item.itemId, item]));
+    mockTripItemsByTripId[tripId][dayNumber] = itemIds.map((itemId, index) => ({
+      ...itemsById.get(itemId)!,
+      visitOrder: index + 1,
+    }));
+
+    return createSuccessResponse(null);
+  }),
 
   http.patch<
     { tripId: string; dayNumber: string; itemId: string },

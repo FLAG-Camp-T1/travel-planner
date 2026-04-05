@@ -18,6 +18,7 @@ import com.travelplanner.backend.common.exception.GlobalExceptionHandler;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
+import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
@@ -197,6 +198,30 @@ class TripControllerTest {
     }
 
     @Test
+    void reorderTripDayItems_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .reorderTripDayItems(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(ReorderTripDayItemsRequestDto.class));
+
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/reorder")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "itemIds": [5003, 5001, 5002]
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void createTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
         mockMvc.perform(
                         post("/api/v1/trips/create")
@@ -254,6 +279,22 @@ class TripControllerTest {
                                         """
                                         {
                                           "travelMethod": "FLY"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void reorderTripDayItems_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/reorder")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "itemIds": []
                                         }
                                         """))
                 .andExpect(status().isOk())

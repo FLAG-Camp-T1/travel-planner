@@ -7,6 +7,7 @@ import com.travelplanner.backend.place.service.PlaceLookupService;
 import com.travelplanner.backend.route.enums.TravelMode;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
+import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
@@ -19,8 +20,13 @@ import com.travelplanner.backend.trip.repository.PoiRepository;
 import com.travelplanner.backend.trip.repository.TripDayRepository;
 import com.travelplanner.backend.trip.repository.TripRepository;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,7 +118,29 @@ public class TripCommandService {
                 getOwnedItineraryEntity(tripId, dayNumber, tripDayEntity.getId(), itemId);
 
         itineraryRepository.delete(itineraryEntity);
-        reorderTripDayItems(tripDayEntity.getId());
+        List<ItineraryEntity> remainingItems =
+                itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(tripDayEntity.getId());
+        rewriteVisitOrder(remainingItems);
+        itineraryRepository.saveAll(remainingItems);
+    }
+
+    @Transactional
+    public void reorderTripDayItems(
+            Long tripId, Integer dayNumber, ReorderTripDayItemsRequestDto request) {
+        TripDayEntity tripDayEntity = getOwnedTripDayEntity(tripId, dayNumber);
+        List<ItineraryEntity> currentItems =
+                itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(tripDayEntity.getId());
+        List<Long> requestedItemIds = request.getItemIds();
+
+        validateTripDayReorderRequest(tripId, dayNumber, currentItems, requestedItemIds);
+
+        Map<Long, ItineraryEntity> itemsById =
+                currentItems.stream()
+                        .collect(Collectors.toMap(ItineraryEntity::getId, Function.identity()));
+        List<ItineraryEntity> reorderedItems =
+                requestedItemIds.stream().map(itemsById::get).toList();
+
+        persistTripDayReorder(reorderedItems);
     }
 
     private List<TripDayEntity> createTripDays(Long tripId, Integer durationDays) {
@@ -171,15 +199,49 @@ public class TripCommandService {
         return itineraryEntity;
     }
 
-    private void reorderTripDayItems(Long tripDayId) {
-        List<ItineraryEntity> remainingItems =
-                itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(tripDayId);
-
-        for (int index = 0; index < remainingItems.size(); index += 1) {
-            remainingItems.get(index).setVisitOrder(index + 1);
+    private void validateTripDayReorderRequest(
+            Long tripId,
+            Integer dayNumber,
+            List<ItineraryEntity> currentItems,
+            List<Long> itemIds) {
+        Set<Long> requestedItemIdSet = new HashSet<>(itemIds);
+        if (requestedItemIdSet.size() != itemIds.size()) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST,
+                    "Duplicate itinerary items are not allowed in the reorder request.");
         }
 
-        itineraryRepository.saveAll(remainingItems);
+        Set<Long> currentItemIdSet =
+                currentItems.stream().map(ItineraryEntity::getId).collect(Collectors.toSet());
+
+        if (itemIds.size() != currentItems.size() || !currentItemIdSet.equals(requestedItemIdSet)) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST,
+                    "Reorder request must include every itinerary item for day %d of trip %d."
+                            .formatted(dayNumber, tripId));
+        }
+    }
+
+    private void rewriteVisitOrder(List<ItineraryEntity> items) {
+        for (int index = 0; index < items.size(); index += 1) {
+            items.get(index).setVisitOrder(index + 1);
+        }
+    }
+
+    private void persistTripDayReorder(List<ItineraryEntity> reorderedItems) {
+        int temporaryVisitOrderBase =
+                reorderedItems.stream()
+                        .map(ItineraryEntity::getVisitOrder)
+                        .max(Integer::compareTo)
+                        .orElse(0);
+
+        for (int index = 0; index < reorderedItems.size(); index += 1) {
+            reorderedItems.get(index).setVisitOrder(temporaryVisitOrderBase + index + 1);
+        }
+        itineraryRepository.saveAll(reorderedItems);
+
+        rewriteVisitOrder(reorderedItems);
+        itineraryRepository.saveAll(reorderedItems);
     }
 
     private PoiEntity getOrCreatePoiEntity(String placeId) {

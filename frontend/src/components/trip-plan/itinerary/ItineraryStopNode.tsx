@@ -6,19 +6,27 @@ import {
 } from './itineraryPresentation';
 
 type ItineraryStopNodeProps = {
+  canMoveDown: boolean;
+  canMoveUp: boolean;
   isBusy: boolean;
   isDeleting: boolean;
   item: ItineraryItem;
   onDelete: () => void;
+  onMoveDown: () => void;
+  onMoveUp: () => void;
   showLineAbove: boolean;
   showLineBelow: boolean;
 };
 
 export default function ItineraryStopNode({
+  canMoveDown,
+  canMoveUp,
   isBusy,
   isDeleting,
   item,
   onDelete,
+  onMoveDown,
+  onMoveUp,
   showLineAbove,
   showLineBelow,
 }: ItineraryStopNodeProps) {
@@ -52,14 +60,36 @@ export default function ItineraryStopNode({
           <div className="truncate text-sm font-medium text-gray-900">{item.name}</div>
         </div>
 
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isBusy}
-          className="shrink-0 rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
-        >
-          {isDeleting ? 'Deleting...' : 'Delete'}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {canMoveUp ? (
+            <button
+              type="button"
+              onClick={onMoveUp}
+              disabled={isBusy}
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+            >
+              Up
+            </button>
+          ) : null}
+          {canMoveDown ? (
+            <button
+              type="button"
+              onClick={onMoveDown}
+              disabled={isBusy}
+              className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+            >
+              Down
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isBusy}
+            className="rounded-full border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
+import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
@@ -171,6 +172,26 @@ public class TripController {
             @Parameter(description = "Itinerary item identifier", example = "5001") @PathVariable
                     Long itemId) {
         tripCommandService.deleteTripDayItem(tripId, dayNumber, itemId);
+        return ApiResponse.success();
+    }
+
+    @PatchMapping("/{tripId}/days/{dayNumber}/items/reorder")
+    @Operation(
+            summary = "Reorder day itinerary items",
+            description =
+                    "Replaces the stop order for one trip day and rewrites visit order values to match.")
+    public ApiResponse<Void> reorderTripDayItems(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description =
+                                    "Ordered itinerary item identifiers for the selected trip day",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    ReorderTripDayItemsRequestDto request) {
+        tripCommandService.reorderTripDayItems(tripId, dayNumber, request);
         return ApiResponse.success();
     }
 

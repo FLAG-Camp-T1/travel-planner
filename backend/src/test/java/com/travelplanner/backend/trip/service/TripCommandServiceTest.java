@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,7 @@ import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.place.service.PlaceLookupService;
 import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
+import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
@@ -457,5 +459,169 @@ class TripCommandServiceTest {
         assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
         verify(itineraryRepository, never()).delete(any(ItineraryEntity.class));
         verify(itineraryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reorderTripDayItems_RewritesVisitOrderFromRequestedSequence() {
+        ReorderTripDayItemsRequestDto request = new ReorderTripDayItemsRequestDto();
+        request.setItemIds(List.of(5003L, 5001L, 5002L));
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        ItineraryEntity firstItem = new ItineraryEntity();
+        firstItem.setId(5001L);
+        firstItem.setTripDayId(2001L);
+        firstItem.setVisitOrder(1);
+
+        ItineraryEntity secondItem = new ItineraryEntity();
+        secondItem.setId(5002L);
+        secondItem.setTripDayId(2001L);
+        secondItem.setVisitOrder(2);
+
+        ItineraryEntity thirdItem = new ItineraryEntity();
+        thirdItem.setId(5003L);
+        thirdItem.setTripDayId(2001L);
+        thirdItem.setVisitOrder(3);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(2001L))
+                .thenReturn(List.of(firstItem, secondItem, thirdItem));
+
+        tripCommandService.reorderTripDayItems(1001L, 1, request);
+
+        verify(itineraryRepository, times(2)).saveAll(itineraryItemsCaptor.capture());
+        List<List<ItineraryEntity>> savedBatches = itineraryItemsCaptor.getAllValues();
+        List<ItineraryEntity> finalOrderBatch = savedBatches.get(savedBatches.size() - 1);
+
+        assertEquals(
+                List.of(5003L, 5001L, 5002L),
+                finalOrderBatch.stream().map(ItineraryEntity::getId).toList());
+        assertEquals(1, finalOrderBatch.get(0).getVisitOrder());
+        assertEquals(2, finalOrderBatch.get(1).getVisitOrder());
+        assertEquals(3, finalOrderBatch.get(2).getVisitOrder());
+    }
+
+    @Test
+    void reorderTripDayItems_WhenRequestIsMissingItems_ThrowsBusinessException() {
+        ReorderTripDayItemsRequestDto request = new ReorderTripDayItemsRequestDto();
+        request.setItemIds(List.of(5001L, 5003L));
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(2001L))
+                .thenReturn(
+                        List.of(
+                                buildItineraryItem(5001L, 2001L, 1),
+                                buildItineraryItem(5002L, 2001L, 2),
+                                buildItineraryItem(5003L, 2001L, 3)));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.reorderTripDayItems(1001L, 1, request));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(itineraryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reorderTripDayItems_WhenRequestContainsDuplicates_ThrowsBusinessException() {
+        ReorderTripDayItemsRequestDto request = new ReorderTripDayItemsRequestDto();
+        request.setItemIds(List.of(5001L, 5001L, 5003L));
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(2001L))
+                .thenReturn(
+                        List.of(
+                                buildItineraryItem(5001L, 2001L, 1),
+                                buildItineraryItem(5002L, 2001L, 2),
+                                buildItineraryItem(5003L, 2001L, 3)));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.reorderTripDayItems(1001L, 1, request));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(itineraryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void reorderTripDayItems_WhenRequestContainsForeignItem_ThrowsBusinessException() {
+        ReorderTripDayItemsRequestDto request = new ReorderTripDayItemsRequestDto();
+        request.setItemIds(List.of(5001L, 6001L, 5003L));
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        TripDayEntity tripDayEntity = new TripDayEntity();
+        tripDayEntity.setId(2001L);
+        tripDayEntity.setTripId(1001L);
+        tripDayEntity.setDayNumber(1);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findByTripIdAndDayNumber(1001L, 1))
+                .thenReturn(Optional.of(tripDayEntity));
+        when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(2001L))
+                .thenReturn(
+                        List.of(
+                                buildItineraryItem(5001L, 2001L, 1),
+                                buildItineraryItem(5002L, 2001L, 2),
+                                buildItineraryItem(5003L, 2001L, 3)));
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.reorderTripDayItems(1001L, 1, request));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(itineraryRepository, never()).saveAll(any());
+    }
+
+    private ItineraryEntity buildItineraryItem(Long itemId, Long tripDayId, Integer visitOrder) {
+        ItineraryEntity itineraryEntity = new ItineraryEntity();
+        itineraryEntity.setId(itemId);
+        itineraryEntity.setTripDayId(tripDayId);
+        itineraryEntity.setVisitOrder(visitOrder);
+        return itineraryEntity;
     }
 }
