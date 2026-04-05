@@ -9,6 +9,7 @@ import type {
   ItineraryItem,
   TripDay,
   TripSummary,
+  UpdateTripRequest,
 } from '@/api/tripApi';
 import type { StateCreator } from 'zustand';
 
@@ -70,11 +71,18 @@ export interface TripPlanningSlice {
   daysError: string | null;
   tripCreationStatus: LoadStatus;
   tripCreationError: string | null;
+  tripUpdateStatus: LoadStatus;
+  tripUpdateError: string | null;
+  tripDeletionStatus: LoadStatus;
+  tripDeletionError: string | null;
+  tripDeletionTargetId: number | null;
   tripBootstrapStatus: LoadStatus;
   tripBootstrapError: string | null;
   fetchTrips: () => Promise<void>;
   setActivePlannerPanel: (panel: PlannerPanel) => void;
   createTrip: (request: CreateTripRequest) => Promise<void>;
+  updateTrip: (tripId: number, request: UpdateTripRequest) => Promise<void>;
+  deleteTrip: (tripId: number) => Promise<void>;
   bootstrapTrip: (tripId: number) => Promise<void>;
   fetchTrip: (tripId: number) => Promise<void>;
   fetchTripDays: (tripId: number) => Promise<void>;

@@ -8,6 +8,11 @@ export interface CreateTripRequest {
   startDate?: DateString;
 }
 
+export interface UpdateTripRequest {
+  title: string;
+  startDate?: DateString | null;
+}
+
 export interface TripSummary {
   tripId: number;
   title: string;
@@ -82,6 +87,14 @@ export const getTrips = (): Promise<TripSummary[]> => {
 
 export const getTrip = (tripId: number): Promise<TripSummary> => {
   return axiosClient.get(`/trips/${tripId}`);
+};
+
+export const updateTrip = (tripId: number, request: UpdateTripRequest): Promise<TripSummary> => {
+  return axiosClient.patch(`/trips/${tripId}`, request);
+};
+
+export const deleteTrip = (tripId: number): Promise<void> => {
+  return axiosClient.delete(`/trips/${tripId}`);
 };
 
 export const getTripDays = (tripId: number): Promise<TripDaysResponse> => {

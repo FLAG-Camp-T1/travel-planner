@@ -1,10 +1,12 @@
 import {
   createTrip as createTripApi,
+  deleteTrip as deleteTripApi,
   generateTripDayRoute,
   getTrips,
   getTrip,
   getTripDayItems,
   getTripDays,
+  updateTrip as updateTripApi,
 } from '@/api/tripApi';
 import type { AppStoreCreator, TripPlanningSlice } from '../types';
 
@@ -39,7 +41,17 @@ const getTripListState = () => ({
   activePlannerPanel: 'trips' as const,
 });
 
+const getTripMutationState = () => ({
+  tripUpdateStatus: 'idle' as const,
+  tripUpdateError: null,
+  tripDeletionStatus: 'idle' as const,
+  tripDeletionError: null,
+  tripDeletionTargetId: null,
+});
+
 export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set, get) => {
+  let activeTripsRequestId = 0;
+
   const completeBootstrap = async (tripId: number) => {
     try {
       await get().fetchTrip(tripId);
@@ -82,13 +94,13 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     ...getTripListState(),
     tripCreationStatus: 'idle',
     tripCreationError: null,
+    ...getTripMutationState(),
     tripBootstrapStatus: 'idle',
     tripBootstrapError: null,
 
     fetchTrips: async () => {
-      if (get().tripsStatus === 'loading') {
-        return;
-      }
+      activeTripsRequestId += 1;
+      const requestId = activeTripsRequestId;
 
       set(
         {
@@ -101,6 +113,9 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
       try {
         const trips = await getTrips();
+        if (requestId !== activeTripsRequestId) {
+          return;
+        }
 
         set(
           {
@@ -112,6 +127,10 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           'trip/list:success',
         );
       } catch (error) {
+        if (requestId !== activeTripsRequestId) {
+          return;
+        }
+
         set(
           {
             tripsStatus: 'error',
@@ -152,6 +171,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         {
           tripCreationStatus: 'loading',
           tripCreationError: null,
+          tripUpdateStatus: 'idle',
+          tripUpdateError: null,
+          tripDeletionStatus: 'idle',
+          tripDeletionError: null,
+          tripDeletionTargetId: null,
         },
         false,
         'trip/create:start',
@@ -170,6 +194,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
             lastBootstrapTripId: createdTrip.tripId,
             tripCreationStatus: 'ready',
             tripCreationError: null,
+            ...getTripMutationState(),
             tripBootstrapStatus: 'loading',
             tripBootstrapError: null,
           },
@@ -184,9 +209,120 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           {
             tripCreationStatus: 'error',
             tripCreationError: getErrorMessage(error),
+            tripUpdateStatus: 'idle',
+            tripUpdateError: null,
+            tripDeletionStatus: 'idle',
+            tripDeletionError: null,
+            tripDeletionTargetId: null,
           },
           false,
           'trip/create:error',
+        );
+      }
+    },
+
+    updateTrip: async (tripId, request) => {
+      set(
+        {
+          tripUpdateStatus: 'loading',
+          tripUpdateError: null,
+        },
+        false,
+        'trip/update:start',
+      );
+
+      try {
+        const updatedTrip = await updateTripApi(tripId, request);
+        const shouldRefreshDays = get().currentTrip?.tripId === tripId;
+
+        set(
+          (state) => ({
+            trips: state.trips.map((trip) => (trip.tripId === tripId ? updatedTrip : trip)),
+            currentTrip: state.currentTrip?.tripId === tripId ? updatedTrip : state.currentTrip,
+            tripStatus: state.currentTrip?.tripId === tripId ? 'ready' : state.tripStatus,
+            tripError: state.currentTrip?.tripId === tripId ? null : state.tripError,
+            tripUpdateStatus: 'ready',
+            tripUpdateError: null,
+          }),
+          false,
+          'trip/update:success',
+        );
+
+        void get().fetchTrips();
+        if (shouldRefreshDays) {
+          await get().fetchTripDays(tripId);
+        }
+      } catch (error) {
+        set(
+          {
+            tripUpdateStatus: 'error',
+            tripUpdateError: getErrorMessage(error),
+          },
+          false,
+          'trip/update:error',
+        );
+      }
+    },
+
+    deleteTrip: async (tripId) => {
+      set(
+        {
+          tripDeletionStatus: 'loading',
+          tripDeletionError: null,
+          tripDeletionTargetId: tripId,
+        },
+        false,
+        'trip/delete:start',
+      );
+
+      try {
+        await deleteTripApi(tripId);
+        const isDeletingCurrentTrip = get().currentTrip?.tripId === tripId;
+
+        if (isDeletingCurrentTrip) {
+          set(
+            {
+              ...getEmptyTripPlanningData(),
+              trips: get().trips.filter((trip) => trip.tripId !== tripId),
+              tripsStatus: get().tripsStatus,
+              tripsError: get().tripsError,
+              activePlannerPanel: 'trips',
+              tripCreationStatus: get().tripCreationStatus,
+              tripCreationError: get().tripCreationError,
+              tripUpdateStatus: get().tripUpdateStatus,
+              tripUpdateError: get().tripUpdateError,
+              tripDeletionStatus: 'ready',
+              tripDeletionError: null,
+              tripDeletionTargetId: null,
+              tripBootstrapStatus: 'idle',
+              tripBootstrapError: null,
+            },
+            false,
+            'trip/delete:success-current',
+          );
+        } else {
+          set(
+            (state) => ({
+              trips: state.trips.filter((trip) => trip.tripId !== tripId),
+              tripDeletionStatus: 'ready',
+              tripDeletionError: null,
+              tripDeletionTargetId: null,
+            }),
+            false,
+            'trip/delete:success',
+          );
+        }
+
+        void get().fetchTrips();
+      } catch (error) {
+        set(
+          {
+            tripDeletionStatus: 'error',
+            tripDeletionError: getErrorMessage(error),
+            tripDeletionTargetId: null,
+          },
+          false,
+          'trip/delete:error',
         );
       }
     },
@@ -447,6 +583,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           activePlannerPanel: 'trips',
           tripCreationStatus: 'idle',
           tripCreationError: null,
+          ...getTripMutationState(),
           tripBootstrapStatus: 'idle',
           tripBootstrapError: null,
         },

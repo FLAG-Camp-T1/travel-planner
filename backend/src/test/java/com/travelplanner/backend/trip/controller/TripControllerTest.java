@@ -2,9 +2,12 @@ package com.travelplanner.backend.trip.controller;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -15,6 +18,7 @@ import com.travelplanner.backend.common.exception.GlobalExceptionHandler;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
 import com.travelplanner.backend.trip.service.TripRouteService;
@@ -91,6 +95,46 @@ class TripControllerTest {
     }
 
     @Test
+    void updateTrip_ReturnsSuccessPayload() throws Exception {
+        TripSummaryDto response = new TripSummaryDto();
+        response.setTripId(1001L);
+        response.setTitle("Updated DC Trip");
+        response.setDurationDays(3);
+        response.setStartDate(LocalDate.of(2026, 4, 12));
+
+        when(tripCommandService.updateTrip(any(Long.class), any(UpdateTripRequestDto.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "title": "Updated DC Trip",
+                                          "startDate": "2026-04-12"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.tripId").value(1001))
+                .andExpect(jsonPath("$.data.title").value("Updated DC Trip"))
+                .andExpect(jsonPath("$.data.startDate").value("2026-04-12"));
+    }
+
+    @Test
+    void deleteTrip_ReturnsSuccessPayload() throws Exception {
+        doNothing().when(tripCommandService).deleteTrip(1001L);
+
+        mockMvc.perform(delete("/api/v1/trips/1001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void createTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
         mockMvc.perform(
                         post("/api/v1/trips/create")
@@ -100,6 +144,22 @@ class TripControllerTest {
                                         {
                                           "title": "",
                                           "durationDays": 0
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void updateTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "title": " "
                                         }
                                         """))
                 .andExpect(status().isOk())

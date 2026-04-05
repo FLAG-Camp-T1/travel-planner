@@ -25,8 +25,12 @@ export default function MyTripsSection() {
   const {
     bootstrapTrip,
     currentTrip,
+    deleteTrip,
     fetchTrips,
     lastBootstrapTripId,
+    tripDeletionError,
+    tripDeletionStatus,
+    tripDeletionTargetId,
     trips,
     tripsError,
     tripsStatus,
@@ -35,8 +39,12 @@ export default function MyTripsSection() {
     useShallow((state) => ({
       bootstrapTrip: state.bootstrapTrip,
       currentTrip: state.currentTrip,
+      deleteTrip: state.deleteTrip,
       fetchTrips: state.fetchTrips,
       lastBootstrapTripId: state.lastBootstrapTripId,
+      tripDeletionError: state.tripDeletionError,
+      tripDeletionStatus: state.tripDeletionStatus,
+      tripDeletionTargetId: state.tripDeletionTargetId,
       trips: state.trips,
       tripsError: state.tripsError,
       tripsStatus: state.tripsStatus,
@@ -80,6 +88,12 @@ export default function MyTripsSection() {
           <div className="px-4 py-4 text-sm text-gray-500">Loading your saved trips…</div>
         ) : null}
 
+        {tripDeletionStatus === 'error' ? (
+          <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {tripDeletionError ?? 'We couldn’t delete this trip.'}
+          </div>
+        ) : null}
+
         {tripsStatus === 'error' ? (
           <div className="space-y-3 px-4 py-4">
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-600">
@@ -107,47 +121,74 @@ export default function MyTripsSection() {
               const isSelected = currentTrip?.tripId === trip.tripId;
               const isLoadingTarget =
                 tripBootstrapStatus === 'loading' && lastBootstrapTripId === trip.tripId;
+              const isDeletingTarget =
+                tripDeletionStatus === 'loading' && tripDeletionTargetId === trip.tripId;
 
               return (
                 <li key={trip.tripId}>
-                  <button
-                    type="button"
-                    onClick={() => void bootstrapTrip(trip.tripId)}
-                    disabled={tripBootstrapStatus === 'loading'}
-                    className={`w-full px-4 py-4 text-left transition ${
-                      isSelected
-                        ? 'bg-blue-50/70'
-                        : 'bg-white hover:bg-slate-50 disabled:cursor-wait disabled:hover:bg-white'
+                  <div
+                    className={`flex items-stretch gap-3 px-4 py-4 transition ${
+                      isSelected ? 'bg-blue-50/70' : 'bg-white'
                     }`}
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-sm font-semibold text-gray-900">
-                            {trip.title}
-                          </span>
-                          {isSelected ? (
-                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
-                              Current Trip
+                    <button
+                      type="button"
+                      onClick={() => void bootstrapTrip(trip.tripId)}
+                      disabled={tripBootstrapStatus === 'loading' || isDeletingTarget}
+                      className={`min-w-0 flex-1 text-left ${
+                        isSelected
+                          ? ''
+                          : 'hover:bg-slate-50 disabled:cursor-wait disabled:hover:bg-transparent'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate text-sm font-semibold text-gray-900">
+                              {trip.title}
+                            </span>
+                            {isSelected ? (
+                              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
+                                Current Trip
+                              </span>
+                            ) : null}
+                          </div>
+                          {isLoadingTarget ? (
+                            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
+                              Opening…
                             </span>
                           ) : null}
                         </div>
-                        {isLoadingTarget ? (
-                          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
-                            Opening…
-                          </span>
-                        ) : null}
-                      </div>
 
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                        <span>{trip.durationDays} days</span>
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          {formatTripSchedule(trip.startDate)}
-                        </span>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span>{trip.durationDays} days</span>
+                          <span className="inline-flex items-center gap-1">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            {formatTripSchedule(trip.startDate)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete "${trip.title}"? This will remove its days and itinerary items.`,
+                          )
+                        ) {
+                          void deleteTrip(trip.tripId);
+                        }
+                      }}
+                      disabled={
+                        tripDeletionStatus === 'loading' || tripBootstrapStatus === 'loading'
+                      }
+                      className="shrink-0 self-start rounded-full border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isDeletingTarget ? 'Removing…' : 'Delete'}
+                    </button>
+                  </div>
                 </li>
               );
             })}

@@ -6,6 +6,7 @@ import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
 import com.travelplanner.backend.trip.service.TripRouteService;
@@ -16,7 +17,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,7 +43,12 @@ public class TripController {
             description =
                     "Creates a trip shell with title, duration, and optional fixed start date.")
     public ApiResponse<TripSummaryDto> createTrip(
-            @Valid @RequestBody CreateTripRequestDto request) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "Trip fields used to create a new trip",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    CreateTripRequestDto request) {
         log.info("Inbound Trip Create Request: {}", request);
         return ApiResponse.success(tripCommandService.createTrip(request));
     }
@@ -61,6 +69,32 @@ public class TripController {
             @Parameter(description = "Trip identifier", example = "1001") @PathVariable
                     Long tripId) {
         return ApiResponse.success(tripQueryService.getTrip(tripId));
+    }
+
+    @PatchMapping("/{tripId}")
+    @Operation(
+            summary = "Update a trip",
+            description = "Updates the current user's editable trip fields.")
+    public ApiResponse<TripSummaryDto> updateTrip(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "Editable trip fields for the selected trip",
+                            required = true)
+                    @Valid
+                    @RequestBody
+                    UpdateTripRequestDto request) {
+        return ApiResponse.success(tripCommandService.updateTrip(tripId, request));
+    }
+
+    @DeleteMapping("/{tripId}")
+    @Operation(
+            summary = "Delete a trip",
+            description = "Deletes one trip owned by the current user and cascades related data.")
+    public ApiResponse<Void> deleteTrip(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable
+                    Long tripId) {
+        tripCommandService.deleteTrip(tripId);
+        return ApiResponse.success();
     }
 
     @GetMapping("/{tripId}/days")

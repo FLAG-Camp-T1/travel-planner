@@ -11,6 +11,7 @@ import type {
   TripDayItemsResponse,
   TripDaysResponse,
   TripSummary,
+  UpdateTripRequest,
 } from '@/api/tripApi';
 import type { MockFailureFlag } from './mockScenario';
 import { MOCK_FLAGS_HEADER } from './mockScenario';
@@ -516,6 +517,63 @@ export const handlers = [
       }
 
       return createSuccessResponse(trip);
+    },
+  ),
+
+  http.patch<
+    { tripId: string },
+    UpdateTripRequest,
+    MockApiResponse<TripSummary> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const tripIndex = mockTrips.findIndex((item) => item.tripId === tripId);
+
+    if (tripIndex < 0) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as UpdateTripRequest;
+    const title = requestBody.title?.trim();
+
+    if (!title) {
+      return createErrorResponse('Trip title is required.', 40002);
+    }
+
+    const existingTrip = mockTrips[tripIndex];
+    const updatedTrip: TripSummary = {
+      ...existingTrip,
+      title,
+      startDate: requestBody.startDate ?? null,
+    };
+
+    mockTrips = mockTrips.map((trip) => (trip.tripId === tripId ? updatedTrip : trip));
+    mockTripDaysByTripId[tripId] = buildMockTripDays(
+      existingTrip.durationDays,
+      requestBody.startDate ?? null,
+    );
+
+    return createSuccessResponse(updatedTrip);
+  }),
+
+  http.delete<{ tripId: string }, never, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId`,
+    async ({ params }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const tripExists = mockTrips.some((item) => item.tripId === tripId);
+
+      if (!tripExists) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      mockTrips = mockTrips.filter((trip) => trip.tripId !== tripId);
+      delete mockTripDaysByTripId[tripId];
+      delete mockTripItemsByTripId[tripId];
+
+      return createSuccessResponse(null);
     },
   ),
 

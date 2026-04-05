@@ -1,4 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
+import TripEditSection from '@/components/trip-plan/sections/TripEditSection';
 import { useAppStore } from '@/stores/useAppStore';
 
 const formatStartDate = (startDate?: string | null) => {
@@ -33,6 +34,7 @@ export default function TripOverviewSection() {
           <h2 className="text-lg font-semibold text-gray-700">Trip Overview</h2>
           <p className="mt-1 text-sm text-gray-500">Overview of the current trip.</p>
         </div>
+        {currentTrip ? <TripEditSection /> : null}
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">

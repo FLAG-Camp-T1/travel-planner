@@ -2,19 +2,26 @@ package com.travelplanner.backend.trip.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.context.CurrentUserProvider;
+import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.model.TripDayEntity;
 import com.travelplanner.backend.trip.model.TripEntity;
 import com.travelplanner.backend.trip.repository.TripDayRepository;
 import com.travelplanner.backend.trip.repository.TripRepository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +44,7 @@ class TripCommandServiceTest {
     @InjectMocks private TripCommandService tripCommandService;
 
     @Captor private ArgumentCaptor<List<TripDayEntity>> tripDaysCaptor;
+    @Captor private ArgumentCaptor<TripEntity> tripCaptor;
 
     @Test
     void createTrip_PersistsTripAndGeneratesOrderedDays() {
@@ -71,5 +79,109 @@ class TripCommandServiceTest {
         assertEquals(1, savedTripDays.get(0).getDayNumber());
         assertEquals(2, savedTripDays.get(1).getDayNumber());
         assertEquals(3, savedTripDays.get(2).getDayNumber());
+    }
+
+    @Test
+    void updateTrip_UpdatesTrimmedTitleAndStartDate() {
+        UpdateTripRequestDto request = new UpdateTripRequestDto();
+        request.setTitle("  Updated DC Trip  ");
+        request.setStartDate(LocalDate.of(2026, 4, 12));
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+        tripEntity.setTitle("Spring DC Trip");
+        tripEntity.setDuration(3);
+        tripEntity.setStartDate(LocalDate.of(2026, 4, 10));
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripRepository.save(any(TripEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TripSummaryDto result = tripCommandService.updateTrip(1001L, request);
+
+        assertNotNull(result);
+        assertEquals("Updated DC Trip", result.getTitle());
+        assertEquals(LocalDate.of(2026, 4, 12), result.getStartDate());
+        assertEquals(3, result.getDurationDays());
+
+        verify(tripRepository).save(tripCaptor.capture());
+        TripEntity savedTrip = tripCaptor.getValue();
+        assertEquals("Updated DC Trip", savedTrip.getTitle());
+        assertEquals(LocalDate.of(2026, 4, 12), savedTrip.getStartDate());
+    }
+
+    @Test
+    void updateTrip_ClearsStartDateWhenNullIsProvided() {
+        UpdateTripRequestDto request = new UpdateTripRequestDto();
+        request.setTitle("Spring DC Trip");
+        request.setStartDate(null);
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+        tripEntity.setTitle("Spring DC Trip");
+        tripEntity.setDuration(3);
+        tripEntity.setStartDate(LocalDate.of(2026, 4, 10));
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripRepository.save(any(TripEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TripSummaryDto result = tripCommandService.updateTrip(1001L, request);
+
+        assertNotNull(result);
+        assertNull(result.getStartDate());
+
+        verify(tripRepository).save(tripCaptor.capture());
+        assertNull(tripCaptor.getValue().getStartDate());
+    }
+
+    @Test
+    void updateTrip_WhenTripIsNotOwned_ThrowsBusinessException() {
+        UpdateTripRequestDto request = new UpdateTripRequestDto();
+        request.setTitle("Updated DC Trip");
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID)).thenReturn(Optional.empty());
+
+        BusinessException exception =
+                assertThrows(
+                        BusinessException.class,
+                        () -> tripCommandService.updateTrip(1001L, request));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(tripRepository, never()).save(any(TripEntity.class));
+    }
+
+    @Test
+    void deleteTrip_RemovesOwnedTrip() {
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+
+        tripCommandService.deleteTrip(1001L);
+
+        verify(tripRepository).delete(tripEntity);
+    }
+
+    @Test
+    void deleteTrip_WhenTripIsNotOwned_ThrowsBusinessException() {
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID)).thenReturn(Optional.empty());
+
+        BusinessException exception =
+                assertThrows(BusinessException.class, () -> tripCommandService.deleteTrip(1001L));
+
+        assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
+        verify(tripRepository, never()).delete(any(TripEntity.class));
     }
 }
