@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type { RouteRequest, RouteSummary } from '@/api/routeApi';
 import type {
@@ -237,6 +238,91 @@ const mockPoiResults: POIDto[] = [
   },
 ];
 
+const mockPlaceDetailsById: Record<string, PlaceDetailDto> = {
+  'poi-search-1': {
+    placeId: 'poi-search-1',
+    name: 'National Air and Space Museum',
+    address: '600 Independence Ave SW, Washington, DC 20560, USA',
+    latitude: 38.8882,
+    longitude: -77.0199,
+    categoryLabel: 'Museum',
+    rating: 4.7,
+    userRatingCount: 12645,
+    websiteUri: 'https://airandspace.si.edu/',
+    googleMapsUri: 'https://maps.google.com/?cid=123',
+    openingWeekdayDescriptions: [
+      'Monday: 10:00 AM – 5:30 PM',
+      'Tuesday: 10:00 AM – 5:30 PM',
+      'Wednesday: 10:00 AM – 5:30 PM',
+    ],
+  },
+  'poi-search-2': {
+    placeId: 'poi-search-2',
+    name: 'Founding Farmers DC',
+    address: '1924 Pennsylvania Ave NW, Washington, DC 20006, USA',
+    latitude: 38.9007,
+    longitude: -77.0447,
+    categoryLabel: 'Restaurant',
+    rating: 4.4,
+    userRatingCount: 22193,
+    websiteUri: 'https://www.wearefoundingfarmers.com/',
+    googleMapsUri: 'https://maps.google.com/?cid=456',
+    openingWeekdayDescriptions: ['Monday: 7:30 AM – 9:00 PM', 'Tuesday: 7:30 AM – 9:00 PM'],
+  },
+  'poi-search-3': {
+    placeId: 'poi-search-3',
+    name: 'The LINE DC',
+    address: '1770 Euclid St NW, Washington, DC 20009, USA',
+    latitude: 38.9235,
+    longitude: -77.0418,
+    categoryLabel: 'Lodging',
+    rating: 4.5,
+    userRatingCount: 4312,
+    websiteUri: 'https://www.thelinehotel.com/dc/',
+    googleMapsUri: 'https://maps.google.com/?cid=789',
+    openingWeekdayDescriptions: [],
+  },
+  'poi-search-4': {
+    placeId: 'poi-search-4',
+    name: 'National Mall',
+    address: 'Washington, DC 20004, USA',
+    latitude: 38.8896,
+    longitude: -77.023,
+    categoryLabel: 'Tourist Attraction',
+    rating: 4.8,
+    userRatingCount: 50001,
+    websiteUri: null,
+    googleMapsUri: 'https://maps.google.com/?cid=888',
+    openingWeekdayDescriptions: [],
+  },
+  ChIJVTPokywQkFQRmtVEaUZlJRA: {
+    placeId: 'ChIJVTPokywQkFQRmtVEaUZlJRA',
+    name: 'Pike Place Market',
+    address: '85 Pike St, Seattle, WA 98101, USA',
+    latitude: 47.609722,
+    longitude: -122.342222,
+    categoryLabel: 'Market',
+    rating: 4.7,
+    userRatingCount: 98765,
+    websiteUri: 'https://www.pikeplacemarket.org/',
+    googleMapsUri: 'https://maps.google.com/?cid=999',
+    openingWeekdayDescriptions: ['Monday: 9:00 AM – 6:00 PM', 'Tuesday: 9:00 AM – 6:00 PM'],
+  },
+  ChIJN1t_tDeuEmsRUsoyG83frY4: {
+    placeId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+    name: 'Sydney Opera House',
+    address: 'Bennelong Point, Sydney NSW 2000, Australia',
+    latitude: -33.856784,
+    longitude: 151.215297,
+    categoryLabel: 'Landmark',
+    rating: 4.7,
+    userRatingCount: 77431,
+    websiteUri: 'https://www.sydneyoperahouse.com/',
+    googleMapsUri: 'https://maps.google.com/?cid=1000',
+    openingWeekdayDescriptions: ['Monday: 9:00 AM – 5:00 PM', 'Tuesday: 9:00 AM – 5:00 PM'],
+  },
+};
+
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
     `${API_BASE_URL}/login`,
@@ -334,6 +420,21 @@ export const handlers = [
     },
   ),
 
+  http.get(`${API_BASE_URL}/places/:placeId`, ({ params }) => {
+    const { placeId } = params;
+
+    if (typeof placeId !== 'string') {
+      return createErrorResponse('placeId is required', 40002);
+    }
+
+    const detail = mockPlaceDetailsById[placeId];
+    if (!detail) {
+      return createErrorResponse(`Place ${placeId} not found`, 40400);
+    }
+
+    return createSuccessResponse(detail);
+  }),
+
   http.get(`${API_BASE_URL}/bookmarks`, () => {
     return createSuccessResponse(mockBookmarks);
   }),
@@ -374,6 +475,12 @@ export const handlers = [
     mockBookmarks = mockBookmarks.filter((bookmark) => bookmark.bookmarkId !== bookmarkId);
 
     return createSuccessResponse(null);
+  }),
+
+  http.get(`${API_BASE_URL}/trips`, async () => {
+    await waitForMockDelay();
+
+    return createSuccessResponse([...mockTrips].sort((left, right) => right.tripId - left.tripId));
   }),
 
   http.post<never, CreateTripRequest, MockApiResponse<TripSummary> | MockApiResponse<null>>(
