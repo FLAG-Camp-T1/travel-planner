@@ -1,20 +1,26 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
 import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
-import type { RouteRequest, RouteSummary } from '@/api/routeApi';
 import type {
+  CreateTripDayItemRequest,
   CreateTripRequest,
   GenerateDayRouteResponse,
   ItineraryItem,
+  MoveTripDayItemRequest,
+  ReorderTripDayItemsRequest,
   TripDay,
   TripDayItemsResponse,
   TripDaysResponse,
   TripSummary,
+  UpdateTripDayItemRequest,
+  UpdateTripRequest,
 } from '@/api/tripApi';
 import type { MockFailureFlag } from './mockScenario';
 import { MOCK_FLAGS_HEADER } from './mockScenario';
-import { buildLegacyRouteSummary, buildMockTripDayRouteResult } from './routeFixtures';
+import { buildMockTripDayRouteResult } from './routeFixtures';
+import { toDisplayedTripTravelMethod } from '@/utils/tripTravelMethod';
 
 const API_BASE_URL = 'http://localhost:8080/api/v1';
 
@@ -64,8 +70,7 @@ const getMockFlagsFromRequest = (request: Request) => {
         flag === 'trip-create-error' ||
         flag === 'trip-bootstrap-trip-error' ||
         flag === 'trip-bootstrap-days-error' ||
-        flag === 'trip-day-route-error' ||
-        flag === 'legacy-route-error',
+        flag === 'trip-day-route-error',
     );
 
   return new Set<MockFailureFlag>(flags);
@@ -116,6 +121,7 @@ const buildMockTripDays = (durationDays: number, startDate?: string | null): Tri
 };
 
 let nextBookmarkSequence = 3;
+let nextItineraryItemSequence = 1000;
 let nextTripSequence = 1002;
 
 let mockUsers: Array<{ username: string; password: string }> = [
@@ -174,6 +180,8 @@ const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
         itemId: 101,
         placeId: 'place-georgetown-waterfront',
         name: 'Georgetown Waterfront',
+        latitude: 38.90331,
+        longitude: -77.06794,
         visitOrder: 1,
         travelMethod: 'Walk',
       },
@@ -181,6 +189,8 @@ const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
         itemId: 102,
         placeId: 'place-lincoln-memorial',
         name: 'Lincoln Memorial',
+        latitude: 38.88927,
+        longitude: -77.05018,
         visitOrder: 2,
         travelMethod: 'Drive',
       },
@@ -190,6 +200,8 @@ const mockTripItemsByTripId: Record<number, Record<number, ItineraryItem[]>> = {
         itemId: 201,
         placeId: 'place-smithsonian-castle',
         name: 'Smithsonian Castle',
+        latitude: 38.88868,
+        longitude: -77.02603,
         visitOrder: 1,
         travelMethod: null,
       },
@@ -236,6 +248,91 @@ const mockPoiResults: POIDto[] = [
     rating: 4.8,
   },
 ];
+
+const mockPlaceDetailsById: Record<string, PlaceDetailDto> = {
+  'poi-search-1': {
+    placeId: 'poi-search-1',
+    name: 'National Air and Space Museum',
+    address: '600 Independence Ave SW, Washington, DC 20560, USA',
+    latitude: 38.8882,
+    longitude: -77.0199,
+    categoryLabel: 'Museum',
+    rating: 4.7,
+    userRatingCount: 12645,
+    websiteUri: 'https://airandspace.si.edu/',
+    googleMapsUri: 'https://maps.google.com/?cid=123',
+    openingWeekdayDescriptions: [
+      'Monday: 10:00 AM – 5:30 PM',
+      'Tuesday: 10:00 AM – 5:30 PM',
+      'Wednesday: 10:00 AM – 5:30 PM',
+    ],
+  },
+  'poi-search-2': {
+    placeId: 'poi-search-2',
+    name: 'Founding Farmers DC',
+    address: '1924 Pennsylvania Ave NW, Washington, DC 20006, USA',
+    latitude: 38.9007,
+    longitude: -77.0447,
+    categoryLabel: 'Restaurant',
+    rating: 4.4,
+    userRatingCount: 22193,
+    websiteUri: 'https://www.wearefoundingfarmers.com/',
+    googleMapsUri: 'https://maps.google.com/?cid=456',
+    openingWeekdayDescriptions: ['Monday: 7:30 AM – 9:00 PM', 'Tuesday: 7:30 AM – 9:00 PM'],
+  },
+  'poi-search-3': {
+    placeId: 'poi-search-3',
+    name: 'The LINE DC',
+    address: '1770 Euclid St NW, Washington, DC 20009, USA',
+    latitude: 38.9235,
+    longitude: -77.0418,
+    categoryLabel: 'Lodging',
+    rating: 4.5,
+    userRatingCount: 4312,
+    websiteUri: 'https://www.thelinehotel.com/dc/',
+    googleMapsUri: 'https://maps.google.com/?cid=789',
+    openingWeekdayDescriptions: [],
+  },
+  'poi-search-4': {
+    placeId: 'poi-search-4',
+    name: 'National Mall',
+    address: 'Washington, DC 20004, USA',
+    latitude: 38.8896,
+    longitude: -77.023,
+    categoryLabel: 'Tourist Attraction',
+    rating: 4.8,
+    userRatingCount: 50001,
+    websiteUri: null,
+    googleMapsUri: 'https://maps.google.com/?cid=888',
+    openingWeekdayDescriptions: [],
+  },
+  ChIJVTPokywQkFQRmtVEaUZlJRA: {
+    placeId: 'ChIJVTPokywQkFQRmtVEaUZlJRA',
+    name: 'Pike Place Market',
+    address: '85 Pike St, Seattle, WA 98101, USA',
+    latitude: 47.609722,
+    longitude: -122.342222,
+    categoryLabel: 'Market',
+    rating: 4.7,
+    userRatingCount: 98765,
+    websiteUri: 'https://www.pikeplacemarket.org/',
+    googleMapsUri: 'https://maps.google.com/?cid=999',
+    openingWeekdayDescriptions: ['Monday: 9:00 AM – 6:00 PM', 'Tuesday: 9:00 AM – 6:00 PM'],
+  },
+  ChIJN1t_tDeuEmsRUsoyG83frY4: {
+    placeId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+    name: 'Sydney Opera House',
+    address: 'Bennelong Point, Sydney NSW 2000, Australia',
+    latitude: -33.856784,
+    longitude: 151.215297,
+    categoryLabel: 'Landmark',
+    rating: 4.7,
+    userRatingCount: 77431,
+    websiteUri: 'https://www.sydneyoperahouse.com/',
+    googleMapsUri: 'https://maps.google.com/?cid=1000',
+    openingWeekdayDescriptions: ['Monday: 9:00 AM – 5:00 PM', 'Tuesday: 9:00 AM – 5:00 PM'],
+  },
+};
 
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
@@ -292,27 +389,6 @@ export const handlers = [
     return createSuccessResponse(null);
   }),
 
-  http.post<never, RouteRequest, MockApiResponse<RouteSummary> | MockApiResponse<null>>(
-    `${API_BASE_URL}/routes/request`,
-    async ({ request }) => {
-      await waitForMockDelay();
-
-      if (getMockFlagsFromRequest(request).has('legacy-route-error')) {
-        return createErrorResponse('Legacy debug route request failed in mock mode.', 50010);
-      }
-
-      const requestBody = (await request.json()) as RouteRequest;
-      const originPlaceId = requestBody.originPlaceId?.trim();
-      const destinationPlaceId = requestBody.destinationPlaceId?.trim();
-
-      if (!originPlaceId || !destinationPlaceId) {
-        return createErrorResponse('Origin and destination place IDs are required.', 40002);
-      }
-
-      return createSuccessResponse(buildLegacyRouteSummary(originPlaceId, destinationPlaceId));
-    },
-  ),
-
   http.post<never, POISearchRequest, MockApiResponse<POIDto[]> | MockApiResponse<null>>(
     `${API_BASE_URL}/poi/search`,
     async ({ request }) => {
@@ -333,6 +409,21 @@ export const handlers = [
       return createSuccessResponse(results);
     },
   ),
+
+  http.get(`${API_BASE_URL}/places/:placeId`, ({ params }) => {
+    const { placeId } = params;
+
+    if (typeof placeId !== 'string') {
+      return createErrorResponse('placeId is required', 40002);
+    }
+
+    const detail = mockPlaceDetailsById[placeId];
+    if (!detail) {
+      return createErrorResponse(`Place ${placeId} not found`, 40400);
+    }
+
+    return createSuccessResponse(detail);
+  }),
 
   http.get(`${API_BASE_URL}/bookmarks`, () => {
     return createSuccessResponse(mockBookmarks);
@@ -374,6 +465,12 @@ export const handlers = [
     mockBookmarks = mockBookmarks.filter((bookmark) => bookmark.bookmarkId !== bookmarkId);
 
     return createSuccessResponse(null);
+  }),
+
+  http.get(`${API_BASE_URL}/trips`, async () => {
+    await waitForMockDelay();
+
+    return createSuccessResponse([...mockTrips].sort((left, right) => right.tripId - left.tripId));
   }),
 
   http.post<never, CreateTripRequest, MockApiResponse<TripSummary> | MockApiResponse<null>>(
@@ -435,6 +532,85 @@ export const handlers = [
     },
   ),
 
+  http.patch<
+    { tripId: string },
+    UpdateTripRequest,
+    MockApiResponse<TripSummary> | MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const tripIndex = mockTrips.findIndex((item) => item.tripId === tripId);
+
+    if (tripIndex < 0) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as UpdateTripRequest;
+    const title = requestBody.title?.trim();
+    const durationDays = requestBody.durationDays;
+
+    if (!title || !durationDays || durationDays < 1 || durationDays > 15) {
+      return createErrorResponse('Trip title and durationDays are required.', 40002);
+    }
+
+    const existingTrip = mockTrips[tripIndex];
+    if (durationDays < existingTrip.durationDays) {
+      const existingDayItems = mockTripItemsByTripId[tripId] ?? {};
+      const trimmedDaysContainItems = Array.from(
+        { length: existingTrip.durationDays - durationDays },
+        (_, index) => durationDays + index + 1,
+      ).some((dayNumber) => (existingDayItems[dayNumber] ?? []).length > 0);
+
+      if (trimmedDaysContainItems) {
+        return createErrorResponse(
+          'Cannot reduce trip duration while trimmed days still contain itinerary items.',
+          40000,
+        );
+      }
+    }
+
+    const updatedTrip: TripSummary = {
+      ...existingTrip,
+      title,
+      durationDays,
+      startDate: requestBody.startDate ?? null,
+    };
+
+    mockTrips = mockTrips.map((trip) => (trip.tripId === tripId ? updatedTrip : trip));
+    mockTripDaysByTripId[tripId] = buildMockTripDays(durationDays, requestBody.startDate ?? null);
+
+    const existingDayItems = mockTripItemsByTripId[tripId] ?? {};
+    mockTripItemsByTripId[tripId] = Object.fromEntries(
+      Array.from({ length: durationDays }, (_, index) => {
+        const dayNumber = index + 1;
+        return [dayNumber, existingDayItems[dayNumber] ?? []];
+      }),
+    );
+
+    return createSuccessResponse(updatedTrip);
+  }),
+
+  http.delete<{ tripId: string }, never, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId`,
+    async ({ params }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const tripExists = mockTrips.some((item) => item.tripId === tripId);
+
+      if (!tripExists) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      mockTrips = mockTrips.filter((trip) => trip.tripId !== tripId);
+      delete mockTripDaysByTripId[tripId];
+      delete mockTripItemsByTripId[tripId];
+
+      return createSuccessResponse(null);
+    },
+  ),
+
   http.get<{ tripId: string }, never, MockApiResponse<TripDaysResponse> | MockApiResponse<null>>(
     `${API_BASE_URL}/trips/:tripId/days`,
     async ({ params, request }) => {
@@ -481,6 +657,233 @@ export const handlers = [
 
     return createSuccessResponse(response);
   }),
+
+  http.post<{ tripId: string; dayNumber: string }, CreateTripDayItemRequest, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const dayNumber = Number(params.dayNumber);
+      const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!items) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      const requestBody = (await request.json()) as CreateTripDayItemRequest;
+      const placeId = requestBody.placeId?.trim();
+
+      if (!placeId) {
+        return createErrorResponse('Place ID is required.', 40002);
+      }
+
+      const sourceDetail = mockPlaceDetailsById[placeId];
+      const sourcePoi = mockPoiResults.find((poi) => poi.placeId === placeId);
+
+      if (!sourceDetail && !sourcePoi) {
+        return createErrorResponse(`Place ${placeId} not found.`, 40404);
+      }
+
+      const name = sourceDetail?.name ?? sourcePoi?.name ?? 'Selected Place';
+
+      mockTripItemsByTripId[tripId][dayNumber] = [
+        ...items,
+        {
+          itemId: nextItineraryItemSequence,
+          placeId,
+          name,
+          latitude: sourceDetail?.latitude ?? sourcePoi?.latitude ?? null,
+          longitude: sourceDetail?.longitude ?? sourcePoi?.longitude ?? null,
+          visitOrder: items.length + 1,
+          travelMethod: 'Drive',
+        },
+      ];
+
+      nextItineraryItemSequence += 1;
+
+      return createSuccessResponse(null);
+    },
+  ),
+
+  http.patch<
+    { tripId: string; dayNumber: string },
+    ReorderTripDayItemsRequest,
+    MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/reorder`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+    if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    if (!items) {
+      return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as ReorderTripDayItemsRequest;
+    const itemIds = requestBody.itemIds ?? [];
+
+    if (itemIds.length === 0) {
+      return createErrorResponse('Reorder item IDs are required.', 40002);
+    }
+
+    const uniqueItemIds = new Set(itemIds);
+    const currentItemIds = new Set(items.map((item) => item.itemId));
+    const isExactCurrentDaySet =
+      uniqueItemIds.size === itemIds.length &&
+      itemIds.length === items.length &&
+      itemIds.every((itemId) => currentItemIds.has(itemId));
+
+    if (!isExactCurrentDaySet) {
+      return createErrorResponse(
+        'Reorder request must include each itinerary item exactly once.',
+        40002,
+      );
+    }
+
+    const itemsById = new Map(items.map((item) => [item.itemId, item]));
+    mockTripItemsByTripId[tripId][dayNumber] = itemIds.map((itemId, index) => ({
+      ...itemsById.get(itemId)!,
+      visitOrder: index + 1,
+    }));
+
+    return createSuccessResponse(null);
+  }),
+
+  http.post<
+    { tripId: string; dayNumber: string; itemId: string },
+    MoveTripDayItemRequest,
+    MockApiResponse<null>
+  >(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId/move`,
+    async ({ params, request }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const sourceDayNumber = Number(params.dayNumber);
+      const itemId = Number(params.itemId);
+      const sourceItems = mockTripItemsByTripId[tripId]?.[sourceDayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!sourceItems) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      const requestBody = (await request.json()) as MoveTripDayItemRequest;
+      const targetDayNumber = requestBody.targetDayNumber;
+      const targetItems = mockTripItemsByTripId[tripId]?.[targetDayNumber];
+
+      if (!targetItems) {
+        return createErrorResponse(`Trip day ${targetDayNumber} not found.`, 40404);
+      }
+
+      if (targetDayNumber === sourceDayNumber) {
+        return createErrorResponse('Target day must differ from the source day.', 40000);
+      }
+
+      const movedItem = sourceItems.find((item) => item.itemId === itemId);
+      if (!movedItem) {
+        return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+      }
+
+      mockTripItemsByTripId[tripId][sourceDayNumber] = sourceItems
+        .filter((item) => item.itemId !== itemId)
+        .map((item, index) => ({
+          ...item,
+          visitOrder: index + 1,
+        }));
+
+      mockTripItemsByTripId[tripId][targetDayNumber] = [
+        ...targetItems,
+        {
+          ...movedItem,
+          visitOrder: targetItems.length + 1,
+        },
+      ];
+
+      return createSuccessResponse(null);
+    },
+  ),
+
+  http.patch<
+    { tripId: string; dayNumber: string; itemId: string },
+    UpdateTripDayItemRequest,
+    MockApiResponse<null>
+  >(`${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId`, async ({ params, request }) => {
+    await waitForMockDelay();
+
+    const tripId = Number(params.tripId);
+    const dayNumber = Number(params.dayNumber);
+    const itemId = Number(params.itemId);
+    const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+    if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+      return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+    }
+
+    if (!items) {
+      return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+    }
+
+    const itemIndex = items.findIndex((item) => item.itemId === itemId);
+    if (itemIndex < 0) {
+      return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+    }
+
+    const requestBody = (await request.json()) as UpdateTripDayItemRequest;
+    const displayTravelMethod = toDisplayedTripTravelMethod(requestBody.travelMethod);
+
+    mockTripItemsByTripId[tripId][dayNumber] = items.map((item) =>
+      item.itemId === itemId ? { ...item, travelMethod: displayTravelMethod } : item,
+    );
+
+    return createSuccessResponse(null);
+  }),
+
+  http.delete<{ tripId: string; dayNumber: string; itemId: string }, never, MockApiResponse<null>>(
+    `${API_BASE_URL}/trips/:tripId/days/:dayNumber/items/:itemId`,
+    async ({ params }) => {
+      await waitForMockDelay();
+
+      const tripId = Number(params.tripId);
+      const dayNumber = Number(params.dayNumber);
+      const itemId = Number(params.itemId);
+      const items = mockTripItemsByTripId[tripId]?.[dayNumber];
+
+      if (!mockTrips.some((trip) => trip.tripId === tripId)) {
+        return createErrorResponse(`Trip ${params.tripId} not found.`, 40404);
+      }
+
+      if (!items) {
+        return createErrorResponse(`Trip day ${params.dayNumber} not found.`, 40404);
+      }
+
+      if (!items.some((item) => item.itemId === itemId)) {
+        return createErrorResponse(`Itinerary item ${params.itemId} not found.`, 40404);
+      }
+
+      mockTripItemsByTripId[tripId][dayNumber] = items
+        .filter((item) => item.itemId !== itemId)
+        .map((item, index) => ({
+          ...item,
+          visitOrder: index + 1,
+        }));
+
+      return createSuccessResponse(null);
+    },
+  ),
 
   http.post<
     { tripId: string; dayNumber: string },

@@ -5,10 +5,6 @@ import type { Bookmark } from '@/api/bookmarkApi';
 import { useAppStore } from '@/stores/useAppStore';
 import BookmarkButton from './BookmarkButton';
 
-// 这个文件的功能：
-// 显示一个列表，列表中包含所有的收藏。
-// 列表有三种状态：加载中、没有收藏（空列表）、有收藏（非空列表）。
-
 type BookmarkListProps = {
   className?: string;
   emptyMessage?: string;

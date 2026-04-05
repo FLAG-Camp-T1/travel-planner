@@ -1,11 +1,14 @@
 import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
+import DayRouteViewportFocusBridge from '@/components/map/DayRouteViewportFocusBridge';
+import GlobalApiErrorBanner from '@/components/map/GlobalApiErrorBanner';
+import MapPlaceClickOverlayBridge from '@/components/map/MapPlaceClickOverlayBridge';
 import PlannerMapCameraSync from '@/components/map/PlannerMapCameraSync';
 import POIMarkers from '@/components/map/POIMarkers';
 import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
+import TripActionSuccessToast from '@/components/map/TripActionSuccessToast';
 import { useShallow } from 'zustand/react/shallow';
 import CustomZoomControl from '../components/map/CustomZoomControl';
-import RoutePolyline from '../components/map/RoutePolyline';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
 import TripPlanWorkspaceShell from '@/components/trip-plan/TripPlanWorkspaceShell';
 import { useAppStore } from '@/stores/useAppStore';
@@ -52,21 +55,27 @@ export default function PlannerPage() {
   return (
     <TripPlanWorkspaceShell>
       <TripPlanMapShell apiKey={apiKey}>
-        <Map
-          defaultCenter={defaultCameraProps.center}
-          defaultZoom={defaultCameraProps.zoom}
-          style={{ width: '100%', height: '100%' }}
-          disableDefaultUI={true}
-          mapTypeControl={false}
-          gestureHandling={'greedy'}
-          mapId={'DEMO_MAP_ID'}
-        >
-          <PlannerMapCameraSync />
-          <CustomZoomControl />
-          <RoutePolyline />
-          <SelectedDayRoutePolyline />
-          <POIMarkers />
-        </Map>
+        <div className="relative h-full w-full">
+          <Map
+            defaultCenter={defaultCameraProps.center}
+            defaultZoom={defaultCameraProps.zoom}
+            style={{ width: '100%', height: '100%' }}
+            disableDefaultUI={true}
+            mapTypeControl={false}
+            gestureHandling={'greedy'}
+            mapId={'DEMO_MAP_ID'}
+          >
+            <DayRouteViewportFocusBridge />
+            <PlannerMapCameraSync />
+            <MapPlaceClickOverlayBridge />
+            <CustomZoomControl />
+            <SelectedDayRoutePolyline />
+            <POIMarkers />
+          </Map>
+
+          <GlobalApiErrorBanner />
+          <TripActionSuccessToast />
+        </div>
       </TripPlanMapShell>
     </TripPlanWorkspaceShell>
   );

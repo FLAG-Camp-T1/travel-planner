@@ -136,7 +136,6 @@ VITE_TRIP_PLAN_ENABLE_DEV_FALLBACK=true
 /planner?tpMock=trip-bootstrap-trip-error
 /planner?tpMock=trip-bootstrap-days-error
 /planner?tpMock=trip-day-route-error
-/planner?tpMock=legacy-route-error
 /planner?tpMock=clear
 ```
 
@@ -146,7 +145,6 @@ VITE_TRIP_PLAN_ENABLE_DEV_FALLBACK=true
 - `trip-bootstrap-trip-error`：bootstrap 过程中获取 Trip 概览失败
 - `trip-bootstrap-days-error`：bootstrap 过程中获取 Trip days 失败
 - `trip-day-route-error`：为当前 selected day 生成 route 失败
-- `legacy-route-error`：dev-only `DebugRoutePanel` 的 legacy route 请求失败
 
 ### 4.5 Trip Plan Mock 推荐使用方式
 

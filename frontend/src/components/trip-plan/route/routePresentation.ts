@@ -92,3 +92,37 @@ export const getRouteEmptyStateMessage = ({
 
   return `Generate a route after adding at least two stops to Day ${selectedDayNumber}.`;
 };
+
+export const getRouteStatusMessage = ({
+  currentTrip,
+  currentDayRouteError,
+  currentDayRouteSummary,
+  currentDayRouteStatus,
+  routeEmptyStateMessage,
+  selectedDayNumber,
+}: {
+  currentTrip: { tripId: number } | null;
+  currentDayRouteError: string | null;
+  currentDayRouteSummary: DayRouteSummary | null;
+  currentDayRouteStatus: LoadStatus;
+  routeEmptyStateMessage: string | null;
+  selectedDayNumber: number | null;
+}) => {
+  if (selectedDayNumber === null) {
+    return 'Select a day to view route details.';
+  }
+
+  if (currentDayRouteStatus === 'loading') {
+    return `Generating route data for Day ${selectedDayNumber}.`;
+  }
+
+  if (currentDayRouteStatus === 'error') {
+    return currentDayRouteError ?? `Failed to generate route data for Day ${selectedDayNumber}.`;
+  }
+
+  if (currentTrip && currentDayRouteSummary === null && routeEmptyStateMessage) {
+    return routeEmptyStateMessage;
+  }
+
+  return `Day ${selectedDayNumber} route`;
+};

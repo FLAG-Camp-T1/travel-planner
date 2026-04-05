@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useAppStore } from '@/stores/useAppStore';
+import { createPoiDetailOverlayFromPoi } from '@/components/place/placeDetailOverlayFactory';
 
 const FOCUS_ZOOM_LEVEL = 15;
 const PAN_ANIMATION_DURATION_MS = 450;
@@ -12,18 +13,28 @@ const easeInOutCubic = (progress: number) => {
 };
 
 export default function POIMarkers() {
+  const activePlannerPanel = useAppStore((state) => state.activePlannerPanel);
   const poiResults = useAppStore((state) => state.poiResults);
   const selectedPOI = useAppStore((state) => state.selectedPOI);
   const hoveredPOI = useAppStore((state) => state.hoveredPOI);
   const selectPOI = useAppStore((state) => state.selectPOI);
+  const openPlaceDetail = useAppStore((state) => state.openPlaceDetail);
   const map = useMap();
   const animationFrameRef = useRef<number | null>(null);
+  const isExploreActive = activePlannerPanel === 'explore';
   const visiblePoiResults = poiResults.flatMap((poi, index) =>
-    poi.latitude != null && poi.longitude != null ? [{ poi, index }] : [],
+    isExploreActive && poi.latitude != null && poi.longitude != null ? [{ poi, index }] : [],
   );
 
   useEffect(() => {
-    if (!map || selectedPOI?.latitude == null || selectedPOI?.longitude == null) return;
+    if (
+      !isExploreActive ||
+      !map ||
+      selectedPOI?.latitude == null ||
+      selectedPOI?.longitude == null
+    ) {
+      return;
+    }
 
     const startCenter = map.getCenter();
     const targetCenter = { lat: selectedPOI.latitude, lng: selectedPOI.longitude };
@@ -75,7 +86,7 @@ export default function POIMarkers() {
     };
 
     animationFrameRef.current = requestAnimationFrame(animatePan);
-  }, [map, selectedPOI]);
+  }, [isExploreActive, map, selectedPOI]);
 
   useEffect(() => {
     return () => {
@@ -98,10 +109,13 @@ export default function POIMarkers() {
             key={poi.placeId}
             position={{ lat: poi.latitude, lng: poi.longitude }}
             title={`${index + 1}. ${poi.name}`}
-            onClick={() => selectPOI(poi)}
+            onClick={() => {
+              selectPOI(poi);
+              void openPlaceDetail(createPoiDetailOverlayFromPoi(poi));
+            }}
           >
             <Pin
-              glyph={`${index + 1}`}
+              glyphText={`${index + 1}`}
               background={isSelected ? '#ef4444' : isHovered ? '#f59e0b' : '#3b82f6'}
               glyphColor="#fff"
               borderColor={isSelected ? '#b91c1c' : isHovered ? '#b45309' : '#1d4ed8'}

@@ -2,9 +2,12 @@ package com.travelplanner.backend.trip.controller;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,9 +15,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.common.exception.GlobalExceptionHandler;
+import com.travelplanner.backend.trip.dto.CreateItineraryItemRequestDto;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
 import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
+import com.travelplanner.backend.trip.dto.MoveTripDayItemRequestDto;
+import com.travelplanner.backend.trip.dto.ReorderTripDayItemsRequestDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
+import com.travelplanner.backend.trip.dto.UpdateItineraryItemRequestDto;
+import com.travelplanner.backend.trip.dto.UpdateTripRequestDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
 import com.travelplanner.backend.trip.service.TripRouteService;
@@ -68,6 +76,179 @@ class TripControllerTest {
     }
 
     @Test
+    void listTrips_ReturnsSuccessPayload() throws Exception {
+        TripSummaryDto firstTrip = new TripSummaryDto();
+        firstTrip.setTripId(1002L);
+        firstTrip.setTitle("Summer Tokyo Trip");
+        firstTrip.setDurationDays(5);
+
+        TripSummaryDto secondTrip = new TripSummaryDto();
+        secondTrip.setTripId(1001L);
+        secondTrip.setTitle("Spring DC Trip");
+        secondTrip.setDurationDays(3);
+
+        when(tripQueryService.listTrips()).thenReturn(List.of(firstTrip, secondTrip));
+
+        mockMvc.perform(get("/api/v1/trips"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].tripId").value(1002))
+                .andExpect(jsonPath("$.data[0].title").value("Summer Tokyo Trip"));
+    }
+
+    @Test
+    void updateTrip_ReturnsSuccessPayload() throws Exception {
+        TripSummaryDto response = new TripSummaryDto();
+        response.setTripId(1001L);
+        response.setTitle("Updated DC Trip");
+        response.setDurationDays(5);
+        response.setStartDate(LocalDate.of(2026, 4, 12));
+
+        when(tripCommandService.updateTrip(any(Long.class), any(UpdateTripRequestDto.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "title": "Updated DC Trip",
+                                          "durationDays": 5,
+                                          "startDate": "2026-04-12"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.tripId").value(1001))
+                .andExpect(jsonPath("$.data.title").value("Updated DC Trip"))
+                .andExpect(jsonPath("$.data.startDate").value("2026-04-12"));
+    }
+
+    @Test
+    void deleteTrip_ReturnsSuccessPayload() throws Exception {
+        doNothing().when(tripCommandService).deleteTrip(1001L);
+
+        mockMvc.perform(delete("/api/v1/trips/1001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    void createTripDayItem_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .createTripDayItem(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(CreateItineraryItemRequestDto.class));
+
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "placeId": "poi-search-1"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    void updateTripDayItem_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .updateTripDayItem(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(Long.class),
+                        any(UpdateItineraryItemRequestDto.class));
+
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/5001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "travelMethod": "WALK"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    void deleteTripDayItem_ReturnsSuccessPayload() throws Exception {
+        doNothing().when(tripCommandService).deleteTripDayItem(1001L, 1, 5001L);
+
+        mockMvc.perform(delete("/api/v1/trips/1001/days/1/items/5001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    void reorderTripDayItems_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .reorderTripDayItems(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(ReorderTripDayItemsRequestDto.class));
+
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/reorder")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "itemIds": [5003, 5001, 5002]
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    void moveTripDayItem_ReturnsSuccessPayload() throws Exception {
+        doNothing()
+                .when(tripCommandService)
+                .moveTripDayItem(
+                        any(Long.class),
+                        any(Integer.class),
+                        any(Long.class),
+                        any(MoveTripDayItemRequestDto.class));
+
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items/5002/move")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "targetDayNumber": 2
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.SUCCESS.getCode()))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void createTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
         mockMvc.perform(
                         post("/api/v1/trips/create")
@@ -77,6 +258,87 @@ class TripControllerTest {
                                         {
                                           "title": "",
                                           "durationDays": 0
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void updateTrip_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "title": " ",
+                                          "durationDays": 0
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void createTripDayItem_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "placeId": " "
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void updateTripDayItem_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/5001")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "travelMethod": "FLY"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void reorderTripDayItems_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        patch("/api/v1/trips/1001/days/1/items/reorder")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "itemIds": []
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.PARAM_INVALID.getCode()))
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void moveTripDayItem_WhenRequestIsInvalid_ReturnsParamInvalid() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/trips/1001/days/1/items/5002/move")
+                                .contentType(APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "targetDayNumber": 0
                                         }
                                         """))
                 .andExpect(status().isOk())

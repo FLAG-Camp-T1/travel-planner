@@ -7,6 +7,7 @@ import RouteSegmentList from '@/components/trip-plan/route/RouteSegmentList';
 import {
   getLongRouteWarningMessage,
   getRouteEmptyStateMessage,
+  getRouteStatusMessage,
   shouldShowLongRouteWarning,
 } from '@/components/trip-plan/route/routePresentation';
 
@@ -18,44 +19,57 @@ export default function DayRouteSection() {
     currentTrip,
     dayItemsByDayNumber,
     dayItemsStatusByDayNumber,
+    dayRouteColorMode,
     dayRouteByDayNumber,
     dayRouteErrorByDayNumber,
     dayRouteSegmentsByDayNumber,
     dayRouteStatusByDayNumber,
+    setDayRouteColorMode,
     selectedDayNumber,
   } = useAppStore(
     useShallow((state) => ({
       currentTrip: state.currentTrip,
       dayItemsByDayNumber: state.dayItemsByDayNumber,
       dayItemsStatusByDayNumber: state.dayItemsStatusByDayNumber,
+      dayRouteColorMode: state.dayRouteColorMode,
       dayRouteByDayNumber: state.dayRouteByDayNumber,
       dayRouteErrorByDayNumber: state.dayRouteErrorByDayNumber,
       dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
       dayRouteStatusByDayNumber: state.dayRouteStatusByDayNumber,
+      setDayRouteColorMode: state.setDayRouteColorMode,
       selectedDayNumber: state.selectedDayNumber,
     })),
   );
 
+  const dayCacheKey =
+    currentTrip && selectedDayNumber !== null ? `${currentTrip.tripId}:${selectedDayNumber}` : null;
+
   const currentDayRouteStatus =
-    selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayRouteStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const currentDayRouteError =
-    selectedDayNumber !== null ? (dayRouteErrorByDayNumber[selectedDayNumber] ?? null) : null;
+    dayCacheKey !== null ? (dayRouteErrorByDayNumber[dayCacheKey] ?? null) : null;
   const currentDayRouteSummary =
-    selectedDayNumber !== null ? (dayRouteByDayNumber[selectedDayNumber] ?? null) : null;
+    dayCacheKey !== null ? (dayRouteByDayNumber[dayCacheKey] ?? null) : null;
   const currentDaySegments =
-    selectedDayNumber !== null
-      ? (dayRouteSegmentsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ROUTE_SEGMENTS)
+    dayCacheKey !== null
+      ? (dayRouteSegmentsByDayNumber[dayCacheKey] ?? EMPTY_DAY_ROUTE_SEGMENTS)
       : EMPTY_DAY_ROUTE_SEGMENTS;
   const currentDayItems =
-    selectedDayNumber !== null
-      ? (dayItemsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ITEMS)
-      : EMPTY_DAY_ITEMS;
+    dayCacheKey !== null ? (dayItemsByDayNumber[dayCacheKey] ?? EMPTY_DAY_ITEMS) : EMPTY_DAY_ITEMS;
   const currentDayItemsStatus =
-    selectedDayNumber !== null ? (dayItemsStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayItemsStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const currentDayItemCount = currentDayItems.length;
   const routeEmptyStateMessage = getRouteEmptyStateMessage({
     currentDayItemCount,
     currentDayItemsStatus,
+    selectedDayNumber,
+  });
+  const routeStatusMessage = getRouteStatusMessage({
+    currentDayRouteError,
+    currentDayRouteStatus,
+    routeEmptyStateMessage,
+    currentDayRouteSummary,
+    currentTrip,
     selectedDayNumber,
   });
 
@@ -63,11 +77,26 @@ export default function DayRouteSection() {
     return Object.fromEntries(currentDayItems.map((item) => [item.itemId, item]));
   }, [currentDayItems]);
   const showLongRouteWarning = shouldShowLongRouteWarning(currentDayRouteSummary);
+  const isContrastMode = dayRouteColorMode === 'contrast';
 
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
+          <button
+            type="button"
+            onClick={() => setDayRouteColorMode(isContrastMode ? 'travelMethod' : 'contrast')}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm transition ${
+              isContrastMode
+                ? 'border-gray-900 bg-gray-900 text-white'
+                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
+            }`}
+            aria-pressed={isContrastMode}
+          >
+            {isContrastMode ? 'High Contrast On' : 'High Contrast Off'}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-gray-500">
           Travel time and route details for the selected day.
         </p>
@@ -75,35 +104,13 @@ export default function DayRouteSection() {
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
-          {selectedDayNumber !== null
-            ? `Day ${selectedDayNumber} route`
-            : 'Select a day to view route details.'}
+          {routeStatusMessage}
         </div>
 
         {!currentTrip || selectedDayNumber === null ? (
           <div className="px-4 py-4 text-sm text-gray-500">
             Create or load a trip, then choose a day to view route details.
           </div>
-        ) : null}
-
-        {currentTrip && selectedDayNumber !== null && currentDayRouteStatus === 'loading' ? (
-          <div className="px-4 py-4 text-sm text-gray-500">
-            Generating route data for Day {selectedDayNumber}.
-          </div>
-        ) : null}
-
-        {currentTrip && selectedDayNumber !== null && currentDayRouteStatus === 'error' ? (
-          <div className="px-4 py-4 text-sm text-red-600">
-            {currentDayRouteError ?? `Failed to generate route data for Day ${selectedDayNumber}.`}
-          </div>
-        ) : null}
-
-        {currentTrip &&
-        selectedDayNumber !== null &&
-        currentDayRouteSummary === null &&
-        currentDayRouteStatus !== 'loading' &&
-        currentDayRouteStatus !== 'error' ? (
-          <div className="px-4 py-4 text-sm text-gray-500">{routeEmptyStateMessage}</div>
         ) : null}
 
         {currentTrip && selectedDayNumber !== null && currentDayRouteSummary !== null ? (
@@ -125,7 +132,11 @@ export default function DayRouteSection() {
                 {`Route summary is ready, but no segment rows were returned for Day ${selectedDayNumber}.`}
               </div>
             ) : (
-              <RouteSegmentList itemsById={itemsById} segments={currentDaySegments} />
+              <RouteSegmentList
+                itemsById={itemsById}
+                segments={currentDaySegments}
+                colorMode={dayRouteColorMode}
+              />
             )}
           </>
         ) : null}

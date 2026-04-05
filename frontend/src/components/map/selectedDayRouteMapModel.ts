@@ -1,5 +1,8 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
-import { getTravelMethodStrokeColor } from '../trip-plan/travelMethodPresentation';
+import {
+  getDayRouteSegmentColors,
+  type DayRouteColorMode,
+} from '@/utils/dayRouteColorPresentation';
 
 const GAP_DISTANCE_THRESHOLD_METERS = 20;
 
@@ -18,6 +21,8 @@ export type GapConnector = {
 
 export type ItineraryMarkerPoint = {
   itemId: number;
+  placeId: string;
+  name: string | null;
   visitOrder: number;
   title: string;
   position: google.maps.LatLng;
@@ -36,15 +41,37 @@ export const buildSelectedDayRouteMapModel = ({
   items,
   segments,
   selectedDayNumber,
+  colorMode,
 }: {
   geometryLib: typeof google.maps.geometry | null;
   items: ItineraryItem[];
   segments: DayRouteSegment[];
   selectedDayNumber: number | null;
+  colorMode: DayRouteColorMode;
 }): SelectedDayRouteMapModel => {
+  const markerPoints: ItineraryMarkerPoint[] = items
+    .filter((item) => item.latitude != null && item.longitude != null)
+    .map((item) => ({
+      itemId: item.itemId,
+      placeId: item.placeId,
+      name: item.name ?? null,
+      visitOrder: item.visitOrder,
+      title: item.name ?? `Stop ${item.visitOrder}`,
+      position: new google.maps.LatLng(item.latitude as number, item.longitude as number),
+    }));
+
+  const markerSignature =
+    selectedDayNumber === null
+      ? null
+      : `${selectedDayNumber}:${markerPoints
+          .map(
+            (markerPoint) =>
+              `${markerPoint.itemId}:${markerPoint.visitOrder}:${markerPoint.position.lat()}:${markerPoint.position.lng()}`,
+          )
+          .join('|')}`;
   const drawableSegments = segments.filter((segment) => segment.encodedPolyline.trim().length > 0);
 
-  if (!geometryLib || selectedDayNumber === null || drawableSegments.length === 0) {
+  if (selectedDayNumber === null) {
     return {
       routeSignature: null,
       markerSignature: null,
@@ -54,26 +81,33 @@ export const buildSelectedDayRouteMapModel = ({
     };
   }
 
+  if (!geometryLib || drawableSegments.length === 0) {
+    return {
+      routeSignature: null,
+      markerSignature,
+      decodedSegments: [],
+      gapConnectors: [],
+      markerPoints,
+    };
+  }
+
   const routeSignature = `${selectedDayNumber}:${drawableSegments
     .map((segment) => segment.encodedPolyline.trim())
     .join('|')}`;
-  let previousTravelMethod: string | null = null;
-  let methodVariantIndex = 0;
-  const decodedSegments = drawableSegments
-    .map((segment) => {
-      if (segment.travelMethod === previousTravelMethod) {
-        methodVariantIndex += 1;
-      } else {
-        previousTravelMethod = segment.travelMethod;
-        methodVariantIndex = 0;
-      }
-
+  const segmentColors = getDayRouteSegmentColors(segments, colorMode);
+  const decodedSegments = segments
+    .map((segment, index) => ({
+      segment,
+      strokeColor: segmentColors[index],
+    }))
+    .filter(({ segment }) => segment.encodedPolyline.trim().length > 0)
+    .map(({ segment, strokeColor }) => {
       return {
         fromItemId: segment.fromItemId,
         toItemId: segment.toItemId,
         path: geometryLib.encoding.decodePath(segment.encodedPolyline.trim()),
         viewport: segment.viewport,
-        strokeColor: getTravelMethodStrokeColor(segment.travelMethod, methodVariantIndex),
+        strokeColor,
       };
     })
     .filter((segment) => segment.path.length > 0);
@@ -81,34 +115,12 @@ export const buildSelectedDayRouteMapModel = ({
   if (decodedSegments.length === 0) {
     return {
       routeSignature: null,
-      markerSignature: null,
+      markerSignature,
       decodedSegments: [],
       gapConnectors: [],
-      markerPoints: [],
+      markerPoints,
     };
   }
-
-  const itemsById = new Map(items.map((item) => [item.itemId, item]));
-  const markerPoints: ItineraryMarkerPoint[] = [];
-  const firstSegment = decodedSegments[0];
-  const firstItem = itemsById.get(firstSegment.fromItemId);
-
-  markerPoints.push({
-    itemId: firstSegment.fromItemId,
-    visitOrder: firstItem?.visitOrder ?? 1,
-    title: firstItem?.name ?? `Stop ${firstItem?.visitOrder ?? 1}`,
-    position: firstSegment.path[0],
-  });
-
-  decodedSegments.forEach((segment, segmentIndex) => {
-    const toItem = itemsById.get(segment.toItemId);
-    markerPoints.push({
-      itemId: segment.toItemId,
-      visitOrder: toItem?.visitOrder ?? segmentIndex + 2,
-      title: toItem?.name ?? `Stop ${segmentIndex + 2}`,
-      position: segment.path[segment.path.length - 1],
-    });
-  });
 
   const gapConnectors: GapConnector[] = [];
   for (let segmentIndex = 0; segmentIndex < decodedSegments.length - 1; segmentIndex += 1) {
@@ -127,10 +139,6 @@ export const buildSelectedDayRouteMapModel = ({
       end: nextStart,
     });
   }
-
-  const markerSignature = `${routeSignature}:${markerPoints
-    .map((markerPoint) => `${markerPoint.itemId}:${markerPoint.visitOrder}:${markerPoint.title}`)
-    .join('|')}`;
 
   return {
     routeSignature,

@@ -1,9 +1,9 @@
 import { useShallow } from 'zustand/react/shallow';
 import BookmarkList from '@/components/bookmark/BookmarkList';
-import CandidatePlaceCard from '@/components/trip-plan/candidate/CandidatePlaceCard';
+import SavedBookmarkCard from '@/components/trip-plan/bookmark/SavedBookmarkCard';
 import { useAppStore } from '@/stores/useAppStore';
 
-export default function CandidatePlacesSection() {
+export default function SavedBookmarksSection() {
   const { currentTrip, days, daysStatus, selectedDayNumber, tripStatus } = useAppStore(
     useShallow((state) => ({
       currentTrip: state.currentTrip,
@@ -24,18 +24,18 @@ export default function CandidatePlacesSection() {
     ? `Add to Day ${selectedDayNumber}`
     : 'Select a trip day first';
   const disabledCtaHelperText = isSelectedDayReady
-    ? 'Adding places directly to a day is coming soon.'
-    : 'Choose a day before adding places to your itinerary.';
+    ? 'Adding saved bookmarks directly to a day is coming soon.'
+    : 'Create or choose a trip day before adding saved places to your itinerary.';
   const disabledCtaTooltipText =
-    'You can browse saved places now. Adding them directly to an itinerary is not available yet.';
+    'You can review and manage bookmarks now. Adding them directly to an itinerary is not available yet.';
 
   return (
     <section className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-700">Candidate Places</h2>
+          <h2 className="text-lg font-semibold text-gray-700">Saved Bookmarks</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Browse saved places you may want to add later.
+            Browse saved places you may want to reuse later in planning.
           </p>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
@@ -46,11 +46,13 @@ export default function CandidatePlacesSection() {
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
           <div>
-            <div className="text-sm font-medium text-gray-800">Saved Bookmarks</div>
-            <div className="mt-1 text-xs text-gray-500">Save places here for later planning.</div>
+            <div className="text-sm font-medium text-gray-800">Bookmark Library</div>
+            <div className="mt-1 text-xs text-gray-500">
+              Saved places stay available even before a trip exists.
+            </div>
           </div>
           <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-            {isSelectedDayReady ? `Day ${selectedDayNumber}` : 'Choose a day'}
+            {isSelectedDayReady ? `Day ${selectedDayNumber}` : 'Plan Later'}
           </span>
         </div>
 
@@ -59,7 +61,7 @@ export default function CandidatePlacesSection() {
             loadingMessage="Loading bookmark source data."
             listClassName="divide-y divide-gray-100"
             renderBookmark={(bookmark) => (
-              <CandidatePlaceCard
+              <SavedBookmarkCard
                 bookmark={bookmark}
                 ctaHelperText={disabledCtaHelperText}
                 ctaLabel={disabledCtaLabel}

@@ -5,6 +5,9 @@ import java.util.List;
 import lombok.Data;
 
 @Data
+@Schema(
+        name = "GenerateDayRouteResponse",
+        description = "Route generation result for one selected trip day")
 public class GenerateDayRouteResponseDto {
 
     @Schema(description = "Trip identifier", example = "1001")

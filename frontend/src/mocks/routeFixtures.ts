@@ -1,4 +1,3 @@
-import type { RouteSummary } from '@/api/routeApi';
 import type {
   DayRouteSegment,
   DayRouteSummary,
@@ -6,6 +5,7 @@ import type {
   ItineraryItem,
   RouteViewport,
 } from '@/api/tripApi';
+import { DEFAULT_TRIP_TRAVEL_METHOD_LABEL } from '@/utils/tripTravelMethod';
 
 type LatLng = {
   lat: number;
@@ -141,7 +141,7 @@ const buildSegmentForItems = (
 ): DayRouteSegment => ({
   fromItemId: fromItem.itemId,
   toItemId: toItem.itemId,
-  travelMethod: toItem.travelMethod ?? 'Drive',
+  travelMethod: toItem.travelMethod ?? DEFAULT_TRIP_TRAVEL_METHOD_LABEL,
   distanceMeters: legDefinition.distanceMeters,
   durationSeconds: legDefinition.durationSeconds,
   encodedPolyline: encodePolyline(legDefinition.points),
@@ -175,19 +175,5 @@ export const buildMockTripDayRouteResult = (
     dayNumber,
     routeSummary: buildSummary(totalDistanceMeters, totalDurationSeconds),
     segments,
-  };
-};
-
-export const buildLegacyRouteSummary = (
-  originPlaceId: string,
-  destinationPlaceId: string,
-): RouteSummary => {
-  const leg = getLegDefinition(originPlaceId, destinationPlaceId);
-
-  return {
-    distanceMeters: leg.distanceMeters,
-    duration: `${leg.durationSeconds}s`,
-    encodedPolyline: encodePolyline(leg.points),
-    viewport: getViewportFromPoints(leg.points),
   };
 };

@@ -44,10 +44,10 @@ export default function TopBar() {
           <POISearchPanel layout="topbar" />
         </div>
 
-        <div className="flex shrink-0 items-center gap-4 xl:self-start">
+        <div className="flex shrink-0 items-center gap-4">
           <button
             onClick={handleLogout}
-            className="text-sm font-medium text-gray-500 transition-colors hover:text-red-600"
+            className="inline-flex h-9 items-center text-sm font-medium text-gray-500 transition-colors hover:text-red-600"
           >
             Log Out
           </button>

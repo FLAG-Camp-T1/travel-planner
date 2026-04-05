@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(name = "RouteLatLng", description = "Latitude and longitude pair")
 public class RouteLatLngDto {
 
     @Schema(description = "Latitude", example = "47.609722")

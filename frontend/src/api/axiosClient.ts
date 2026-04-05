@@ -1,6 +1,15 @@
 import axios from 'axios';
+import { emitApiError } from './apiErrorBus';
 import { getActiveMockFlags, MOCK_FLAGS_HEADER } from '@/mocks/mockScenario';
 import { getStoredAuthToken } from '@/utils/authStorage';
+
+const getApiErrorMessage = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Request failed. Please try again.';
+};
 
 const axiosClient = axios.create({
   baseURL: 'http://localhost:8080/api/v1',
@@ -27,6 +36,7 @@ axiosClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    emitApiError(getApiErrorMessage(error));
     return Promise.reject(error);
   },
 );
@@ -38,13 +48,16 @@ axiosClient.interceptors.response.use(
     if (res.success) {
       return res.data;
     } else {
-      console.error('API Error:', res.message);
-      return Promise.reject(new Error(res.message || 'Backend API Error'));
+      const message = res.message || 'Backend API Error';
+      console.error('API Error:', message);
+      emitApiError(message);
+      return Promise.reject(new Error(message));
     }
   },
   (error) => {
     const errorMsg = error.response?.data?.message || error.message;
     console.error('HTTP level error:', errorMsg);
+    emitApiError(errorMsg || 'HTTP request failed.');
     return Promise.reject(new Error(errorMsg));
   },
 );

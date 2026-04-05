@@ -3,7 +3,8 @@ package com.travelplanner.backend.trip.service;
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
-import com.travelplanner.backend.place.service.PlaceLookupService;
+import com.travelplanner.backend.place.dto.PlaceDetailDto;
+import com.travelplanner.backend.place.service.PlaceDetailsService;
 import com.travelplanner.backend.trip.dto.ItineraryItemDto;
 import com.travelplanner.backend.trip.dto.TripDayDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
@@ -32,8 +33,15 @@ public class TripQueryService {
     private final TripDayRepository tripDayRepository;
     private final ItineraryRepository itineraryRepository;
     private final PoiRepository poiRepository;
-    private final PlaceLookupService placeLookupService;
+    private final PlaceDetailsService placeDetailsService;
     private final CurrentUserProvider currentUserProvider;
+
+    public List<TripSummaryDto> listTrips() {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        return tripRepository.findAllByUserIdOrderByIdDesc(currentUserId).stream()
+                .map(TripMapper::toTripSummaryDto)
+                .toList();
+    }
 
     public TripSummaryDto getTrip(Long tripId) {
         return TripMapper.toTripSummaryDto(getOwnedTripEntity(tripId));
@@ -117,7 +125,12 @@ public class TripQueryService {
                             .formatted(itineraryItem.getPoiId(), itineraryItem.getId()));
         }
 
-        String displayName = placeLookupService.resolveDisplayName(poiEntity.getPlacesId());
-        return TripMapper.toItineraryItemDto(itineraryItem, poiEntity, displayName);
+        PlaceDetailDto placeDetail = placeDetailsService.getPlaceDetails(poiEntity.getPlacesId());
+        return TripMapper.toItineraryItemDto(
+                itineraryItem,
+                poiEntity,
+                placeDetail.getName(),
+                placeDetail.getLatitude(),
+                placeDetail.getLongitude());
     }
 }

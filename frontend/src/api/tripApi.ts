@@ -8,6 +8,36 @@ export interface CreateTripRequest {
   startDate?: DateString;
 }
 
+export interface UpdateTripRequest {
+  title: string;
+  durationDays: number;
+  startDate?: DateString | null;
+}
+
+export interface CreateTripDayItemRequest {
+  placeId: string;
+}
+
+export type TripTravelMethodCommand =
+  | 'DRIVE'
+  | 'BICYCLE'
+  | 'WALK'
+  | 'TWO_WHEELER'
+  | 'TRANSIT'
+  | 'TRAVEL_MODE_UNSPECIFIED';
+
+export interface UpdateTripDayItemRequest {
+  travelMethod: TripTravelMethodCommand;
+}
+
+export interface ReorderTripDayItemsRequest {
+  itemIds: number[];
+}
+
+export interface MoveTripDayItemRequest {
+  targetDayNumber: number;
+}
+
 export interface TripSummary {
   tripId: number;
   title: string;
@@ -28,7 +58,9 @@ export interface TripDaysResponse {
 export interface ItineraryItem {
   itemId: number;
   placeId: string;
-  name: string;
+  name: string | null;
+  latitude: number | null;
+  longitude: number | null;
   visitOrder: number;
   travelMethod: string | null;
 }
@@ -76,8 +108,62 @@ export const createTrip = (request: CreateTripRequest): Promise<TripSummary> => 
   return axiosClient.post('/trips/create', request);
 };
 
+export const getTrips = (): Promise<TripSummary[]> => {
+  return axiosClient.get('/trips');
+};
+
 export const getTrip = (tripId: number): Promise<TripSummary> => {
   return axiosClient.get(`/trips/${tripId}`);
+};
+
+export const updateTrip = (tripId: number, request: UpdateTripRequest): Promise<TripSummary> => {
+  return axiosClient.patch(`/trips/${tripId}`, request);
+};
+
+export const deleteTrip = (tripId: number): Promise<void> => {
+  return axiosClient.delete(`/trips/${tripId}`);
+};
+
+export const createTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  request: CreateTripDayItemRequest,
+): Promise<void> => {
+  return axiosClient.post(`/trips/${tripId}/days/${dayNumber}/items`, request);
+};
+
+export const updateTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  itemId: number,
+  request: UpdateTripDayItemRequest,
+): Promise<void> => {
+  return axiosClient.patch(`/trips/${tripId}/days/${dayNumber}/items/${itemId}`, request);
+};
+
+export const deleteTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  itemId: number,
+): Promise<void> => {
+  return axiosClient.delete(`/trips/${tripId}/days/${dayNumber}/items/${itemId}`);
+};
+
+export const reorderTripDayItems = (
+  tripId: number,
+  dayNumber: number,
+  request: ReorderTripDayItemsRequest,
+): Promise<void> => {
+  return axiosClient.patch(`/trips/${tripId}/days/${dayNumber}/items/reorder`, request);
+};
+
+export const moveTripDayItem = (
+  tripId: number,
+  dayNumber: number,
+  itemId: number,
+  request: MoveTripDayItemRequest,
+): Promise<void> => {
+  return axiosClient.post(`/trips/${tripId}/days/${dayNumber}/items/${itemId}/move`, request);
 };
 
 export const getTripDays = (tripId: number): Promise<TripDaysResponse> => {

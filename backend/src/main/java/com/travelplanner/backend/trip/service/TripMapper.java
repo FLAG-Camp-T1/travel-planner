@@ -36,11 +36,17 @@ final class TripMapper {
     }
 
     static ItineraryItemDto toItineraryItemDto(
-            ItineraryEntity itineraryEntity, PoiEntity poiEntity, String displayName) {
+            ItineraryEntity itineraryEntity,
+            PoiEntity poiEntity,
+            String displayName,
+            Double latitude,
+            Double longitude) {
         ItineraryItemDto dto = new ItineraryItemDto();
         dto.setItemId(itineraryEntity.getId());
         dto.setPlaceId(poiEntity.getPlacesId());
         dto.setName(displayName);
+        dto.setLatitude(latitude);
+        dto.setLongitude(longitude);
         dto.setVisitOrder(itineraryEntity.getVisitOrder());
         dto.setTravelMethod(
                 TripTravelMethodMapper.toNullableDisplay(itineraryEntity.getTravelMethod()));

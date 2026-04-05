@@ -8,7 +8,8 @@ import static org.mockito.Mockito.when;
 import com.travelplanner.backend.common.api.ResultCode;
 import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
-import com.travelplanner.backend.place.service.PlaceLookupService;
+import com.travelplanner.backend.place.dto.PlaceDetailDto;
+import com.travelplanner.backend.place.service.PlaceDetailsService;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
@@ -40,10 +41,39 @@ class TripQueryServiceTest {
     @Mock private TripDayRepository tripDayRepository;
     @Mock private ItineraryRepository itineraryRepository;
     @Mock private PoiRepository poiRepository;
-    @Mock private PlaceLookupService placeLookupService;
+    @Mock private PlaceDetailsService placeDetailsService;
     @Mock private CurrentUserProvider currentUserProvider;
 
     @InjectMocks private TripQueryService tripQueryService;
+
+    @Test
+    void listTrips_ReturnsOwnedTripsInRepositoryOrder() {
+        TripEntity newestTrip = new TripEntity();
+        newestTrip.setId(1002L);
+        newestTrip.setUserId(CURRENT_USER_ID);
+        newestTrip.setTitle("Summer Tokyo Trip");
+        newestTrip.setDuration(5);
+        newestTrip.setStartDate(LocalDate.of(2026, 7, 1));
+
+        TripEntity olderTrip = new TripEntity();
+        olderTrip.setId(1001L);
+        olderTrip.setUserId(CURRENT_USER_ID);
+        olderTrip.setTitle("Spring DC Trip");
+        olderTrip.setDuration(3);
+        olderTrip.setStartDate(LocalDate.of(2026, 4, 10));
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findAllByUserIdOrderByIdDesc(CURRENT_USER_ID))
+                .thenReturn(List.of(newestTrip, olderTrip));
+
+        List<TripSummaryDto> result = tripQueryService.listTrips();
+
+        assertEquals(2, result.size());
+        assertEquals(1002L, result.get(0).getTripId());
+        assertEquals("Summer Tokyo Trip", result.get(0).getTitle());
+        assertEquals(1001L, result.get(1).getTripId());
+        assertEquals("Spring DC Trip", result.get(1).getTitle());
+    }
 
     @Test
     void getTrip_ReturnsOwnedTripSummary() {
@@ -139,7 +169,7 @@ class TripQueryServiceTest {
     }
 
     @Test
-    void getTripDayItems_ReturnsOrderedItemsWithResolvedNames() {
+    void getTripDayItems_ReturnsOrderedItemsWithResolvedDetails() {
         TripEntity tripEntity = new TripEntity();
         tripEntity.setId(1001L);
         tripEntity.setUserId(CURRENT_USER_ID);
@@ -180,10 +210,20 @@ class TripQueryServiceTest {
                 .thenReturn(List.of(firstItem, secondItem));
         when(poiRepository.findAllById(List.of(201L, 202L)))
                 .thenReturn(List.of(firstPoi, secondPoi));
-        when(placeLookupService.resolveDisplayName("ChIJVTPokywQkFQRmtVEaUZlJRA"))
-                .thenReturn("Pike Place Market");
-        when(placeLookupService.resolveDisplayName("ChIJVVVVVYx3j4ARP-3NGldc8qQ"))
-                .thenReturn("Route Example Origin");
+        PlaceDetailDto firstPlaceDetail = new PlaceDetailDto();
+        firstPlaceDetail.setName("Pike Place Market");
+        firstPlaceDetail.setLatitude(47.609722);
+        firstPlaceDetail.setLongitude(-122.342222);
+
+        PlaceDetailDto secondPlaceDetail = new PlaceDetailDto();
+        secondPlaceDetail.setName("Route Example Origin");
+        secondPlaceDetail.setLatitude(38.8895);
+        secondPlaceDetail.setLongitude(-77.0353);
+
+        when(placeDetailsService.getPlaceDetails("ChIJVTPokywQkFQRmtVEaUZlJRA"))
+                .thenReturn(firstPlaceDetail);
+        when(placeDetailsService.getPlaceDetails("ChIJVVVVVYx3j4ARP-3NGldc8qQ"))
+                .thenReturn(secondPlaceDetail);
 
         TripDayItemsResponseDto result = tripQueryService.getTripDayItems(1001L, 1);
 
@@ -192,12 +232,14 @@ class TripQueryServiceTest {
         assertEquals(2, result.getItems().size());
         assertEquals(5001L, result.getItems().get(0).getItemId());
         assertEquals("Pike Place Market", result.getItems().get(0).getName());
+        assertEquals(47.609722, result.getItems().get(0).getLatitude());
+        assertEquals(-122.342222, result.getItems().get(0).getLongitude());
         assertNull(result.getItems().get(0).getTravelMethod());
         assertEquals("Walk", result.getItems().get(1).getTravelMethod());
     }
 
     @Test
-    void getTripDayItems_WhenPlaceLookupFails_PropagatesBusinessException() {
+    void getTripDayItems_WhenPlaceDetailsLookupFails_PropagatesBusinessException() {
         TripEntity tripEntity = new TripEntity();
         tripEntity.setId(1001L);
         tripEntity.setUserId(CURRENT_USER_ID);
@@ -226,7 +268,7 @@ class TripQueryServiceTest {
         when(itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(11L))
                 .thenReturn(List.of(itineraryItem));
         when(poiRepository.findAllById(List.of(201L))).thenReturn(List.of(poiEntity));
-        when(placeLookupService.resolveDisplayName("ChIJVTPokywQkFQRmtVEaUZlJRA"))
+        when(placeDetailsService.getPlaceDetails("ChIJVTPokywQkFQRmtVEaUZlJRA"))
                 .thenThrow(new BusinessException(ResultCode.GOOGLE_PLACES_REQUEST_ERROR));
 
         BusinessException exception =

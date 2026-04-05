@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import lombok.Data;
 
 @Data
+@Schema(name = "TripSummary", description = "Summary view of a trip")
 public class TripSummaryDto {
 
     @Schema(description = "Trip identifier", example = "1001")
@@ -16,6 +17,6 @@ public class TripSummaryDto {
     @Schema(description = "Trip duration in days", example = "3")
     private Integer durationDays;
 
-    @Schema(description = "Optional fixed trip start date", example = "2026-04-10")
+    @Schema(description = "Trip start date when scheduling is fixed", example = "2026-04-10")
     private LocalDate startDate;
 }
