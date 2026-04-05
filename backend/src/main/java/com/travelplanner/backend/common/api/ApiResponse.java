@@ -1,14 +1,23 @@
 package com.travelplanner.backend.common.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.jspecify.annotations.NonNull;
 
 @Data
+@Schema(name = "ApiResponse", description = "Standard API response wrapper")
 public class ApiResponse<T> {
 
+    @Schema(description = "Application-level result code", example = "20000")
     private Integer code;
+
+    @Schema(description = "Human-readable result message", example = "OK")
     private String message;
+
+    @Schema(description = "Whether the request completed successfully", example = "true")
     private Boolean success;
+
+    @Schema(description = "Response payload; null when no payload is returned", nullable = true)
     private T data;
 
     // Disable constructor. Use factory method instead

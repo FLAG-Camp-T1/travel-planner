@@ -4,6 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(
+        name = "DayRouteSegment",
+        description = "Computed route segment between two itinerary items")
 public class DayRouteSegmentDto {
 
     @Schema(description = "Itinerary item id for the segment origin", example = "5001")

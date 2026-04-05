@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import lombok.Data;
 
 @Data
+@Schema(name = "CreateTripRequest", description = "Request payload used to create a trip")
 public class CreateTripRequestDto {
 
     @NotBlank
@@ -21,6 +22,6 @@ public class CreateTripRequestDto {
     @Schema(description = "Trip duration in days", example = "3")
     private Integer durationDays;
 
-    @Schema(description = "Optional fixed trip start date", example = "2026-04-10")
+    @Schema(description = "Trip start date when scheduling is fixed", example = "2026-04-10")
     private LocalDate startDate;
 }

@@ -10,6 +10,7 @@ import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
 import com.travelplanner.backend.trip.service.TripRouteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/trips")
 @RequiredArgsConstructor
-@Tag(name = "Trips", description = "APIs for trip planning")
+@Tag(name = "Trips", description = "Create trips, browse trip data, and generate day routes")
 public class TripController {
 
     private final TripCommandService tripCommandService;
@@ -34,7 +35,10 @@ public class TripController {
     private final TripRouteService tripRouteService;
 
     @PostMapping("/create")
-    @Operation(summary = "Create a trip")
+    @Operation(
+            summary = "Create a trip",
+            description =
+                    "Creates a trip shell with title, duration, and optional fixed start date.")
     public ApiResponse<TripSummaryDto> createTrip(
             @Valid @RequestBody CreateTripRequestDto request) {
         log.info("Inbound Trip Create Request: {}", request);
@@ -42,34 +46,52 @@ public class TripController {
     }
 
     @GetMapping
-    @Operation(summary = "List trips for the current user")
+    @Operation(
+            summary = "List trips",
+            description = "Returns the current user's trips in reverse creation order.")
     public ApiResponse<List<TripSummaryDto>> listTrips() {
         return ApiResponse.success(tripQueryService.listTrips());
     }
 
     @GetMapping("/{tripId}")
-    @Operation(summary = "Get trip summary")
-    public ApiResponse<TripSummaryDto> getTrip(@PathVariable Long tripId) {
+    @Operation(
+            summary = "Get trip summary",
+            description = "Returns the summary for one trip owned by the current user.")
+    public ApiResponse<TripSummaryDto> getTrip(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable
+                    Long tripId) {
         return ApiResponse.success(tripQueryService.getTrip(tripId));
     }
 
     @GetMapping("/{tripId}/days")
-    @Operation(summary = "Get ordered trip days")
-    public ApiResponse<TripDaysResponseDto> getTripDays(@PathVariable Long tripId) {
+    @Operation(
+            summary = "List trip days",
+            description = "Returns ordered day entries for the selected trip.")
+    public ApiResponse<TripDaysResponseDto> getTripDays(
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable
+                    Long tripId) {
         return ApiResponse.success(tripQueryService.getTripDays(tripId));
     }
 
     @GetMapping("/{tripId}/days/{dayNumber}/items")
-    @Operation(summary = "Get ordered itinerary items")
+    @Operation(
+            summary = "List day itinerary items",
+            description = "Returns ordered itinerary items for one day of the selected trip.")
     public ApiResponse<TripDayItemsResponseDto> getTripDayItems(
-            @PathVariable Long tripId, @PathVariable Integer dayNumber) {
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber) {
         return ApiResponse.success(tripQueryService.getTripDayItems(tripId, dayNumber));
     }
 
     @PostMapping("/{tripId}/days/{dayNumber}/route/generate")
-    @Operation(summary = "Generate route for the selected trip day")
+    @Operation(
+            summary = "Generate a day route",
+            description = "Computes route segments and totals for one trip day.")
     public ApiResponse<GenerateDayRouteResponseDto> generateDayRoute(
-            @PathVariable Long tripId, @PathVariable Integer dayNumber) {
+            @Parameter(description = "Trip identifier", example = "1001") @PathVariable Long tripId,
+            @Parameter(description = "Day number within the trip", example = "1") @PathVariable
+                    Integer dayNumber) {
         return ApiResponse.success(tripRouteService.generateDayRoute(tripId, dayNumber));
     }
 }

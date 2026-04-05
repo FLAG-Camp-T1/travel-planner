@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.Data;
 
 @Data
+@Schema(name = "TripDaysResponse", description = "Ordered day list returned for one trip")
 public class TripDaysResponseDto {
 
     @Schema(description = "Trip identifier", example = "1001")

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(name = "ItineraryItem", description = "One ordered itinerary item within a trip day")
 public class ItineraryItemDto {
 
     @Schema(description = "Itinerary item identifier", example = "5001")

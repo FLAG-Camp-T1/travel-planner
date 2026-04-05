@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 @Data
+@Schema(name = "DayRouteSummary", description = "Aggregate route totals for one trip day")
 public class DayRouteSummaryDto {
 
     @Schema(description = "Total route distance in meters", example = "3500")
