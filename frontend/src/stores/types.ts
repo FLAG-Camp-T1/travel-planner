@@ -160,8 +160,8 @@ export type DetailOverlayKind = 'poi' | 'bookmark';
 
 export interface PlaceDetailSourceSummary {
   placeId: string;
-  name: string;
-  address: string;
+  name: string | null;
+  address: string | null;
   latitude: number | null;
   longitude: number | null;
   categoryLabel: string | null;

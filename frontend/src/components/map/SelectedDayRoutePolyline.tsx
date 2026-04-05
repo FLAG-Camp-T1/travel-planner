@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { useShallow } from 'zustand/react/shallow';
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
+import { createPoiDetailOverlayFromItineraryItem } from '@/components/place/placeDetailOverlayFactory';
 import { useAppStore } from '@/stores/useAppStore';
 import {
   buildSelectedDayRouteMapModel,
@@ -44,6 +45,7 @@ const SelectedDayRoutePolyline = () => {
     dayItemsByDayNumber,
     dayRouteColorMode,
     dayRouteSegmentsByDayNumber,
+    openPlaceDetail,
     selectedDayNumber,
   } = useAppStore(
     useShallow((state) => ({
@@ -51,6 +53,7 @@ const SelectedDayRoutePolyline = () => {
       dayItemsByDayNumber: state.dayItemsByDayNumber,
       dayRouteColorMode: state.dayRouteColorMode,
       dayRouteSegmentsByDayNumber: state.dayRouteSegmentsByDayNumber,
+      openPlaceDetail: state.openPlaceDetail,
       selectedDayNumber: state.selectedDayNumber,
     })),
   );
@@ -197,13 +200,32 @@ const SelectedDayRoutePolyline = () => {
       markerRefs.current[markerIndex].position = markerPoint.position;
       markerRefs.current[markerIndex].title = markerPoint.title;
       markerRefs.current[markerIndex].content = pinElement.element;
+      google.maps.event.clearInstanceListeners(markerRefs.current[markerIndex]);
+
+      if (markerPoint.placeId) {
+        markerRefs.current[markerIndex].addListener('click', () => {
+          const matchedItem = currentDayItems.find((item) => item.itemId === markerPoint.itemId);
+
+          if (!matchedItem) {
+            return;
+          }
+
+          void openPlaceDetail(
+            createPoiDetailOverlayFromItineraryItem({
+              item: matchedItem,
+              latitude: markerPoint.position.lat(),
+              longitude: markerPoint.position.lng(),
+            }),
+          );
+        });
+      }
     });
 
     markerRefs.current.slice(mapModel.markerPoints.length).forEach((marker) => {
       marker.map = null;
     });
     markerRefs.current.length = mapModel.markerPoints.length;
-  }, [map, mapModel, markerLib]);
+  }, [currentDayItems, map, mapModel, markerLib, openPlaceDetail]);
 
   useEffect(() => {
     const polylines = polylineRefs.current;

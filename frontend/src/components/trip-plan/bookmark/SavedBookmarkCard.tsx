@@ -1,7 +1,7 @@
 import type { Bookmark } from '@/api/bookmarkApi';
 import BookmarkButton from '@/components/bookmark/BookmarkButton';
+import { createBookmarkDetailOverlay } from '@/components/place/placeDetailOverlayFactory';
 import { useAppStore } from '@/stores/useAppStore';
-import type { ActiveDetailOverlay } from '@/stores/types';
 
 type SavedBookmarkCardProps = {
   bookmark: Bookmark;
@@ -9,20 +9,6 @@ type SavedBookmarkCardProps = {
   ctaHelperText: string;
   ctaTooltipText?: string;
 };
-
-const toBookmarkDetailOverlay = (bookmark: Bookmark): ActiveDetailOverlay => ({
-  kind: 'bookmark',
-  placeId: bookmark.googlePlaceId,
-  sourceSummary: {
-    placeId: bookmark.googlePlaceId,
-    name: bookmark.poiName,
-    address: bookmark.poiAddress,
-    latitude: bookmark.poiLatitude,
-    longitude: bookmark.poiLongitude,
-    categoryLabel: bookmark.category ?? null,
-    rating: null,
-  },
-});
 
 export default function SavedBookmarkCard({
   bookmark,
@@ -35,7 +21,7 @@ export default function SavedBookmarkCard({
   return (
     <div
       className="relative cursor-pointer px-4 py-4 transition-colors hover:bg-slate-50/80"
-      onClick={() => void openPlaceDetail(toBookmarkDetailOverlay(bookmark))}
+      onClick={() => void openPlaceDetail(createBookmarkDetailOverlay(bookmark))}
     >
       <div className="absolute right-4 top-4">
         <BookmarkButton

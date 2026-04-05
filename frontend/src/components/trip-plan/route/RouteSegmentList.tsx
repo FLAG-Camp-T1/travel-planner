@@ -1,4 +1,5 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
+import { emitDayRouteViewportFocus } from '@/components/map/dayRouteViewportFocusBus';
 import { getTravelMethodPalette } from '../travelMethodPresentation';
 import { formatDistance, formatSegmentDuration } from './routePresentation';
 import {
@@ -28,9 +29,37 @@ export default function RouteSegmentList({
       {segments.map((segment, index) => {
         const palette = getTravelMethodPalette(segment.travelMethod);
         const segmentColor = segmentColors[index];
+        const isViewportClickable = Boolean(segment.viewport);
 
         return (
-          <div key={`${segment.fromItemId}-${segment.toItemId}-${index}`} className="px-4 py-4">
+          <div
+            key={`${segment.fromItemId}-${segment.toItemId}-${index}`}
+            className={`px-4 py-4 transition ${
+              isViewportClickable ? 'cursor-pointer hover:bg-slate-50/80' : ''
+            }`}
+            onClick={() => {
+              if (segment.viewport) {
+                emitDayRouteViewportFocus(segment.viewport);
+              }
+            }}
+            role={isViewportClickable ? 'button' : undefined}
+            tabIndex={isViewportClickable ? 0 : undefined}
+            onKeyDown={(event) => {
+              if (!segment.viewport) {
+                return;
+              }
+
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                emitDayRouteViewportFocus(segment.viewport);
+              }
+            }}
+            aria-label={
+              isViewportClickable
+                ? `Focus map on route from ${getItemLabel(itemsById, segment.fromItemId)} to ${getItemLabel(itemsById, segment.toItemId)}`
+                : undefined
+            }
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-gray-800">

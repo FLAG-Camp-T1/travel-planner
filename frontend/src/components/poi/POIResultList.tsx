@@ -1,21 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 import type { POIDto } from '@/api/poiApi';
-import type { ActiveDetailOverlay } from '@/stores/types';
-
-const toPoiDetailOverlay = (poi: POIDto): ActiveDetailOverlay => ({
-  kind: 'poi',
-  placeId: poi.placeId,
-  sourceSummary: {
-    placeId: poi.placeId,
-    name: poi.name,
-    address: poi.address,
-    latitude: poi.latitude,
-    longitude: poi.longitude,
-    categoryLabel: poi.poiType,
-    rating: poi.rating,
-  },
-});
+import { createPoiDetailOverlayFromPoi } from '@/components/place/placeDetailOverlayFactory';
 
 export default function POIResultList() {
   const {
@@ -42,7 +28,7 @@ export default function POIResultList() {
 
   const handleClick = (poi: POIDto) => {
     selectPOI(poi);
-    void openPlaceDetail(toPoiDetailOverlay(poi));
+    void openPlaceDetail(createPoiDetailOverlayFromPoi(poi));
   };
 
   if (poiStatus === 'idle') {

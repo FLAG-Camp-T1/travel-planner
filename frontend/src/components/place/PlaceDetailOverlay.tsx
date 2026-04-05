@@ -1,6 +1,7 @@
 import { ArrowLeft, Clock3, ExternalLink, Globe, MapPinned, Star } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import BookmarkButton from '@/components/bookmark/BookmarkButton';
+import { emitTripActionFeedback } from '@/components/map/tripActionFeedbackBus';
 import { useAppStore } from '@/stores/useAppStore';
 
 const formatCoordinate = (value: number | null) => {
@@ -53,8 +54,8 @@ export default function PlaceDetailOverlay() {
   }
 
   const summary = activeDetailOverlay.sourceSummary;
-  const name = placeDetail?.name ?? summary.name;
-  const address = placeDetail?.address ?? summary.address;
+  const name = placeDetail?.name ?? summary.name ?? 'Loading place...';
+  const address = placeDetail?.address ?? summary.address ?? 'Address unavailable';
   const categoryLabel = placeDetail?.categoryLabel ?? summary.categoryLabel;
   const rating = placeDetail?.rating ?? summary.rating;
   const ratingCount = formatRatingCount(placeDetail?.userRatingCount ?? null);
@@ -86,6 +87,7 @@ export default function PlaceDetailOverlay() {
       await createDayItem(currentTrip.tripId, selectedDayNumber, {
         placeId: activeDetailOverlay.placeId,
       });
+      emitTripActionFeedback(`Added to ${currentTrip.title} · Day ${selectedDayNumber}`);
       setActivePlannerPanel('trips');
     } catch {
       return;

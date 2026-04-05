@@ -21,6 +21,8 @@ export type GapConnector = {
 
 export type ItineraryMarkerPoint = {
   itemId: number;
+  placeId: string;
+  name: string | null;
   visitOrder: number;
   title: string;
   position: google.maps.LatLng;
@@ -97,6 +99,8 @@ export const buildSelectedDayRouteMapModel = ({
 
   markerPoints.push({
     itemId: firstSegment.fromItemId,
+    placeId: firstItem?.placeId ?? '',
+    name: firstItem?.name ?? null,
     visitOrder: firstItem?.visitOrder ?? 1,
     title: firstItem?.name ?? `Stop ${firstItem?.visitOrder ?? 1}`,
     position: firstSegment.path[0],
@@ -106,6 +110,8 @@ export const buildSelectedDayRouteMapModel = ({
     const toItem = itemsById.get(segment.toItemId);
     markerPoints.push({
       itemId: segment.toItemId,
+      placeId: toItem?.placeId ?? '',
+      name: toItem?.name ?? null,
       visitOrder: toItem?.visitOrder ?? segmentIndex + 2,
       title: toItem?.name ?? `Stop ${segmentIndex + 2}`,
       position: segment.path[segment.path.length - 1],

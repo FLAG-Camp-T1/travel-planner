@@ -6,8 +6,18 @@ const getDaySecondaryText = (date: string | null) => {
 };
 
 export default function TripDayNavigationSection() {
-  const { days, daysError, daysStatus, selectDay, selectedDayNumber } = useAppStore(
+  const {
+    currentTrip,
+    dayItemsByDayNumber,
+    days,
+    daysError,
+    daysStatus,
+    selectDay,
+    selectedDayNumber,
+  } = useAppStore(
     useShallow((state) => ({
+      currentTrip: state.currentTrip,
+      dayItemsByDayNumber: state.dayItemsByDayNumber,
       days: state.days,
       daysError: state.daysError,
       daysStatus: state.daysStatus,
@@ -44,6 +54,10 @@ export default function TripDayNavigationSection() {
 
         {days.map((day) => {
           const isSelected = day.dayNumber === selectedDayNumber;
+          const dayCacheKey = currentTrip ? `${currentTrip.tripId}:${day.dayNumber}` : null;
+          const itineraryCount = dayCacheKey ? (dayItemsByDayNumber[dayCacheKey]?.length ?? 0) : 0;
+          const itineraryCountLabel =
+            itineraryCount === 1 ? '1 itinerary' : `${itineraryCount} itineraries`;
 
           return (
             <button
@@ -60,7 +74,12 @@ export default function TripDayNavigationSection() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold text-gray-900">Day {day.dayNumber}</div>
-                  <div className="mt-1 text-xs text-gray-500">{getDaySecondaryText(day.date)}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <span>{getDaySecondaryText(day.date)}</span>
+                    <span className={isSelected ? 'text-blue-700' : 'text-slate-500'}>
+                      {itineraryCountLabel}
+                    </span>
+                  </div>
                 </div>
                 {isSelected ? (
                   <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">

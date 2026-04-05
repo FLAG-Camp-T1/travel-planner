@@ -1,9 +1,12 @@
 import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
+import DayRouteViewportFocusBridge from '@/components/map/DayRouteViewportFocusBridge';
 import GlobalApiErrorBanner from '@/components/map/GlobalApiErrorBanner';
+import MapPlaceClickOverlayBridge from '@/components/map/MapPlaceClickOverlayBridge';
 import PlannerMapCameraSync from '@/components/map/PlannerMapCameraSync';
 import POIMarkers from '@/components/map/POIMarkers';
 import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
+import TripActionSuccessToast from '@/components/map/TripActionSuccessToast';
 import { useShallow } from 'zustand/react/shallow';
 import CustomZoomControl from '../components/map/CustomZoomControl';
 import TripPlanMapShell from '@/components/trip-plan/TripPlanMapShell';
@@ -62,13 +65,16 @@ export default function PlannerPage() {
             gestureHandling={'greedy'}
             mapId={'DEMO_MAP_ID'}
           >
+            <DayRouteViewportFocusBridge />
             <PlannerMapCameraSync />
+            <MapPlaceClickOverlayBridge />
             <CustomZoomControl />
             <SelectedDayRoutePolyline />
             <POIMarkers />
           </Map>
 
           <GlobalApiErrorBanner />
+          <TripActionSuccessToast />
         </div>
       </TripPlanMapShell>
     </TripPlanWorkspaceShell>

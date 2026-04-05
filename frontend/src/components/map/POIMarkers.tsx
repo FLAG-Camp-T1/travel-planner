@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useAppStore } from '@/stores/useAppStore';
-import type { POIDto } from '@/api/poiApi';
-import type { ActiveDetailOverlay } from '@/stores/types';
+import { createPoiDetailOverlayFromPoi } from '@/components/place/placeDetailOverlayFactory';
 
 const FOCUS_ZOOM_LEVEL = 15;
 const PAN_ANIMATION_DURATION_MS = 450;
@@ -12,20 +11,6 @@ const easeInOutCubic = (progress: number) => {
     ? 4 * progress * progress * progress
     : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 };
-
-const toPoiDetailOverlay = (poi: POIDto): ActiveDetailOverlay => ({
-  kind: 'poi',
-  placeId: poi.placeId,
-  sourceSummary: {
-    placeId: poi.placeId,
-    name: poi.name,
-    address: poi.address,
-    latitude: poi.latitude,
-    longitude: poi.longitude,
-    categoryLabel: poi.poiType,
-    rating: poi.rating,
-  },
-});
 
 export default function POIMarkers() {
   const activePlannerPanel = useAppStore((state) => state.activePlannerPanel);
@@ -126,7 +111,7 @@ export default function POIMarkers() {
             title={`${index + 1}. ${poi.name}`}
             onClick={() => {
               selectPOI(poi);
-              void openPlaceDetail(toPoiDetailOverlay(poi));
+              void openPlaceDetail(createPoiDetailOverlayFromPoi(poi));
             }}
           >
             <Pin
