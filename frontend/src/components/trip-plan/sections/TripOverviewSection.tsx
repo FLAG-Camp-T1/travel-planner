@@ -31,13 +31,8 @@ export default function TripOverviewSection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Trip Overview</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Read-only trip summary backed by the current active trip context.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Overview of the current trip.</p>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-          Read-Only Data
-        </span>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
@@ -49,7 +44,7 @@ export default function TripOverviewSection() {
                 ? 'Loading the current trip summary.'
                 : tripStatus === 'error'
                   ? (tripError ?? 'Failed to load the current trip summary.')
-                  : 'Current trip summary is available for read-only review.'}
+                  : 'Trip details are ready.'}
             </div>
           </div>
 

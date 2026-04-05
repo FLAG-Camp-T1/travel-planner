@@ -2,6 +2,10 @@ import { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 import ItineraryList from '@/components/trip-plan/itinerary/ItineraryList';
+import {
+  getGenerateRouteButtonLabel,
+  getItineraryStatusMessage,
+} from '@/components/trip-plan/itinerary/itinerarySectionPresentation';
 
 export default function ItinerarySection() {
   const {
@@ -42,82 +46,33 @@ export default function ItinerarySection() {
     selectedDayNumber !== null ? (dayItemsByDayNumber[selectedDayNumber] ?? []) : [];
   const currentDayRouteStatus =
     selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+  const tripReady = currentTrip !== null;
   const hasDisplayableRoute =
     selectedDayNumber !== null &&
     (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') === 'ready';
   const canGenerateRoute =
-    currentTrip !== null &&
+    tripReady &&
     selectedDayNumber !== null &&
     currentDayStatus === 'ready' &&
     currentDayItems.length >= 2 &&
     currentDayRouteStatus !== 'loading' &&
     !hasDisplayableRoute;
-  const generateRouteButtonLabel = (() => {
-    if (currentTrip === null || selectedDayNumber === null) {
-      return 'Generate Route';
-    }
-
-    if (currentDayStatus === 'error') {
-      return 'Route Unavailable';
-    }
-
-    if (currentDayRouteStatus === 'loading') {
-      return 'Generating Route';
-    }
-
-    if (hasDisplayableRoute) {
-      return 'Route Ready';
-    }
-
-    if (currentDayStatus !== 'ready') {
-      return 'Loading Itinerary';
-    }
-
-    if (currentDayItems.length === 0) {
-      return 'No Itinerary Yet';
-    }
-
-    if (currentDayItems.length === 1) {
-      return 'Route Not Needed';
-    }
-
-    return 'Generate Route';
-  })();
-  const itineraryStatusMessage = (() => {
-    if (selectedDayNumber === null) {
-      return 'Waiting for the planner context to determine a selected day.';
-    }
-
-    if (currentTrip === null) {
-      return 'Route generation will stay disabled until the planner context is ready.';
-    }
-
-    if (currentDayStatus === 'idle' || currentDayStatus === 'loading') {
-      return `Loading itinerary items for Day ${selectedDayNumber}.`;
-    }
-
-    if (currentDayStatus === 'error') {
-      return `Itinerary data for Day ${selectedDayNumber} failed to load. Route generation stays unavailable until the request succeeds.`;
-    }
-
-    if (currentDayRouteStatus === 'loading') {
-      return `Generating route data for Day ${selectedDayNumber}.`;
-    }
-
-    if (hasDisplayableRoute) {
-      return `Day ${selectedDayNumber} already has generated route data. Route display will appear in a dedicated section.`;
-    }
-
-    if (currentDayItems.length === 0) {
-      return `Day ${selectedDayNumber} has no itinerary items yet. Route generation becomes available after at least two stops exist.`;
-    }
-
-    if (currentDayItems.length === 1) {
-      return `Day ${selectedDayNumber} has one itinerary item, so no between-stop route is needed.`;
-    }
-
-    return `Showing itinerary data for Day ${selectedDayNumber}. Route generation is available from this section header.`;
-  })();
+  const generateRouteButtonLabel = getGenerateRouteButtonLabel({
+    currentDayItemCount: currentDayItems.length,
+    currentDayRouteStatus,
+    currentDayStatus,
+    hasDisplayableRoute,
+    selectedDayNumber,
+    tripReady,
+  });
+  const itineraryStatusMessage = getItineraryStatusMessage({
+    currentDayItemCount: currentDayItems.length,
+    currentDayRouteStatus,
+    currentDayStatus,
+    hasDisplayableRoute,
+    selectedDayNumber,
+    tripReady,
+  });
 
   const handleGenerateRoute = () => {
     if (!currentTrip || selectedDayNumber === null || !canGenerateRoute) {
@@ -132,10 +87,7 @@ export default function ItinerarySection() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Selected Day Itinerary</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            This section is now the only UI entrypoint that loads or reuses itinerary items for the
-            currently selected day.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">View the stops planned for the selected day.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <button
@@ -146,9 +98,6 @@ export default function ItinerarySection() {
           >
             {generateRouteButtonLabel}
           </button>
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-            Selected-Day Data
-          </span>
         </div>
       </div>
 
@@ -157,14 +106,13 @@ export default function ItinerarySection() {
           {itineraryStatusMessage}
         </div>
 
-        {!currentTrip || selectedDayNumber === null ? (
+        {!tripReady || selectedDayNumber === null ? (
           <div className="px-4 py-4 text-sm text-gray-500">
-            Planner context is not ready yet. The itinerary will appear once a trip and selected day
-            are available.
+            Create or load a trip, then choose a day to view its itinerary.
           </div>
         ) : null}
 
-        {currentTrip &&
+        {tripReady &&
         selectedDayNumber !== null &&
         (currentDayStatus === 'idle' || currentDayStatus === 'loading') ? (
           <div className="px-4 py-4 text-sm text-gray-500">
@@ -172,13 +120,13 @@ export default function ItinerarySection() {
           </div>
         ) : null}
 
-        {currentTrip && selectedDayNumber !== null && currentDayStatus === 'error' ? (
+        {tripReady && selectedDayNumber !== null && currentDayStatus === 'error' ? (
           <div className="px-4 py-4 text-sm text-red-600">
             {currentDayError ?? `Failed to load itinerary items for Day ${selectedDayNumber}.`}
           </div>
         ) : null}
 
-        {currentTrip &&
+        {tripReady &&
         selectedDayNumber !== null &&
         currentDayStatus === 'ready' &&
         currentDayItems.length === 0 ? (
@@ -187,7 +135,7 @@ export default function ItinerarySection() {
           </div>
         ) : null}
 
-        {currentTrip &&
+        {tripReady &&
         selectedDayNumber !== null &&
         currentDayStatus === 'ready' &&
         currentDayItems.length > 0 ? (

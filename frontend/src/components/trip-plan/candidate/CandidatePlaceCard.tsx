@@ -5,12 +5,14 @@ type CandidatePlaceCardProps = {
   bookmark: Bookmark;
   ctaLabel: string;
   ctaHelperText: string;
+  ctaTooltipText?: string;
 };
 
 export default function CandidatePlaceCard({
   bookmark,
   ctaHelperText,
   ctaLabel,
+  ctaTooltipText,
 }: CandidatePlaceCardProps) {
   return (
     <div className="relative px-4 py-4">
@@ -48,15 +50,25 @@ export default function CandidatePlaceCard({
         </div>
 
         <div className="mt-4">
-          <button
-            type="button"
-            disabled
-            className="rounded-full bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 cursor-not-allowed"
-          >
-            {ctaLabel}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded-full bg-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500"
+            >
+              {ctaLabel}
+            </button>
+            {ctaTooltipText ? (
+              <span
+                title={ctaTooltipText}
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[11px] font-medium text-gray-500"
+                aria-label="More information"
+              >
+                i
+              </span>
+            ) : null}
+          </div>
           <p className="mt-2 text-xs text-gray-500">{ctaHelperText}</p>
-          <p className="mt-2 text-[11px] text-gray-400">Remove only affects bookmark source.</p>
         </div>
       </div>
     </div>

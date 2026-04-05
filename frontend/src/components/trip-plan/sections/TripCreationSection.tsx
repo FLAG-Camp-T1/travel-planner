@@ -46,17 +46,11 @@ export default function TripCreationSection() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
+      <div>
         <div>
           <h2 className="text-lg font-semibold text-gray-700">Create Trip</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Start the planner by creating a trip. The sidebar will switch into the active trip
-            workspace only after the new trip finishes bootstrapping.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Create a new trip to start planning.</p>
         </div>
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-          Creation-First
-        </span>
       </div>
 
       <form

@@ -66,29 +66,23 @@ export default function DayRouteSection() {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Route results for the selected day appear here after an explicit generation request.
-          </p>
-        </div>
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-          Route Output
-        </span>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-700">Selected Day Route</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Travel time and route details for the selected day.
+        </p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
           {selectedDayNumber !== null
-            ? `Showing route state for Day ${selectedDayNumber}.`
-            : 'Waiting for planner context before resolving selected-day route state.'}
+            ? `Day ${selectedDayNumber} route`
+            : 'Select a day to view route details.'}
         </div>
 
         {!currentTrip || selectedDayNumber === null ? (
           <div className="px-4 py-4 text-sm text-gray-500">
-            Planner context is not ready yet. Route output will appear once a trip and selected day
-            are available.
+            Create or load a trip, then choose a day to view route details.
           </div>
         ) : null}
 
@@ -123,12 +117,7 @@ export default function DayRouteSection() {
             ) : null}
 
             <div className="border-t border-gray-100 px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-gray-700">Route Segments</h3>
-                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-                  Read-only
-                </span>
-              </div>
+              <h3 className="text-sm font-semibold text-gray-700">Route Segments</h3>
             </div>
 
             {currentDaySegments.length === 0 ? (

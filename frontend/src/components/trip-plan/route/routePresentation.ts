@@ -75,11 +75,11 @@ export const getRouteEmptyStateMessage = ({
   }
 
   if (currentDayItemsStatus === 'idle' || currentDayItemsStatus === 'loading') {
-    return `Loading itinerary context for Day ${selectedDayNumber} before evaluating route state.`;
+    return `Loading route details for Day ${selectedDayNumber}.`;
   }
 
   if (currentDayItemsStatus === 'error') {
-    return `Itinerary data for Day ${selectedDayNumber} is unavailable, so route state cannot be determined yet.`;
+    return `We couldn't load the itinerary for Day ${selectedDayNumber}, so route details are unavailable right now.`;
   }
 
   if (currentDayItemCount === 0) {
@@ -90,5 +90,5 @@ export const getRouteEmptyStateMessage = ({
     return `Day ${selectedDayNumber} has one itinerary item, so no between-stop route is needed.`;
   }
 
-  return `Day ${selectedDayNumber} does not have route data yet. Use the itinerary section to generate a route.`;
+  return `Generate a route after adding at least two stops to Day ${selectedDayNumber}.`;
 };

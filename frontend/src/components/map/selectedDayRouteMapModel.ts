@@ -1,6 +1,6 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
+import { getTravelMethodStrokeColor } from '../trip-plan/travelMethodPresentation';
 
-const GOLDEN_ANGLE_DEGREES = 137.508;
 const GAP_DISTANCE_THRESHOLD_METERS = 20;
 
 export type DecodedRouteSegment = {
@@ -31,25 +31,6 @@ export type SelectedDayRouteMapModel = {
   markerPoints: ItineraryMarkerPoint[];
 };
 
-const hashString = (value: string) => {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) % 360;
-  }
-
-  return hash;
-};
-
-const normalizeHue = (value: number) => {
-  return ((value % 360) + 360) % 360;
-};
-
-const createSegmentColor = (baseHue: number, segmentIndex: number) => {
-  const hue = normalizeHue(baseHue + segmentIndex * GOLDEN_ANGLE_DEGREES);
-  return `hsl(${hue} 82% 46%)`;
-};
-
 export const buildSelectedDayRouteMapModel = ({
   geometryLib,
   items,
@@ -73,21 +54,28 @@ export const buildSelectedDayRouteMapModel = ({
     };
   }
 
-  const colorSeed = `${selectedDayNumber}:${drawableSegments
-    .map((segment) => `${segment.fromItemId}-${segment.toItemId}`)
-    .join('|')}`;
   const routeSignature = `${selectedDayNumber}:${drawableSegments
     .map((segment) => segment.encodedPolyline.trim())
     .join('|')}`;
-  const baseHue = hashString(colorSeed);
+  let previousTravelMethod: string | null = null;
+  let methodVariantIndex = 0;
   const decodedSegments = drawableSegments
-    .map((segment, segmentIndex) => ({
-      fromItemId: segment.fromItemId,
-      toItemId: segment.toItemId,
-      path: geometryLib.encoding.decodePath(segment.encodedPolyline.trim()),
-      viewport: segment.viewport,
-      strokeColor: createSegmentColor(baseHue, segmentIndex),
-    }))
+    .map((segment) => {
+      if (segment.travelMethod === previousTravelMethod) {
+        methodVariantIndex += 1;
+      } else {
+        previousTravelMethod = segment.travelMethod;
+        methodVariantIndex = 0;
+      }
+
+      return {
+        fromItemId: segment.fromItemId,
+        toItemId: segment.toItemId,
+        path: geometryLib.encoding.decodePath(segment.encodedPolyline.trim()),
+        viewport: segment.viewport,
+        strokeColor: getTravelMethodStrokeColor(segment.travelMethod, methodVariantIndex),
+      };
+    })
     .filter((segment) => segment.path.length > 0);
 
   if (decodedSegments.length === 0) {
