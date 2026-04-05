@@ -1,6 +1,9 @@
 package com.travelplanner.backend.trip.service;
 
+import com.travelplanner.backend.route.model.ComputedRouteLeg;
 import com.travelplanner.backend.trip.dto.ItineraryItemDto;
+import com.travelplanner.backend.trip.dto.RouteLatLngDto;
+import com.travelplanner.backend.trip.dto.RouteViewportDto;
 import com.travelplanner.backend.trip.dto.TripDayDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.model.ItineraryEntity;
@@ -39,22 +42,30 @@ final class TripMapper {
         dto.setPlaceId(poiEntity.getPlacesId());
         dto.setName(displayName);
         dto.setVisitOrder(itineraryEntity.getVisitOrder());
-        dto.setTravelMethod(toDisplayTravelMethod(itineraryEntity.getTravelMethod()));
+        dto.setTravelMethod(
+                TripTravelMethodMapper.toNullableDisplay(itineraryEntity.getTravelMethod()));
         return dto;
     }
 
-    private static String toDisplayTravelMethod(String travelMethod) {
-        if (travelMethod == null || "TRAVEL_MODE_UNSPECIFIED".equals(travelMethod)) {
+    static RouteViewportDto toRouteViewportDto(ComputedRouteLeg.Viewport viewport) {
+        if (viewport == null) {
             return null;
         }
 
-        return switch (travelMethod) {
-            case "DRIVE" -> "Drive";
-            case "BICYCLE" -> "Bicycle";
-            case "WALK" -> "Walk";
-            case "TWO_WHEELER" -> "Two Wheeler";
-            case "TRANSIT" -> "Transit";
-            default -> travelMethod;
-        };
+        RouteViewportDto dto = new RouteViewportDto();
+        dto.setNortheast(toRouteLatLngDto(viewport.getNortheast()));
+        dto.setSouthwest(toRouteLatLngDto(viewport.getSouthwest()));
+        return dto;
+    }
+
+    private static RouteLatLngDto toRouteLatLngDto(ComputedRouteLeg.LatLng latLng) {
+        if (latLng == null) {
+            return null;
+        }
+
+        RouteLatLngDto dto = new RouteLatLngDto();
+        dto.setLat(latLng.getLat());
+        dto.setLng(latLng.getLng());
+        return dto;
     }
 }

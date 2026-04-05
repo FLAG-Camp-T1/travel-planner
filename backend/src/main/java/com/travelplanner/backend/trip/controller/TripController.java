@@ -2,11 +2,13 @@ package com.travelplanner.backend.trip.controller;
 
 import com.travelplanner.backend.common.api.ApiResponse;
 import com.travelplanner.backend.trip.dto.CreateTripRequestDto;
+import com.travelplanner.backend.trip.dto.GenerateDayRouteResponseDto;
 import com.travelplanner.backend.trip.dto.TripDayItemsResponseDto;
 import com.travelplanner.backend.trip.dto.TripDaysResponseDto;
 import com.travelplanner.backend.trip.dto.TripSummaryDto;
 import com.travelplanner.backend.trip.service.TripCommandService;
 import com.travelplanner.backend.trip.service.TripQueryService;
+import com.travelplanner.backend.trip.service.TripRouteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +30,7 @@ public class TripController {
 
     private final TripCommandService tripCommandService;
     private final TripQueryService tripQueryService;
+    private final TripRouteService tripRouteService;
 
     @PostMapping("/create")
     @Operation(summary = "Create a trip")
@@ -54,5 +57,12 @@ public class TripController {
     public ApiResponse<TripDayItemsResponseDto> getTripDayItems(
             @PathVariable Long tripId, @PathVariable Integer dayNumber) {
         return ApiResponse.success(tripQueryService.getTripDayItems(tripId, dayNumber));
+    }
+
+    @PostMapping("/{tripId}/days/{dayNumber}/route/generate")
+    @Operation(summary = "Generate route for the selected trip day")
+    public ApiResponse<GenerateDayRouteResponseDto> generateDayRoute(
+            @PathVariable Long tripId, @PathVariable Integer dayNumber) {
+        return ApiResponse.success(tripRouteService.generateDayRoute(tripId, dayNumber));
     }
 }
