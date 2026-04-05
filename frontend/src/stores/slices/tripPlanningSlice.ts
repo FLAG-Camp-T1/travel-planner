@@ -211,6 +211,54 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     );
   };
 
+  const pruneTripDayCaches = (tripId: number, validDayNumbers: number[]) => {
+    const validCacheKeys = new Set(
+      validDayNumbers.map((dayNumber) => getTripDayCacheKey(tripId, dayNumber)),
+    );
+
+    set(
+      (state) => ({
+        dayItemsByDayNumber: Object.fromEntries(
+          Object.entries(state.dayItemsByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayItemsStatusByDayNumber: Object.fromEntries(
+          Object.entries(state.dayItemsStatusByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayItemsErrorByDayNumber: Object.fromEntries(
+          Object.entries(state.dayItemsErrorByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayRouteByDayNumber: Object.fromEntries(
+          Object.entries(state.dayRouteByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayRouteSegmentsByDayNumber: Object.fromEntries(
+          Object.entries(state.dayRouteSegmentsByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayRouteStatusByDayNumber: Object.fromEntries(
+          Object.entries(state.dayRouteStatusByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+        dayRouteErrorByDayNumber: Object.fromEntries(
+          Object.entries(state.dayRouteErrorByDayNumber).filter(
+            ([cacheKey]) => !cacheKey.startsWith(`${tripId}:`) || validCacheKeys.has(cacheKey),
+          ),
+        ),
+      }),
+      false,
+      'trip/day-caches:prune',
+    );
+  };
+
   const loadDayItems = async (tripId: number, dayNumber: number, options?: { force?: boolean }) => {
     const cacheKey = getTripDayCacheKey(tripId, dayNumber);
     const currentState = get();
@@ -752,6 +800,10 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
 
       try {
         const response = await getTripDays(tripId);
+        pruneTripDayCaches(
+          tripId,
+          response.days.map((day) => day.dayNumber),
+        );
 
         set(
           (state) => ({

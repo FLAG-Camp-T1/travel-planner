@@ -550,7 +550,18 @@ export const handlers = [
 
     const existingTrip = mockTrips[tripIndex];
     if (durationDays < existingTrip.durationDays) {
-      return createErrorResponse('Reducing trip duration is not supported yet.', 40000);
+      const existingDayItems = mockTripItemsByTripId[tripId] ?? {};
+      const trimmedDaysContainItems = Array.from(
+        { length: existingTrip.durationDays - durationDays },
+        (_, index) => durationDays + index + 1,
+      ).some((dayNumber) => (existingDayItems[dayNumber] ?? []).length > 0);
+
+      if (trimmedDaysContainItems) {
+        return createErrorResponse(
+          'Cannot reduce trip duration while trimmed days still contain itinerary items.',
+          40000,
+        );
+      }
     }
 
     const updatedTrip: TripSummary = {

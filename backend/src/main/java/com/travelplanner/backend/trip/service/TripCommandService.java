@@ -72,8 +72,7 @@ public class TripCommandService {
         }
 
         if (requestedDuration < currentDuration) {
-            throw new BusinessException(
-                    ResultCode.BAD_REQUEST, "Reducing trip duration is not supported yet.");
+            shrinkTripDays(tripEntity.getId(), requestedDuration);
         }
 
         tripEntity.setTitle(trimmedTitle);
@@ -197,6 +196,27 @@ public class TripCommandService {
             tripDays.add(tripDayEntity);
         }
         return tripDays;
+    }
+
+    private void shrinkTripDays(Long tripId, Integer requestedDuration) {
+        List<TripDayEntity> tripDays = tripDayRepository.findAllByTripIdOrderByDayNumberAsc(tripId);
+        List<TripDayEntity> removableTripDays =
+                tripDays.stream()
+                        .filter((tripDay) -> tripDay.getDayNumber() > requestedDuration)
+                        .toList();
+
+        boolean hasItemsOnTrimmedDays =
+                removableTripDays.stream()
+                        .anyMatch(
+                                (tripDay) ->
+                                        itineraryRepository.existsByTripDayId(tripDay.getId()));
+        if (hasItemsOnTrimmedDays) {
+            throw new BusinessException(
+                    ResultCode.BAD_REQUEST,
+                    "Cannot reduce trip duration while trimmed days still contain itinerary items.");
+        }
+
+        tripDayRepository.deleteAll(removableTripDays);
     }
 
     private TripEntity getOwnedTripEntity(Long tripId) {

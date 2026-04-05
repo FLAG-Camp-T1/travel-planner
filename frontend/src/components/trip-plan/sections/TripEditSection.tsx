@@ -41,9 +41,7 @@ export default function TripEditSection() {
   const schedulingModeLabel = startDate ? 'Fixed' : 'Flexible';
   const parsedDurationDays = Number(durationDays);
   const durationIsValid =
-    Number.isInteger(parsedDurationDays) &&
-    parsedDurationDays >= currentTrip.durationDays &&
-    parsedDurationDays <= 15;
+    Number.isInteger(parsedDurationDays) && parsedDurationDays >= 1 && parsedDurationDays <= 15;
   const canSubmit =
     title.trim().length > 0 &&
     durationIsValid &&
@@ -172,7 +170,7 @@ export default function TripEditSection() {
             <span className="text-sm font-medium text-gray-700">Duration</span>
             <input
               type="number"
-              min={currentTrip.durationDays}
+              min={1}
               max={15}
               step={1}
               value={durationDays}
@@ -180,7 +178,8 @@ export default function TripEditSection() {
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             <div className="text-xs text-gray-500">
-              You can extend this trip up to 15 days. Shortening it is not available yet.
+              Set a trip length from 1 to 15 days. Shortening only works when trimmed days are
+              empty.
             </div>
           </label>
 

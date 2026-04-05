@@ -167,7 +167,7 @@ class TripCommandServiceTest {
     }
 
     @Test
-    void updateTrip_WhenDurationShrinks_ThrowsBusinessException() {
+    void updateTrip_WhenDurationShrinksAndTrimmedDaysAreEmpty_DeletesExtraDays() {
         UpdateTripRequestDto request = new UpdateTripRequestDto();
         request.setTitle("Updated DC Trip");
         request.setDurationDays(2);
@@ -178,9 +178,66 @@ class TripCommandServiceTest {
         tripEntity.setTitle("Spring DC Trip");
         tripEntity.setDuration(3);
 
+        TripDayEntity firstTripDay = new TripDayEntity();
+        firstTripDay.setId(2001L);
+        firstTripDay.setTripId(1001L);
+        firstTripDay.setDayNumber(1);
+
+        TripDayEntity secondTripDay = new TripDayEntity();
+        secondTripDay.setId(2002L);
+        secondTripDay.setTripId(1001L);
+        secondTripDay.setDayNumber(2);
+
+        TripDayEntity thirdTripDay = new TripDayEntity();
+        thirdTripDay.setId(2003L);
+        thirdTripDay.setTripId(1001L);
+        thirdTripDay.setDayNumber(3);
+
         when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
         when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
                 .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1001L))
+                .thenReturn(List.of(firstTripDay, secondTripDay, thirdTripDay));
+        when(itineraryRepository.existsByTripDayId(2003L)).thenReturn(false);
+        when(tripRepository.save(any(TripEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        TripSummaryDto result = tripCommandService.updateTrip(1001L, request);
+
+        assertNotNull(result);
+        assertEquals(2, result.getDurationDays());
+        verify(tripDayRepository).deleteAll(tripDaysCaptor.capture());
+        List<TripDayEntity> deletedTripDays = tripDaysCaptor.getValue();
+        assertEquals(1, deletedTripDays.size());
+        assertEquals(3, deletedTripDays.get(0).getDayNumber());
+        verify(tripRepository).save(tripCaptor.capture());
+        assertEquals(2, tripCaptor.getValue().getDuration());
+        verify(tripDayRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void updateTrip_WhenDurationShrinksAndTrimmedDaysContainItems_ThrowsBusinessException() {
+        UpdateTripRequestDto request = new UpdateTripRequestDto();
+        request.setTitle("Updated DC Trip");
+        request.setDurationDays(2);
+
+        TripEntity tripEntity = new TripEntity();
+        tripEntity.setId(1001L);
+        tripEntity.setUserId(CURRENT_USER_ID);
+        tripEntity.setTitle("Spring DC Trip");
+        tripEntity.setDuration(3);
+
+        TripDayEntity thirdTripDay = new TripDayEntity();
+        thirdTripDay.setId(2003L);
+        thirdTripDay.setTripId(1001L);
+        thirdTripDay.setDayNumber(3);
+
+        when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
+        when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
+                .thenReturn(Optional.of(tripEntity));
+        when(tripDayRepository.findAllByTripIdOrderByDayNumberAsc(1001L))
+                .thenReturn(List.of(thirdTripDay));
+        when(itineraryRepository.existsByTripDayId(2003L)).thenReturn(true);
 
         BusinessException exception =
                 assertThrows(
@@ -189,6 +246,7 @@ class TripCommandServiceTest {
 
         assertEquals(ResultCode.BAD_REQUEST, exception.getResultCode());
         verify(tripRepository, never()).save(any(TripEntity.class));
+        verify(tripDayRepository, never()).deleteAll(any());
         verify(tripDayRepository, never()).saveAll(any());
     }
 
