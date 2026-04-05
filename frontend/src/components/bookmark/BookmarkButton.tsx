@@ -1,9 +1,6 @@
 import { Star } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 
-// 这个文件的功能：
-// 在界面显示一颗星星，用户点击后，星星会变成黄色的，表示收藏成功，再次点击后，星星会变成灰色的，表示取消收藏。
-
 interface BookmarkButtonProps {
   googlePlaceId: string;
   poiName: string;
@@ -32,7 +29,9 @@ export default function BookmarkButton({
   const buttonSizeClass = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
   const iconSizeClass = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
 
-  const handleClick = async () => {
+  const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+
     if (currentBookmark) {
       await removeBookmark(currentBookmark.bookmarkId, googlePlaceId);
       return;

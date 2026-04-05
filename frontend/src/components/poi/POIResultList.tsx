@@ -1,23 +1,48 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '@/stores/useAppStore';
 import type { POIDto } from '@/api/poiApi';
+import type { ActiveDetailOverlay } from '@/stores/types';
+
+const toPoiDetailOverlay = (poi: POIDto): ActiveDetailOverlay => ({
+  kind: 'poi',
+  placeId: poi.placeId,
+  sourceSummary: {
+    placeId: poi.placeId,
+    name: poi.name,
+    address: poi.address,
+    latitude: poi.latitude,
+    longitude: poi.longitude,
+    categoryLabel: poi.poiType,
+    rating: poi.rating,
+  },
+});
 
 export default function POIResultList() {
-  const { poiResults, poiStatus, poiError, selectedPOI, hoveredPOI, selectPOI, setHoveredPOI } =
-    useAppStore(
-      useShallow((state) => ({
-        poiResults: state.poiResults,
-        poiStatus: state.poiStatus,
-        poiError: state.poiError,
-        selectedPOI: state.selectedPOI,
-        hoveredPOI: state.hoveredPOI,
-        selectPOI: state.selectPOI,
-        setHoveredPOI: state.setHoveredPOI,
-      })),
-    );
+  const {
+    poiResults,
+    poiStatus,
+    poiError,
+    selectedPOI,
+    hoveredPOI,
+    selectPOI,
+    setHoveredPOI,
+    openPlaceDetail,
+  } = useAppStore(
+    useShallow((state) => ({
+      poiResults: state.poiResults,
+      poiStatus: state.poiStatus,
+      poiError: state.poiError,
+      selectedPOI: state.selectedPOI,
+      hoveredPOI: state.hoveredPOI,
+      selectPOI: state.selectPOI,
+      setHoveredPOI: state.setHoveredPOI,
+      openPlaceDetail: state.openPlaceDetail,
+    })),
+  );
 
   const handleClick = (poi: POIDto) => {
     selectPOI(poi);
+    void openPlaceDetail(toPoiDetailOverlay(poi));
   };
 
   if (poiStatus === 'idle') {

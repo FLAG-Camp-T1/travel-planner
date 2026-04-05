@@ -11,6 +11,8 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
 
   const searchPOI = useAppStore((state) => state.searchPOI);
   const clearPOIResults = useAppStore((state) => state.clearPOIResults);
+  const closePlaceDetail = useAppStore((state) => state.closePlaceDetail);
+  const setActivePlannerPanel = useAppStore((state) => state.setActivePlannerPanel);
   const poiStatus = useAppStore((state) => state.poiStatus);
   const mapCenter = useAppStore((state) => state.mapCenter);
 
@@ -31,10 +33,11 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
       debounceRef.current = setTimeout(() => {
         const trimmed = kw.trim();
         if (!trimmed) return;
+        setActivePlannerPanel('explore');
         void searchPOI(buildSearchRequest(trimmed));
       }, 400);
     },
-    [buildSearchRequest, searchPOI],
+    [buildSearchRequest, searchPOI, setActivePlannerPanel],
   );
 
   const handleSearch = () => {
@@ -42,16 +45,20 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
     const trimmed = keyword.trim();
     if (!trimmed) return;
 
+    closePlaceDetail();
+    setActivePlannerPanel('explore');
     void searchPOI(buildSearchRequest(trimmed));
   };
 
   const handleClear = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setKeyword('');
+    closePlaceDetail();
     clearPOIResults();
   };
 
   const handleKeywordChange = (value: string) => {
+    setActivePlannerPanel('explore');
     setKeyword(value);
     debouncedSearch(value);
   };

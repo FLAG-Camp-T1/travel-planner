@@ -7,6 +7,7 @@ import RouteSegmentList from '@/components/trip-plan/route/RouteSegmentList';
 import {
   getLongRouteWarningMessage,
   getRouteEmptyStateMessage,
+  getRouteStatusMessage,
   shouldShowLongRouteWarning,
 } from '@/components/trip-plan/route/routePresentation';
 
@@ -36,26 +37,35 @@ export default function DayRouteSection() {
     })),
   );
 
+  const dayCacheKey =
+    currentTrip && selectedDayNumber !== null ? `${currentTrip.tripId}:${selectedDayNumber}` : null;
+
   const currentDayRouteStatus =
-    selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayRouteStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const currentDayRouteError =
-    selectedDayNumber !== null ? (dayRouteErrorByDayNumber[selectedDayNumber] ?? null) : null;
+    dayCacheKey !== null ? (dayRouteErrorByDayNumber[dayCacheKey] ?? null) : null;
   const currentDayRouteSummary =
-    selectedDayNumber !== null ? (dayRouteByDayNumber[selectedDayNumber] ?? null) : null;
+    dayCacheKey !== null ? (dayRouteByDayNumber[dayCacheKey] ?? null) : null;
   const currentDaySegments =
-    selectedDayNumber !== null
-      ? (dayRouteSegmentsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ROUTE_SEGMENTS)
+    dayCacheKey !== null
+      ? (dayRouteSegmentsByDayNumber[dayCacheKey] ?? EMPTY_DAY_ROUTE_SEGMENTS)
       : EMPTY_DAY_ROUTE_SEGMENTS;
   const currentDayItems =
-    selectedDayNumber !== null
-      ? (dayItemsByDayNumber[selectedDayNumber] ?? EMPTY_DAY_ITEMS)
-      : EMPTY_DAY_ITEMS;
+    dayCacheKey !== null ? (dayItemsByDayNumber[dayCacheKey] ?? EMPTY_DAY_ITEMS) : EMPTY_DAY_ITEMS;
   const currentDayItemsStatus =
-    selectedDayNumber !== null ? (dayItemsStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayItemsStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const currentDayItemCount = currentDayItems.length;
   const routeEmptyStateMessage = getRouteEmptyStateMessage({
     currentDayItemCount,
     currentDayItemsStatus,
+    selectedDayNumber,
+  });
+  const routeStatusMessage = getRouteStatusMessage({
+    currentDayRouteError,
+    currentDayRouteStatus,
+    routeEmptyStateMessage,
+    currentDayRouteSummary,
+    currentTrip,
     selectedDayNumber,
   });
 
@@ -75,35 +85,13 @@ export default function DayRouteSection() {
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-500">
-          {selectedDayNumber !== null
-            ? `Day ${selectedDayNumber} route`
-            : 'Select a day to view route details.'}
+          {routeStatusMessage}
         </div>
 
         {!currentTrip || selectedDayNumber === null ? (
           <div className="px-4 py-4 text-sm text-gray-500">
             Create or load a trip, then choose a day to view route details.
           </div>
-        ) : null}
-
-        {currentTrip && selectedDayNumber !== null && currentDayRouteStatus === 'loading' ? (
-          <div className="px-4 py-4 text-sm text-gray-500">
-            Generating route data for Day {selectedDayNumber}.
-          </div>
-        ) : null}
-
-        {currentTrip && selectedDayNumber !== null && currentDayRouteStatus === 'error' ? (
-          <div className="px-4 py-4 text-sm text-red-600">
-            {currentDayRouteError ?? `Failed to generate route data for Day ${selectedDayNumber}.`}
-          </div>
-        ) : null}
-
-        {currentTrip &&
-        selectedDayNumber !== null &&
-        currentDayRouteSummary === null &&
-        currentDayRouteStatus !== 'loading' &&
-        currentDayRouteStatus !== 'error' ? (
-          <div className="px-4 py-4 text-sm text-gray-500">{routeEmptyStateMessage}</div>
         ) : null}
 
         {currentTrip && selectedDayNumber !== null && currentDayRouteSummary !== null ? (

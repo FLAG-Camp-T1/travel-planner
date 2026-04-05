@@ -7,6 +7,8 @@ import {
   getItineraryStatusMessage,
 } from '@/components/trip-plan/itinerary/itinerarySectionPresentation';
 
+const EMPTY_DAY_ITEMS = [];
+
 export default function ItinerarySection() {
   const {
     currentTrip,
@@ -38,18 +40,20 @@ export default function ItinerarySection() {
     void fetchDayItems(currentTrip.tripId, selectedDayNumber);
   }, [currentTrip, fetchDayItems, selectedDayNumber]);
 
+  const dayCacheKey =
+    currentTrip && selectedDayNumber !== null ? `${currentTrip.tripId}:${selectedDayNumber}` : null;
+
   const currentDayStatus =
-    selectedDayNumber !== null ? (dayItemsStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayItemsStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const currentDayError =
-    selectedDayNumber !== null ? (dayItemsErrorByDayNumber[selectedDayNumber] ?? null) : null;
+    dayCacheKey !== null ? (dayItemsErrorByDayNumber[dayCacheKey] ?? null) : null;
   const currentDayItems =
-    selectedDayNumber !== null ? (dayItemsByDayNumber[selectedDayNumber] ?? []) : [];
+    dayCacheKey !== null ? (dayItemsByDayNumber[dayCacheKey] ?? EMPTY_DAY_ITEMS) : EMPTY_DAY_ITEMS;
   const currentDayRouteStatus =
-    selectedDayNumber !== null ? (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
+    dayCacheKey !== null ? (dayRouteStatusByDayNumber[dayCacheKey] ?? 'idle') : 'idle';
   const tripReady = currentTrip !== null;
   const hasDisplayableRoute =
-    selectedDayNumber !== null &&
-    (dayRouteStatusByDayNumber[selectedDayNumber] ?? 'idle') === 'ready';
+    dayCacheKey !== null && (dayRouteStatusByDayNumber[dayCacheKey] ?? 'idle') === 'ready';
   const canGenerateRoute =
     tripReady &&
     selectedDayNumber !== null &&
@@ -84,21 +88,21 @@ export default function ItinerarySection() {
 
   return (
     <section className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-semibold text-gray-700">Selected Day Itinerary</h2>
-          <p className="mt-1 text-sm text-gray-500">View the stops planned for the selected day.</p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerateRoute}
+              disabled={!canGenerateRoute}
+              className="whitespace-nowrap rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
+            >
+              {generateRouteButtonLabel}
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={handleGenerateRoute}
-            disabled={!canGenerateRoute}
-            className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:shadow-none"
-          >
-            {generateRouteButtonLabel}
-          </button>
-        </div>
+        <p className="text-sm text-gray-500">View the stops planned for the selected day.</p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -123,15 +127,6 @@ export default function ItinerarySection() {
         {tripReady && selectedDayNumber !== null && currentDayStatus === 'error' ? (
           <div className="px-4 py-4 text-sm text-red-600">
             {currentDayError ?? `Failed to load itinerary items for Day ${selectedDayNumber}.`}
-          </div>
-        ) : null}
-
-        {tripReady &&
-        selectedDayNumber !== null &&
-        currentDayStatus === 'ready' &&
-        currentDayItems.length === 0 ? (
-          <div className="px-4 py-4 text-sm text-gray-500">
-            Day {selectedDayNumber} does not have any itinerary items yet.
           </div>
         ) : null}
 

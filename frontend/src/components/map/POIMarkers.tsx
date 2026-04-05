@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
 import { useAppStore } from '@/stores/useAppStore';
+import type { POIDto } from '@/api/poiApi';
+import type { ActiveDetailOverlay } from '@/stores/types';
 
 const FOCUS_ZOOM_LEVEL = 15;
 const PAN_ANIMATION_DURATION_MS = 450;
@@ -11,11 +13,26 @@ const easeInOutCubic = (progress: number) => {
     : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 };
 
+const toPoiDetailOverlay = (poi: POIDto): ActiveDetailOverlay => ({
+  kind: 'poi',
+  placeId: poi.placeId,
+  sourceSummary: {
+    placeId: poi.placeId,
+    name: poi.name,
+    address: poi.address,
+    latitude: poi.latitude,
+    longitude: poi.longitude,
+    categoryLabel: poi.poiType,
+    rating: poi.rating,
+  },
+});
+
 export default function POIMarkers() {
   const poiResults = useAppStore((state) => state.poiResults);
   const selectedPOI = useAppStore((state) => state.selectedPOI);
   const hoveredPOI = useAppStore((state) => state.hoveredPOI);
   const selectPOI = useAppStore((state) => state.selectPOI);
+  const openPlaceDetail = useAppStore((state) => state.openPlaceDetail);
   const map = useMap();
   const animationFrameRef = useRef<number | null>(null);
   const visiblePoiResults = poiResults.flatMap((poi, index) =>
@@ -98,7 +115,10 @@ export default function POIMarkers() {
             key={poi.placeId}
             position={{ lat: poi.latitude, lng: poi.longitude }}
             title={`${index + 1}. ${poi.name}`}
-            onClick={() => selectPOI(poi)}
+            onClick={() => {
+              selectPOI(poi);
+              void openPlaceDetail(toPoiDetailOverlay(poi));
+            }}
           >
             <Pin
               glyph={`${index + 1}`}

@@ -25,7 +25,7 @@ const DebugRoutePanel = () => {
   };
 
   return (
-    <div className="absolute top-4 left-4 z-10 bg-white p-4 rounded-md shadow-lg border border-gray-200 w-80">
+    <div className="absolute top-4 left-4 z-[5] w-80 rounded-md border border-gray-200 bg-white p-4 shadow-lg">
       <div className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">[DEV] Route Tester</div>
 
       <div className="space-y-3">
