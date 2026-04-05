@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getBookmarkCategories, type BookmarkCategory } from '@/api/bookmarkCategoryApi';
+import { useShallow } from 'zustand/react/shallow';
+import { useAppStore } from '@/stores/useAppStore';
 
 /**
  * 这个文件的功能：
@@ -15,41 +16,104 @@ export default function CategorySelector({
   selectedBookmarkCategoryId,
   onCategorySelect,
 }: CategorySelectorProps) {
-  const [loading, setLoading] = useState(true);
-  const [bookmarkCategories, setBookmarkCategories] = useState<BookmarkCategory[]>([]);
+  const { categories, categoriesStatus, fetchCategories, addCategory } = useAppStore(
+    useShallow((state) => ({
+      categories: state.categories,
+      categoriesStatus: state.categoriesStatus,
+      fetchCategories: state.fetchCategories,
+      addCategory: state.addCategory,
+    })),
+  );
+
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    const fetchCategories = async () => {
-      try {
-        const fetchedCategories = await getBookmarkCategories();
-        setBookmarkCategories(fetchedCategories);
-      } catch (error) {
-        console.error('Failed to get categories:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
-  }, []);
-  if (loading) {
+    if (categoriesStatus === 'idle') {
+      void fetchCategories();
+    }
+  }, [categoriesStatus, fetchCategories]);
+
+  const handleCreateCategory = async () => {
+    const name = newCategoryName.trim();
+    if (name === '') return;
+
+    setCreating(true);
+    try {
+      const newCategory = await addCategory(name);
+      onCategorySelect(newCategory.categoryId);
+      setNewCategoryName('');
+      setShowCreateCategory(false);
+    } catch (error) {
+      console.error('Failed to create category:', error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  if (categoriesStatus === 'idle' || categoriesStatus === 'loading') {
     return <div className="text-sm text-gray-400">Loading...</div>;
   }
-  if (bookmarkCategories.length === 0) {
-    return <div className="text-sm text-gray-400">Waiting for your first category</div>;
-  }
+
   return (
-    <select
-      value={selectedBookmarkCategoryId ?? ''}
-      onChange={(e) => onCategorySelect(Number(e.target.value))}
-      className="w-full text-sm border border-gray-300 rounded px-2 py-1"
-    >
-      <option value="">Select a category</option>
-      {bookmarkCategories.map((bookmarkCategory) => (
-        <option key={bookmarkCategory.categoryId} value={bookmarkCategory.categoryId}>
-          {bookmarkCategory.categoryName}
-        </option>
-      ))}
-    </select>
+    <div>
+      {categories.length === 0 ? (
+        <div className="text-sm text-gray-400">No categories yet. Create your first one!</div>
+      ) : (
+        <select
+          value={selectedBookmarkCategoryId ?? ''}
+          onChange={(e) => onCategorySelect(Number(e.target.value))}
+          className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+        >
+          <option value="">Select a category</option>
+          {categories.map((category) => (
+            <option key={category.categoryId} value={category.categoryId}>
+              {category.categoryName}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {!showCreateCategory && (
+        <button
+          type="button"
+          onClick={() => setShowCreateCategory(true)}
+          className="mt-1 text-sm text-blue-600 hover:underline"
+        >
+          Create new category
+        </button>
+      )}
+
+      {showCreateCategory && (
+        <div className="mt-2 flex gap-2">
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="Enter category name..."
+            className="flex-1 text-sm border border-gray-300 rounded px-2 py-1"
+          />
+          <button
+            type="button"
+            onClick={handleCreateCategory}
+            disabled={creating || !newCategoryName.trim()}
+            className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {creating ? '...' : 'Create'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowCreateCategory(false);
+              setNewCategoryName('');
+            }}
+            className="text-sm px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -8,27 +8,15 @@ import CategorySelector from './CategorySelector';
 // 用户点击收藏时，会弹出一个 CategorySelector，用户可以选择一个分类，然后创建收藏。
 
 interface BookmarkButtonProps {
-  googlePlaceId: string;
-  poiName: string;
-  poiAddress: string;
-  poiLatitude: number;
-  poiLongitude: number;
-  category?: string;
+  googlePlacesId: string;
 }
 
-export default function BookmarkButton({
-  googlePlaceId,
-  poiName,
-  poiAddress,
-  poiLatitude,
-  poiLongitude,
-  category,
-}: BookmarkButtonProps) {
+export default function BookmarkButton({ googlePlacesId }: BookmarkButtonProps) {
   const currentBookmark = useAppStore((state) =>
-    state.bookmarks.find((bookmark) => bookmark.googlePlaceId === googlePlaceId),
+    state.bookmarks.find((bookmark) => bookmark.googlePlacesId === googlePlacesId),
   );
   const createBookmark = useAppStore((state) => state.createBookmark);
-  const isPending = useAppStore((state) => Boolean(state.pendingByPlaceId[googlePlaceId]));
+  const isPending = useAppStore((state) => Boolean(state.pendingByPlaceId[googlePlacesId]));
   const removeBookmark = useAppStore((state) => state.removeBookmark);
   const isBookmarked = currentBookmark !== undefined;
 
@@ -37,7 +25,7 @@ export default function BookmarkButton({
 
   const handleStarClick = async () => {
     if (currentBookmark) {
-      await removeBookmark(currentBookmark.bookmarkId, googlePlaceId);
+      await removeBookmark(currentBookmark.bookmarkId, googlePlacesId);
       return;
     }
     setShowCategorySelector(true);
@@ -45,12 +33,7 @@ export default function BookmarkButton({
 
   const handleCreateBookmark = async () => {
     await createBookmark({
-      googlePlaceId,
-      poiName,
-      poiAddress,
-      poiLatitude,
-      poiLongitude,
-      category,
+      googlePlacesId,
       categoryId: selectedCategoryId ?? undefined,
     });
     setShowCategorySelector(false);

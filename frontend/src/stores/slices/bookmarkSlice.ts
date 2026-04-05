@@ -1,6 +1,7 @@
 import {
   createBookmark as createBookmarkRequest,
   deleteBookmark as deleteBookmarkRequest,
+  updateBookmark as updateBookmarkRequest,
   getBookmarks,
 } from '@/api/bookmarkApi';
 import type { AppStoreCreator, BookmarkSlice } from '../types';
@@ -9,9 +10,9 @@ const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Failed to update bookmarks.';
 };
 
-const clearPendingFlag = (pendingByPlaceId: Record<string, boolean>, googlePlaceId: string) => {
+const clearPendingFlag = (pendingByPlaceId: Record<string, boolean>, googlePlacesId: string) => {
   const remainingPending = { ...pendingByPlaceId };
-  delete remainingPending[googlePlaceId];
+  delete remainingPending[googlePlacesId];
   return remainingPending;
 };
 
@@ -60,9 +61,9 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
   },
 
   createBookmark: async (request) => {
-    const { googlePlaceId } = request;
+    const { googlePlacesId } = request;
 
-    if (get().pendingByPlaceId[googlePlaceId]) {
+    if (get().pendingByPlaceId[googlePlacesId]) {
       return;
     }
 
@@ -70,7 +71,7 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
       (state) => ({
         pendingByPlaceId: {
           ...state.pendingByPlaceId,
-          [googlePlaceId]: true,
+          [googlePlacesId]: true,
         },
         bookmarksError: null,
       }),
@@ -84,12 +85,12 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
       set(
         (state) => ({
           bookmarks: [
-            ...state.bookmarks.filter((item) => item.googlePlaceId !== bookmark.googlePlaceId),
+            ...state.bookmarks.filter((item) => item.googlePlacesId !== bookmark.googlePlacesId),
             bookmark,
           ],
           bookmarksStatus: 'ready',
           bookmarksError: null,
-          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlaceId),
+          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlacesId),
         }),
         false,
         'bookmarks/create:success',
@@ -98,7 +99,7 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
       set(
         (state) => ({
           bookmarksError: getErrorMessage(error),
-          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlaceId),
+          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlacesId),
         }),
         false,
         'bookmarks/create:error',
@@ -106,8 +107,29 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
     }
   },
 
-  removeBookmark: async (bookmarkId, googlePlaceId) => {
-    if (get().pendingByPlaceId[googlePlaceId]) {
+  updateBookmarkCategory: async (bookmarkId, categoryId) => {
+    try {
+      const updated = await updateBookmarkRequest(bookmarkId, categoryId);
+      set(
+        (state) => ({
+          bookmarks: state.bookmarks.map((b) =>
+            b.bookmarkId === bookmarkId ? updated : b,
+          ),
+        }),
+        false,
+        'bookmarks/updateCategory:success',
+      );
+    } catch (error) {
+      set(
+        { bookmarksError: getErrorMessage(error) },
+        false,
+        'bookmarks/updateCategory:error',
+      );
+    }
+  },
+
+  removeBookmark: async (bookmarkId, googlePlacesId) => {
+    if (get().pendingByPlaceId[googlePlacesId]) {
       return;
     }
 
@@ -115,7 +137,7 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
       (state) => ({
         pendingByPlaceId: {
           ...state.pendingByPlaceId,
-          [googlePlaceId]: true,
+          [googlePlacesId]: true,
         },
         bookmarksError: null,
       }),
@@ -131,7 +153,7 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
           bookmarks: state.bookmarks.filter((bookmark) => bookmark.bookmarkId !== bookmarkId),
           bookmarksStatus: state.bookmarksStatus === 'idle' ? 'ready' : state.bookmarksStatus,
           bookmarksError: null,
-          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlaceId),
+          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlacesId),
         }),
         false,
         'bookmarks/remove:success',
@@ -140,7 +162,7 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
       set(
         (state) => ({
           bookmarksError: getErrorMessage(error),
-          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlaceId),
+          pendingByPlaceId: clearPendingFlag(state.pendingByPlaceId, googlePlacesId),
         }),
         false,
         'bookmarks/remove:error',
