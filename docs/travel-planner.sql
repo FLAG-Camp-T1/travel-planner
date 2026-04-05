@@ -7,22 +7,111 @@
 SET search_path TO pg_catalog,public;
 -- ddl-end --
 
+-- ======================================================
+-- Step 1: Create all sequences WITHOUT OWNED BY
+--         (tables don't exist yet; OWNED BY needs them)
+-- ======================================================
+
 -- object: public.poi_id_seq | type: SEQUENCE --
--- ALTER TABLE public.poi DROP SEQUENCE IF EXISTS public.poi_id_seq CASCADE;
 CREATE SEQUENCE public.poi_id_seq
 	INCREMENT BY 1
 	MINVALUE 1
 	MAXVALUE 9223372036854775807
 	START WITH 1
 	CACHE 1
-	NO CYCLE
-	OWNED BY public.poi.id;
-
-ALTER TABLE public.poi ALTER COLUMN id
- SET DEFAULT nextval('public.poi_id_seq'::regclass);
+	NO CYCLE;
 -- ddl-end --
 ALTER SEQUENCE public.poi_id_seq OWNER TO postgres;
 -- ddl-end --
+
+-- object: public.todo_list_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.todo_list_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.todo_list_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.todo_item_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.todo_item_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.todo_item_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.trip_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.trip_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.trip_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.trip_day_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.trip_day_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.trip_day_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.itinerary_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.itinerary_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.itinerary_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.bookmark_category_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.bookmark_category_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.bookmark_category_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- object: public.bookmark_id_seq | type: SEQUENCE --
+CREATE SEQUENCE public.bookmark_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START WITH 1
+	CACHE 1
+	NO CYCLE;
+-- ddl-end --
+ALTER SEQUENCE public.bookmark_id_seq OWNER TO postgres;
+-- ddl-end --
+
+-- ======================================================
+-- Step 2: Create all tables
+--         (sequences already exist, DEFAULT nextval works)
+-- ======================================================
 
 -- object: public.app_user | type: TABLE --
 -- DROP TABLE IF EXISTS public.app_user CASCADE;
@@ -38,123 +127,16 @@ CREATE TABLE public.app_user (
 ALTER TABLE public.app_user OWNER TO postgres;
 -- ddl-end --
 
--- object: public.todo_list_id_seq | type: SEQUENCE --
--- ALTER TABLE public.todo_list DROP SEQUENCE IF EXISTS public.todo_list_id_seq CASCADE;
-CREATE SEQUENCE public.todo_list_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.todo_list.id;
-
-ALTER TABLE public.todo_list ALTER COLUMN id
- SET DEFAULT nextval('public.todo_list_id_seq'::regclass);
+-- object: public.poi | type: TABLE --
+-- DROP TABLE IF EXISTS public.poi CASCADE;
+CREATE TABLE public.poi (
+	id bigint NOT NULL DEFAULT nextval('public.poi_id_seq'::regclass),
+	places_id text NOT NULL,
+	CONSTRAINT pk_poi PRIMARY KEY (id),
+	CONSTRAINT uq_poi_places_id UNIQUE (places_id)
+);
 -- ddl-end --
-ALTER SEQUENCE public.todo_list_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.todo_item_id_seq | type: SEQUENCE --
--- ALTER TABLE public.todo_item DROP SEQUENCE IF EXISTS public.todo_item_id_seq CASCADE;
-CREATE SEQUENCE public.todo_item_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.todo_item.id;
-
-ALTER TABLE public.todo_item ALTER COLUMN id
- SET DEFAULT nextval('public.todo_item_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.todo_item_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.trip_id_seq | type: SEQUENCE --
--- ALTER TABLE public.trip DROP SEQUENCE IF EXISTS public.trip_id_seq CASCADE;
-CREATE SEQUENCE public.trip_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.trip.id;
-
-ALTER TABLE public.trip ALTER COLUMN id
- SET DEFAULT nextval('public.trip_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.trip_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.trip_day_id_seq | type: SEQUENCE --
--- ALTER TABLE public.trip_day DROP SEQUENCE IF EXISTS public.trip_day_id_seq CASCADE;
-CREATE SEQUENCE public.trip_day_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.trip_day.id;
-
-ALTER TABLE public.trip_day ALTER COLUMN id
- SET DEFAULT nextval('public.trip_day_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.trip_day_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.itinerary_id_seq | type: SEQUENCE --
--- ALTER TABLE public.itinerary DROP SEQUENCE IF EXISTS public.itinerary_id_seq CASCADE;
-CREATE SEQUENCE public.itinerary_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.itinerary.id;
-
-ALTER TABLE public.itinerary ALTER COLUMN id
- SET DEFAULT nextval('public.itinerary_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.itinerary_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.bookmark_category_id_seq | type: SEQUENCE --
--- ALTER TABLE public.bookmark_category DROP SEQUENCE IF EXISTS public.bookmark_category_id_seq CASCADE;
-CREATE SEQUENCE public.bookmark_category_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.bookmark_category.id;
-
-ALTER TABLE public.bookmark_category ALTER COLUMN id
- SET DEFAULT nextval('public.bookmark_category_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.bookmark_category_id_seq OWNER TO postgres;
--- ddl-end --
-
--- object: public.bookmark_id_seq | type: SEQUENCE --
--- ALTER TABLE public.bookmark DROP SEQUENCE IF EXISTS public.bookmark_id_seq CASCADE;
-CREATE SEQUENCE public.bookmark_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 9223372036854775807
-	START WITH 1
-	CACHE 1
-	NO CYCLE
-	OWNED BY public.bookmark.id;
-
-ALTER TABLE public.bookmark ALTER COLUMN id
- SET DEFAULT nextval('public.bookmark_id_seq'::regclass);
--- ddl-end --
-ALTER SEQUENCE public.bookmark_id_seq OWNER TO postgres;
+ALTER TABLE public.poi OWNER TO postgres;
 -- ddl-end --
 
 -- object: public.todo_list | type: TABLE --
@@ -173,16 +155,18 @@ OR start_date <= end_date)
 ALTER TABLE public.todo_list OWNER TO postgres;
 -- ddl-end --
 
--- object: public.poi | type: TABLE --
--- DROP TABLE IF EXISTS public.poi CASCADE;
-CREATE TABLE public.poi (
-	id bigint NOT NULL DEFAULT nextval('public.poi_id_seq'::regclass),
-	places_id text NOT NULL,
-	CONSTRAINT pk_poi PRIMARY KEY (id),
-	CONSTRAINT uq_poi_places_id UNIQUE (places_id)
+-- object: public.todo_item | type: TABLE --
+-- DROP TABLE IF EXISTS public.todo_item CASCADE;
+CREATE TABLE public.todo_item (
+	id bigint NOT NULL DEFAULT nextval('public.todo_item_id_seq'::regclass),
+	todo_list_id bigint NOT NULL,
+	poi_id bigint NOT NULL,
+	priority text NOT NULL DEFAULT 'medium',
+	CONSTRAINT pk_todo_item PRIMARY KEY (id),
+	CONSTRAINT ck_todo_item_priority CHECK ((priority = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text])))
 );
 -- ddl-end --
-ALTER TABLE public.poi OWNER TO postgres;
+ALTER TABLE public.todo_item OWNER TO postgres;
 -- ddl-end --
 
 -- object: public.trip | type: TABLE --
@@ -243,20 +227,6 @@ CREATE TABLE public.bookmark_category (
 ALTER TABLE public.bookmark_category OWNER TO postgres;
 -- ddl-end --
 
--- object: public.todo_item | type: TABLE --
--- DROP TABLE IF EXISTS public.todo_item CASCADE;
-CREATE TABLE public.todo_item (
-	id bigint NOT NULL DEFAULT nextval('public.todo_item_id_seq'::regclass),
-	todo_list_id bigint NOT NULL,
-	poi_id bigint NOT NULL,
-	priority text NOT NULL DEFAULT 'medium',
-	CONSTRAINT pk_todo_item PRIMARY KEY (id),
-	CONSTRAINT ck_todo_item_priority CHECK ((priority = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text])))
-);
--- ddl-end --
-ALTER TABLE public.todo_item OWNER TO postgres;
--- ddl-end --
-
 -- object: public.bookmark | type: TABLE --
 -- DROP TABLE IF EXISTS public.bookmark CASCADE;
 CREATE TABLE public.bookmark (
@@ -270,6 +240,32 @@ CREATE TABLE public.bookmark (
 -- ddl-end --
 ALTER TABLE public.bookmark OWNER TO postgres;
 -- ddl-end --
+
+-- ======================================================
+-- Step 3: Bind sequences to their columns via OWNED BY
+--         (tables now exist, so this succeeds)
+-- ======================================================
+
+ALTER SEQUENCE public.poi_id_seq OWNED BY public.poi.id;
+-- ddl-end --
+ALTER SEQUENCE public.todo_list_id_seq OWNED BY public.todo_list.id;
+-- ddl-end --
+ALTER SEQUENCE public.todo_item_id_seq OWNED BY public.todo_item.id;
+-- ddl-end --
+ALTER SEQUENCE public.trip_id_seq OWNED BY public.trip.id;
+-- ddl-end --
+ALTER SEQUENCE public.trip_day_id_seq OWNED BY public.trip_day.id;
+-- ddl-end --
+ALTER SEQUENCE public.itinerary_id_seq OWNED BY public.itinerary.id;
+-- ddl-end --
+ALTER SEQUENCE public.bookmark_category_id_seq OWNED BY public.bookmark_category.id;
+-- ddl-end --
+ALTER SEQUENCE public.bookmark_id_seq OWNED BY public.bookmark.id;
+-- ddl-end --
+
+-- ======================================================
+-- Step 4: Add all foreign key constraints
+-- ======================================================
 
 -- object: fk_todo_list_app_user_id | type: CONSTRAINT --
 -- ALTER TABLE public.todo_list DROP CONSTRAINT IF EXISTS fk_todo_list_app_user_id CASCADE;
@@ -347,5 +343,3 @@ ALTER TABLE public.bookmark ADD CONSTRAINT fk_bookmark_custom_category_user_scop
 REFERENCES public.bookmark_category (id,user_id) MATCH SIMPLE
 ON DELETE SET NULL ON UPDATE NO ACTION;
 -- ddl-end --
-
-
