@@ -8,6 +8,7 @@ import com.travelplanner.backend.route.service.RouteProvider;
 import com.travelplanner.backend.route.util.RouteSummaryMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,7 +30,7 @@ public class RouteController {
             summary = "Request a new route",
             description =
                     "Request a route between two specified Google Place IDs using Google Routes API")
-    public ApiResponse<RouteSummaryDto> requestRoute(@RequestBody RouteRequest request) {
+    public ApiResponse<RouteSummaryDto> requestRoute(@Valid @RequestBody RouteRequest request) {
         log.info("Inbound Route Request: {}", request);
         ComputedRouteLeg computedRouteLeg =
                 routeProvider.computeLeg(
