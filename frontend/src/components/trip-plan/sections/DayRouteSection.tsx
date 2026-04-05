@@ -4,6 +4,11 @@ import { useAppStore } from '@/stores/useAppStore';
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
 import DayRouteSummaryCard from '@/components/trip-plan/route/DayRouteSummaryCard';
 import RouteSegmentList from '@/components/trip-plan/route/RouteSegmentList';
+import {
+  getLongRouteWarningMessage,
+  getRouteEmptyStateMessage,
+  shouldShowLongRouteWarning,
+} from '@/components/trip-plan/route/routePresentation';
 
 const EMPTY_DAY_ITEMS: ItineraryItem[] = [];
 const EMPTY_DAY_ROUTE_SEGMENTS: DayRouteSegment[] = [];
@@ -48,33 +53,16 @@ export default function DayRouteSection() {
   const currentDayItemsStatus =
     selectedDayNumber !== null ? (dayItemsStatusByDayNumber[selectedDayNumber] ?? 'idle') : 'idle';
   const currentDayItemCount = currentDayItems.length;
-  const routeEmptyStateMessage = (() => {
-    if (selectedDayNumber === null) {
-      return null;
-    }
-
-    if (currentDayItemsStatus === 'idle' || currentDayItemsStatus === 'loading') {
-      return `Loading itinerary context for Day ${selectedDayNumber} before evaluating route state.`;
-    }
-
-    if (currentDayItemsStatus === 'error') {
-      return `Itinerary data for Day ${selectedDayNumber} is unavailable, so route state cannot be determined yet.`;
-    }
-
-    if (currentDayItemCount === 0) {
-      return `Day ${selectedDayNumber} does not have any itinerary items yet, so a route cannot be generated.`;
-    }
-
-    if (currentDayItemCount === 1) {
-      return `Day ${selectedDayNumber} has one itinerary item, so no between-stop route is needed.`;
-    }
-
-    return `Day ${selectedDayNumber} does not have route data yet. Use the itinerary section to generate a route.`;
-  })();
+  const routeEmptyStateMessage = getRouteEmptyStateMessage({
+    currentDayItemCount,
+    currentDayItemsStatus,
+    selectedDayNumber,
+  });
 
   const itemsById = useMemo(() => {
     return Object.fromEntries(currentDayItems.map((item) => [item.itemId, item]));
   }, [currentDayItems]);
+  const showLongRouteWarning = shouldShowLongRouteWarning(currentDayRouteSummary);
 
   return (
     <section className="space-y-3">
@@ -127,6 +115,12 @@ export default function DayRouteSection() {
         {currentTrip && selectedDayNumber !== null && currentDayRouteSummary !== null ? (
           <>
             <DayRouteSummaryCard routeSummary={currentDayRouteSummary} />
+
+            {showLongRouteWarning ? (
+              <div className="border-t border-amber-100 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
+                {getLongRouteWarningMessage()}
+              </div>
+            ) : null}
 
             <div className="border-t border-gray-100 px-4 py-3">
               <div className="flex items-center justify-between gap-3">

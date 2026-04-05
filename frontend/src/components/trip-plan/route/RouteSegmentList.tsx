@@ -1,29 +1,9 @@
 import type { DayRouteSegment, ItineraryItem } from '@/api/tripApi';
+import { formatDistance, formatSegmentDuration } from './routePresentation';
 
 type RouteSegmentListProps = {
   itemsById: Record<number, ItineraryItem>;
   segments: DayRouteSegment[];
-};
-
-const formatDistance = (distanceMeters: number) => {
-  if (distanceMeters < 1000) {
-    return `${distanceMeters} m`;
-  }
-
-  return `${(distanceMeters / 1000).toFixed(1)} km`;
-};
-
-const formatDuration = (durationSeconds: number) => {
-  const totalMinutes = Math.round(durationSeconds / 60);
-
-  if (totalMinutes < 60) {
-    return `${totalMinutes} min`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
 };
 
 const getItemLabel = (itemsById: Record<number, ItineraryItem>, itemId: number) => {
@@ -56,7 +36,7 @@ export default function RouteSegmentList({ itemsById, segments }: RouteSegmentLi
               {formatDistance(segment.distanceMeters)}
             </span>
             <span className="rounded-full bg-gray-50 px-3 py-1">
-              {formatDuration(segment.durationSeconds)}
+              {formatSegmentDuration(segment.durationSeconds)}
             </span>
             <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-700">
               Read-only segment
