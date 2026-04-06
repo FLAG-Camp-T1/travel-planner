@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -596,9 +595,8 @@ class TripCommandServiceTest {
 
         tripCommandService.reorderTripDayItems(1001L, 1, request);
 
-        verify(itineraryRepository, times(2)).saveAll(itineraryItemsCaptor.capture());
-        List<List<ItineraryEntity>> savedBatches = itineraryItemsCaptor.getAllValues();
-        List<ItineraryEntity> finalOrderBatch = savedBatches.get(savedBatches.size() - 1);
+        verify(itineraryRepository).saveAll(itineraryItemsCaptor.capture());
+        List<ItineraryEntity> finalOrderBatch = itineraryItemsCaptor.getValue();
 
         assertEquals(
                 List.of(5003L, 5001L, 5002L),
