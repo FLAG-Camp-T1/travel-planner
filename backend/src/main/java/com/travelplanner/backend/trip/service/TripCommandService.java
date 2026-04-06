@@ -133,8 +133,7 @@ public class TripCommandService {
         itineraryRepository.delete(itineraryEntity);
         List<ItineraryEntity> remainingItems =
                 itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(tripDayEntity.getId());
-        rewriteVisitOrder(remainingItems);
-        itineraryRepository.saveAll(remainingItems);
+        saveWithSequentialVisitOrder(remainingItems);
     }
 
     @Transactional
@@ -153,7 +152,7 @@ public class TripCommandService {
         List<ItineraryEntity> reorderedItems =
                 requestedItemIds.stream().map(itemsById::get).toList();
 
-        persistTripDayReorder(reorderedItems);
+        saveWithSequentialVisitOrder(reorderedItems);
     }
 
     @Transactional
@@ -178,8 +177,7 @@ public class TripCommandService {
         List<ItineraryEntity> sourceItems =
                 itineraryRepository.findAllByTripDayIdOrderByVisitOrderAsc(
                         sourceTripDayEntity.getId());
-        rewriteVisitOrder(sourceItems);
-        itineraryRepository.saveAll(sourceItems);
+        saveWithSequentialVisitOrder(sourceItems);
     }
 
     private List<TripDayEntity> createTripDays(Long tripId, Integer durationDays) {
@@ -287,26 +285,14 @@ public class TripCommandService {
         }
     }
 
-    private void rewriteVisitOrder(List<ItineraryEntity> items) {
+    private void saveWithSequentialVisitOrder(List<ItineraryEntity> items) {
         for (int index = 0; index < items.size(); index += 1) {
             items.get(index).setVisitOrder(index + 1);
         }
-    }
 
-    private void persistTripDayReorder(List<ItineraryEntity> reorderedItems) {
-        int temporaryVisitOrderBase =
-                reorderedItems.stream()
-                        .map(ItineraryEntity::getVisitOrder)
-                        .max(Integer::compareTo)
-                        .orElse(0);
-
-        for (int index = 0; index < reorderedItems.size(); index += 1) {
-            reorderedItems.get(index).setVisitOrder(temporaryVisitOrderBase + index + 1);
+        if (!items.isEmpty()) {
+            itineraryRepository.saveAll(items);
         }
-        itineraryRepository.saveAll(reorderedItems);
-
-        rewriteVisitOrder(reorderedItems);
-        itineraryRepository.saveAll(reorderedItems);
     }
 
     private PoiEntity getOrCreatePoiEntity(String placeId) {
