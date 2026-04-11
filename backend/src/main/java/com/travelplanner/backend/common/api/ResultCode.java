@@ -12,6 +12,7 @@ public enum ResultCode {
     PARAM_INVALID(40001, "Param Invalid"),
     PARAM_MISSING(40002, "Param Missing"),
     UNAUTHORIZED(40100, "Unauthorized"),
+    BOOKMARK_NOT_FOUND(40400, "Bookmark Not Found"),
 
     // Server Side Error
     INTERNAL_ERROR(50000, "Internal Error"),

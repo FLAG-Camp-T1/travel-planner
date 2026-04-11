@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
-import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { Bookmark, CreateBookmarkRequest, UpdateBookmarkRequest } from '@/api/bookmarkApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type {
@@ -402,7 +402,9 @@ export const handlers = [
       }
 
       const results = mockPoiResults.filter((poi) => {
-        const haystacks = [poi.name, poi.address, poi.poiType].map((value) => value.toLowerCase());
+        const haystacks = [poi.name, poi.address, poi.poiType].map((value) =>
+          (value ?? '').toLowerCase(),
+        );
         return haystacks.some((value) => value.includes(keyword));
       });
 
@@ -410,43 +412,101 @@ export const handlers = [
     },
   ),
 
-  http.get(`${API_BASE_URL}/places/:placeId`, ({ params }) => {
-    const { placeId } = params;
+  http.get<{ placeId: string }, never, MockApiResponse<PlaceDetailDto> | MockApiResponse<null>>(
+    `${API_BASE_URL}/places/:placeId`,
+    ({ params }) => {
+      const { placeId } = params;
 
-    if (typeof placeId !== 'string') {
-      return createErrorResponse('placeId is required', 40002);
-    }
+      if (typeof placeId !== 'string') {
+        return createErrorResponse('placeId is required', 40002);
+      }
 
-    const detail = mockPlaceDetailsById[placeId];
-    if (!detail) {
-      return createErrorResponse(`Place ${placeId} not found`, 40400);
-    }
+      const detail = mockPlaceDetailsById[placeId];
+      if (!detail) {
+        return createErrorResponse(`Place ${placeId} not found`, 40400);
+      }
 
-    return createSuccessResponse(detail);
-  }),
+      return createSuccessResponse(detail);
+    },
+  ),
 
-  http.get(`${API_BASE_URL}/bookmarks`, () => {
+  http.get<never, never, MockApiResponse<Bookmark[]>>(`${API_BASE_URL}/bookmarks`, () => {
     return createSuccessResponse(mockBookmarks);
   }),
 
-  http.post(`${API_BASE_URL}/bookmarks`, async ({ request }) => {
-    const requestBody = (await request.json()) as CreateBookmarkRequest;
+  http.post<never, CreateBookmarkRequest, MockApiResponse<Bookmark>>(
+    `${API_BASE_URL}/bookmarks`,
+    async ({ request }) => {
+      const requestBody = (await request.json()) as CreateBookmarkRequest;
+      const existingBookmark = mockBookmarks.find(
+        (bookmark) => bookmark.googlePlaceId === requestBody.googlePlaceId,
+      );
 
-    const newBookmark: Bookmark = {
-      bookmarkId: `bookmark-${nextBookmarkSequence}`,
-      poiId: `poi-${nextBookmarkSequence}`,
-      googlePlaceId: requestBody.googlePlaceId,
-      poiName: requestBody.poiName,
-      poiAddress: requestBody.poiAddress,
-      poiLatitude: requestBody.poiLatitude,
-      poiLongitude: requestBody.poiLongitude,
-      category: requestBody.category,
+      if (existingBookmark) {
+        const refreshedBookmark: Bookmark = {
+          ...existingBookmark,
+          poiName: requestBody.poiName,
+          poiAddress: requestBody.poiAddress,
+          poiLatitude: requestBody.poiLatitude,
+          poiLongitude: requestBody.poiLongitude,
+        };
+        mockBookmarks = mockBookmarks.map((bookmark) =>
+          bookmark.bookmarkId === existingBookmark.bookmarkId ? refreshedBookmark : bookmark,
+        );
+
+        return createSuccessResponse(refreshedBookmark);
+      }
+
+      const newBookmark: Bookmark = {
+        bookmarkId: `bookmark-${nextBookmarkSequence}`,
+        poiId: `poi-${nextBookmarkSequence}`,
+        googlePlaceId: requestBody.googlePlaceId,
+        poiName: requestBody.poiName,
+        poiAddress: requestBody.poiAddress,
+        poiLatitude: requestBody.poiLatitude,
+        poiLongitude: requestBody.poiLongitude,
+        category: requestBody.category ?? null,
+      };
+
+      nextBookmarkSequence += 1;
+      mockBookmarks = [...mockBookmarks, newBookmark];
+
+      return createSuccessResponse(newBookmark);
+    },
+  ),
+
+  http.patch<
+    { bookmarkId: string },
+    UpdateBookmarkRequest,
+    MockApiResponse<Bookmark> | MockApiResponse<null>
+  >(`${API_BASE_URL}/bookmarks/:bookmarkId`, async ({ params, request }) => {
+    const { bookmarkId } = params;
+
+    if (typeof bookmarkId !== 'string') {
+      return createErrorResponse('bookmarkId is required', 40002);
+    }
+
+    const requestBody = (await request.json()) as UpdateBookmarkRequest;
+    const bookmarkIndex = mockBookmarks.findIndex((bookmark) => bookmark.bookmarkId === bookmarkId);
+
+    if (bookmarkIndex < 0) {
+      return createErrorResponse(`Bookmark ${bookmarkId} not found`, 40400);
+    }
+
+    const normalizedCategory = requestBody.category?.trim() ? requestBody.category.trim() : null;
+    if (normalizedCategory && normalizedCategory.length > 20) {
+      return createErrorResponse('Bookmark category must be at most 20 characters', 40001);
+    }
+
+    const updatedBookmark: Bookmark = {
+      ...mockBookmarks[bookmarkIndex],
+      category: normalizedCategory,
     };
+    mockBookmarks = mockBookmarks.map((bookmark) =>
+      bookmark.bookmarkId === bookmarkId ? updatedBookmark : bookmark,
+    );
 
-    nextBookmarkSequence += 1;
-    mockBookmarks = [...mockBookmarks, newBookmark];
-
-    return createSuccessResponse(newBookmark);
+    return createSuccessResponse(updatedBookmark);
   }),
 
   http.delete(`${API_BASE_URL}/bookmarks/:bookmarkId`, ({ params }) => {

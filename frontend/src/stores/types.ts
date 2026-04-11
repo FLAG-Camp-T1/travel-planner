@@ -27,9 +27,13 @@ export interface BookmarkSlice {
   bookmarks: Bookmark[];
   bookmarksStatus: LoadStatus;
   bookmarksError: string | null;
+  bookmarkUpdateStatus: LoadStatus;
+  bookmarkUpdateError: string | null;
+  bookmarkUpdateTargetId: string | null;
   pendingByPlaceId: Record<string, boolean>;
   fetchBookmarks: () => Promise<void>;
   createBookmark: (request: CreateBookmarkRequest) => Promise<void>;
+  updateBookmarkCategory: (bookmarkId: string, category?: string | null) => Promise<void>;
   removeBookmark: (bookmarkId: string, googlePlaceId: string) => Promise<void>;
 }
 
@@ -165,6 +169,7 @@ export interface PlaceDetailSourceSummary {
   latitude: number | null;
   longitude: number | null;
   categoryLabel: string | null;
+  savedCategory: string | null;
   rating: number | null;
 }
 

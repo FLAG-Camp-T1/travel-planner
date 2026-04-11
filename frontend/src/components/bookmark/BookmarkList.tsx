@@ -43,7 +43,6 @@ const defaultRenderBookmark = (bookmark: Bookmark) => {
           poiAddress={bookmark.poiAddress}
           poiLatitude={bookmark.poiLatitude}
           poiLongitude={bookmark.poiLongitude}
-          category={bookmark.category}
         />
       </div>
     </div>
