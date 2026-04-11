@@ -10,6 +10,7 @@ const createPlaceDetailSourceSummary = ({
   latitude = null,
   longitude = null,
   categoryLabel = null,
+  savedCategory = null,
   rating = null,
 }: {
   placeId: string;
@@ -18,6 +19,7 @@ const createPlaceDetailSourceSummary = ({
   latitude?: number | null;
   longitude?: number | null;
   categoryLabel?: string | null;
+  savedCategory?: string | null;
   rating?: number | null;
 }): PlaceDetailSourceSummary => ({
   placeId,
@@ -26,6 +28,7 @@ const createPlaceDetailSourceSummary = ({
   latitude,
   longitude,
   categoryLabel,
+  savedCategory,
   rating,
 });
 
@@ -89,6 +92,6 @@ export const createBookmarkDetailOverlay = (bookmark: Bookmark): ActiveDetailOve
     address: bookmark.poiAddress,
     latitude: bookmark.poiLatitude,
     longitude: bookmark.poiLongitude,
-    categoryLabel: bookmark.category ?? null,
+    savedCategory: bookmark.category,
   }),
 });

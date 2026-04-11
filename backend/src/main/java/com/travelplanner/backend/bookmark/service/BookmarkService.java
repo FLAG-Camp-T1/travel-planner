@@ -2,9 +2,11 @@ package com.travelplanner.backend.bookmark.service;
 
 import com.travelplanner.backend.bookmark.dto.BookmarkDto;
 import com.travelplanner.backend.bookmark.dto.CreateBookmarkRequest;
+import com.travelplanner.backend.bookmark.dto.UpdateBookmarkRequest;
 import com.travelplanner.backend.bookmark.entity.BookmarkEntity;
 import com.travelplanner.backend.bookmark.repository.BookmarkRepository;
 import com.travelplanner.backend.common.api.ResultCode;
+import com.travelplanner.backend.common.context.CurrentUserProvider;
 import com.travelplanner.backend.common.exception.BusinessException;
 import com.travelplanner.backend.place.dto.PlaceDetailDto;
 import com.travelplanner.backend.place.service.PlaceDetailsService;
@@ -35,20 +37,22 @@ public class BookmarkService {
     private final PoiRepository poiRepository;
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final PlaceDetailsService placeDetailsService;
+    private final CurrentUserProvider currentUserProvider;
 
     @Transactional(readOnly = true)
-    public List<BookmarkDto> getCurrentUserBookmarks(UUID userId) {
-        List<BookmarkEntity> bookmarks = bookmarkRepository.findAllByUserId(userId);
+    public List<BookmarkDto> getCurrentUserBookmarks() {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        List<BookmarkEntity> bookmarks = bookmarkRepository.findAllByUserId(currentUserId);
         if (bookmarks.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Long> poiIds = bookmarks.stream().map(BookmarkEntity::poiId).distinct().toList();
-        Map<String, PoiEntity> poiById =
+        Map<Long, PoiEntity> poiById =
                 poiRepository.findAllById(poiIds).stream()
                         .collect(
                                 java.util.stream.Collectors.toMap(
-                                        poi -> String.valueOf(poi.getId()), Function.identity()));
+                                        PoiEntity::getId, Function.identity()));
         Map<Long, String> categoryNameById =
                 findCategoryNames(
                         bookmarks.stream()
@@ -62,79 +66,50 @@ public class BookmarkService {
                         bookmark ->
                                 toDto(
                                         bookmark,
-                                        poiById.get(String.valueOf(bookmark.poiId())),
+                                        getRequiredPoi(
+                                                poiById.get(bookmark.poiId()), bookmark.poiId()),
                                         categoryNameById.get(bookmark.customCategory())))
                 .toList();
     }
 
     @Transactional
-    public BookmarkDto createBookmark(UUID userId, CreateBookmarkRequest request) {
+    public BookmarkDto createBookmark(CreateBookmarkRequest request) {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
         PoiEntity poi =
                 poiRepository
                         .findByPlacesId(request.googlePlaceId().trim())
-                        .orElseGet(() -> createPoi(request));
+                        .orElseGet(() -> createPoi(request.googlePlaceId().trim()));
         String normalizedCategory = normalizeCategory(request.category());
-        Long categoryId = resolveCategoryId(userId, normalizedCategory);
 
-        return bookmarkRepository
-                .findByUserIdAndPoiId(userId, poi.getId())
-                .map(
-                        existingBookmark ->
-                                updateCategory(
-                                        existingBookmark,
-                                        poi,
-                                        normalizedCategory,
-                                        categoryId,
-                                        request))
-                .orElseGet(
-                        () -> createBookmark(userId, poi, normalizedCategory, categoryId, request));
+        BookmarkEntity existingBookmark =
+                bookmarkRepository.findByUserIdAndPoiId(currentUserId, poi.getId()).orElse(null);
+        if (existingBookmark != null) {
+            String categoryName = findCategoryName(existingBookmark.customCategory());
+            return toDto(existingBookmark, poi, categoryName, request);
+        }
+
+        Long categoryId = resolveCategoryId(currentUserId, normalizedCategory);
+        BookmarkEntity savedBookmark =
+                bookmarkRepository.save(
+                        BookmarkEntity.builder()
+                                .userId(currentUserId)
+                                .poiId(poi.getId())
+                                .customCategory(categoryId)
+                                .build());
+        return toDto(savedBookmark, poi, normalizedCategory, request);
     }
 
     @Transactional
-    public void deleteBookmark(UUID userId, String bookmarkId) {
+    public BookmarkDto updateBookmark(String bookmarkId, UpdateBookmarkRequest request) {
         Long bookmarkPrimaryKey = parseBookmarkId(bookmarkId);
-        BookmarkEntity bookmark =
-                bookmarkRepository
-                        .findById(bookmarkPrimaryKey)
-                        .orElseThrow(() -> new BusinessException(ResultCode.BOOKMARK_NOT_FOUND));
+        BookmarkEntity bookmark = getOwnedBookmark(bookmarkPrimaryKey);
+        String normalizedCategory = normalizeCategory(request.category());
+        Long categoryId =
+                resolveCategoryId(currentUserProvider.getCurrentUserId(), normalizedCategory);
 
-        if (!bookmark.userId().equals(userId)) {
-            throw new BusinessException(ResultCode.BOOKMARK_NOT_FOUND);
-        }
-
-        bookmarkRepository.deleteById(bookmarkPrimaryKey);
-    }
-
-    private PoiEntity createPoi(CreateBookmarkRequest request) {
-        PoiEntity poi = new PoiEntity();
-        poi.setPlacesId(request.googlePlaceId().trim());
-        return poiRepository.save(poi);
-    }
-
-    private BookmarkDto createBookmark(
-            UUID userId,
-            PoiEntity poi,
-            String category,
-            Long categoryId,
-            CreateBookmarkRequest request) {
-        BookmarkEntity bookmark =
-                BookmarkEntity.builder()
-                        .userId(userId)
-                        .poiId(poi.getId())
-                        .customCategory(categoryId)
-                        .build();
-        BookmarkEntity savedBookmark = bookmarkRepository.save(bookmark);
-        return toDto(savedBookmark, poi, category, request);
-    }
-
-    private BookmarkDto updateCategory(
-            BookmarkEntity bookmark,
-            PoiEntity poi,
-            String category,
-            Long categoryId,
-            CreateBookmarkRequest request) {
         if (Objects.equals(bookmark.customCategory(), categoryId)) {
-            return toDto(bookmark, poi, category, request);
+            PoiEntity poi = getRequiredPoi(bookmark.poiId());
+            return toDto(bookmark, poi, normalizedCategory);
         }
 
         BookmarkEntity updatedBookmark =
@@ -145,21 +120,31 @@ public class BookmarkService {
                         .customCategory(categoryId)
                         .build();
         BookmarkEntity savedBookmark = bookmarkRepository.save(updatedBookmark);
-        return toDto(savedBookmark, poi, category, request);
+        PoiEntity poi = getRequiredPoi(savedBookmark.poiId());
+        return toDto(savedBookmark, poi, normalizedCategory);
+    }
+
+    @Transactional
+    public void deleteBookmark(String bookmarkId) {
+        Long bookmarkPrimaryKey = parseBookmarkId(bookmarkId);
+        BookmarkEntity bookmark = getOwnedBookmark(bookmarkPrimaryKey);
+        bookmarkRepository.deleteById(bookmark.id());
+    }
+
+    private PoiEntity createPoi(String googlePlaceId) {
+        PoiEntity poi = new PoiEntity();
+        poi.setPlacesId(googlePlaceId);
+        return poiRepository.save(poi);
     }
 
     private BookmarkDto toDto(BookmarkEntity bookmark, PoiEntity poi, String category) {
-        if (poi == null) {
-            throw new BusinessException(ResultCode.INTERNAL_ERROR, "POI data missing for bookmark");
-        }
-
         PlaceDetailDto placeDetail = getPlaceDetailOrNull(poi.getPlacesId());
         return BookmarkDto.builder()
                 .bookmarkId(String.valueOf(bookmark.id()))
                 .poiId(String.valueOf(poi.getId()))
                 .googlePlaceId(poi.getPlacesId())
                 .poiName(
-                        placeDetail != null && placeDetail.getName() != null
+                        placeDetail != null && StringUtils.hasText(placeDetail.getName())
                                 ? placeDetail.getName()
                                 : poi.getPlacesId())
                 .poiAddress(placeDetail != null ? placeDetail.getAddress() : null)
@@ -204,6 +189,14 @@ public class BookmarkService {
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
+    private String findCategoryName(Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+
+        return findCategoryNames(List.of(categoryId)).get(categoryId);
+    }
+
     private Long resolveCategoryId(UUID userId, String category) {
         if (category == null) {
             return null;
@@ -232,6 +225,25 @@ public class BookmarkService {
                 Long.class);
     }
 
+    private BookmarkEntity getOwnedBookmark(Long bookmarkId) {
+        return bookmarkRepository
+                .findByIdAndUserId(bookmarkId, currentUserProvider.getCurrentUserId())
+                .orElseThrow(() -> new BusinessException(ResultCode.BOOKMARK_NOT_FOUND));
+    }
+
+    private PoiEntity getRequiredPoi(Long poiId) {
+        return getRequiredPoi(poiRepository.findById(poiId).orElse(null), poiId);
+    }
+
+    private PoiEntity getRequiredPoi(PoiEntity poi, Long poiId) {
+        if (poi != null) {
+            return poi;
+        }
+
+        throw new BusinessException(
+                ResultCode.INTERNAL_ERROR, "POI %d missing for bookmark".formatted(poiId));
+    }
+
     private PlaceDetailDto getPlaceDetailOrNull(String placesId) {
         try {
             return placeDetailsService.getPlaceDetails(placesId);
@@ -245,6 +257,7 @@ public class BookmarkService {
         if (!StringUtils.hasText(category)) {
             return null;
         }
+
         String normalized = category.trim();
         if (normalized.length() > CATEGORY_MAX_LENGTH) {
             throw new BusinessException(

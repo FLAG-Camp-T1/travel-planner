@@ -11,4 +11,6 @@ public interface BookmarkRepository extends CrudRepository<BookmarkEntity, Long>
     List<BookmarkEntity> findAllByUserId(UUID userId);
 
     Optional<BookmarkEntity> findByUserIdAndPoiId(UUID userId, Long poiId);
+
+    Optional<BookmarkEntity> findByIdAndUserId(Long id, UUID userId);
 }

@@ -16,9 +16,9 @@ export interface Bookmark {
   googlePlaceId: string;
   poiName: string;
   poiAddress: string;
-  poiLatitude: number;
-  poiLongitude: number;
-  category?: string;
+  poiLatitude: number | null;
+  poiLongitude: number | null;
+  category: string | null;
 }
 
 // 前端 Post 请求时发给后端的完整数据
@@ -29,7 +29,11 @@ export interface CreateBookmarkRequest {
   poiAddress: string;
   poiLatitude: number;
   poiLongitude: number;
-  category?: string;
+  category?: string | null;
+}
+
+export interface UpdateBookmarkRequest {
+  category?: string | null;
 }
 
 export const getBookmarks = (): Promise<Bookmark[]> => {
@@ -38,6 +42,13 @@ export const getBookmarks = (): Promise<Bookmark[]> => {
 
 export const createBookmark = (request: CreateBookmarkRequest): Promise<Bookmark> => {
   return axiosClient.post('/bookmarks', request);
+};
+
+export const updateBookmark = (
+  bookmarkId: string,
+  request: UpdateBookmarkRequest,
+): Promise<Bookmark> => {
+  return axiosClient.patch(`/bookmarks/${bookmarkId}`, request);
 };
 
 export const deleteBookmark = (bookmarkId: string): Promise<void> => {
