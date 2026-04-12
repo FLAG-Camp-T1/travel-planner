@@ -21,6 +21,12 @@ export interface Bookmark {
   category: string | null;
 }
 
+export interface BookmarkCategory {
+  categoryId: string;
+  name: string;
+  bookmarkCount: number;
+}
+
 // 前端 Post 请求时发给后端的完整数据
 // 这里没有 poiId 是因为 poiId 是后端自动生成的，前端不知道。
 export interface CreateBookmarkRequest {
@@ -36,12 +42,37 @@ export interface UpdateBookmarkRequest {
   category?: string | null;
 }
 
+export interface CreateBookmarkCategoryRequest {
+  name: string;
+}
+
 export const getBookmarks = (): Promise<Bookmark[]> => {
   return axiosClient.get('/bookmarks');
 };
 
 export const createBookmark = (request: CreateBookmarkRequest): Promise<Bookmark> => {
   return axiosClient.post('/bookmarks', request);
+};
+
+export const getBookmarkCategories = (): Promise<BookmarkCategory[]> => {
+  return axiosClient.get('/bookmarks/categories');
+};
+
+export const createBookmarkCategory = (
+  request: CreateBookmarkCategoryRequest,
+): Promise<BookmarkCategory> => {
+  return axiosClient.post('/bookmarks/categories', request);
+};
+
+export const deleteBookmarkCategory = (
+  categoryId: string,
+  deleteBookmarks: boolean,
+): Promise<void> => {
+  return axiosClient.delete(`/bookmarks/categories/${categoryId}`, {
+    params: {
+      deleteBookmarks,
+    },
+  });
 };
 
 export const updateBookmark = (

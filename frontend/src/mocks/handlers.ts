@@ -1,6 +1,12 @@
 import { http, HttpResponse } from 'msw';
 import type { AuthResponse, LoginCredentials, SignupData } from '@/api/authApi';
-import type { Bookmark, CreateBookmarkRequest, UpdateBookmarkRequest } from '@/api/bookmarkApi';
+import type {
+  Bookmark,
+  BookmarkCategory,
+  CreateBookmarkCategoryRequest,
+  CreateBookmarkRequest,
+  UpdateBookmarkRequest,
+} from '@/api/bookmarkApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
 import type {
@@ -121,6 +127,7 @@ const buildMockTripDays = (durationDays: number, startDate?: string | null): Tri
 };
 
 let nextBookmarkSequence = 3;
+let nextBookmarkCategorySequence = 3;
 let nextItineraryItemSequence = 1000;
 let nextTripSequence = 1002;
 
@@ -155,6 +162,41 @@ let mockBookmarks: Bookmark[] = [
     category: 'landmark',
   },
 ];
+
+let mockBookmarkCategories: Array<Pick<BookmarkCategory, 'categoryId' | 'name'>> = [
+  {
+    categoryId: 'bookmark-category-1',
+    name: 'market',
+  },
+  {
+    categoryId: 'bookmark-category-2',
+    name: 'landmark',
+  },
+];
+
+const ensureMockBookmarkCategory = (name: string) => {
+  const existingCategory = mockBookmarkCategories.find((category) => category.name === name);
+  if (existingCategory) {
+    return existingCategory;
+  }
+
+  const newCategory = {
+    categoryId: `bookmark-category-${nextBookmarkCategorySequence}`,
+    name,
+  };
+  nextBookmarkCategorySequence += 1;
+  mockBookmarkCategories = [...mockBookmarkCategories, newCategory];
+  return newCategory;
+};
+
+const buildMockBookmarkCategoriesResponse = (): BookmarkCategory[] => {
+  return [...mockBookmarkCategories]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((category) => ({
+      ...category,
+      bookmarkCount: mockBookmarks.filter((bookmark) => bookmark.category === category.name).length,
+    }));
+};
 
 let mockTrips: TripSummary[] = [
   {
@@ -434,13 +476,85 @@ export const handlers = [
     return createSuccessResponse(mockBookmarks);
   }),
 
-  http.post<never, CreateBookmarkRequest, MockApiResponse<Bookmark>>(
+  http.get<never, never, MockApiResponse<BookmarkCategory[]>>(
+    `${API_BASE_URL}/bookmarks/categories`,
+    () => {
+      return createSuccessResponse(buildMockBookmarkCategoriesResponse());
+    },
+  ),
+
+  http.post<
+    never,
+    CreateBookmarkCategoryRequest,
+    MockApiResponse<BookmarkCategory> | MockApiResponse<null>
+  >(`${API_BASE_URL}/bookmarks/categories`, async ({ request }) => {
+    const requestBody = (await request.json()) as CreateBookmarkCategoryRequest;
+    const normalizedName = requestBody.name?.trim() ? requestBody.name.trim() : '';
+
+    if (!normalizedName) {
+      return createErrorResponse('Bookmark category name is required', 40001);
+    }
+
+    if (normalizedName.length > 20) {
+      return createErrorResponse('Bookmark category must be at most 20 characters', 40001);
+    }
+
+    const category = ensureMockBookmarkCategory(normalizedName);
+
+    return createSuccessResponse({
+      ...category,
+      bookmarkCount: mockBookmarks.filter((bookmark) => bookmark.category === category.name).length,
+    });
+  }),
+
+  http.delete<{ categoryId: string }>(
+    `${API_BASE_URL}/bookmarks/categories/:categoryId`,
+    ({ params, request }) => {
+      const { categoryId } = params;
+
+      if (typeof categoryId !== 'string') {
+        return createErrorResponse('categoryId is required', 40002);
+      }
+
+      const category = mockBookmarkCategories.find((item) => item.categoryId === categoryId);
+      if (!category) {
+        return createErrorResponse(`Category ${categoryId} not found`, 40400);
+      }
+
+      const deleteBookmarks = request.url.includes('deleteBookmarks=true');
+
+      if (deleteBookmarks) {
+        mockBookmarks = mockBookmarks.filter((bookmark) => bookmark.category !== category.name);
+      } else {
+        mockBookmarks = mockBookmarks.map((bookmark) =>
+          bookmark.category === category.name ? { ...bookmark, category: null } : bookmark,
+        );
+      }
+
+      mockBookmarkCategories = mockBookmarkCategories.filter(
+        (item) => item.categoryId !== categoryId,
+      );
+
+      return createSuccessResponse(null);
+    },
+  ),
+
+  http.post<never, CreateBookmarkRequest, MockApiResponse<Bookmark> | MockApiResponse<null>>(
     `${API_BASE_URL}/bookmarks`,
     async ({ request }) => {
       const requestBody = (await request.json()) as CreateBookmarkRequest;
+      const normalizedCategory = requestBody.category?.trim() ? requestBody.category.trim() : null;
       const existingBookmark = mockBookmarks.find(
         (bookmark) => bookmark.googlePlaceId === requestBody.googlePlaceId,
       );
+
+      if (normalizedCategory && normalizedCategory.length > 20) {
+        return createErrorResponse('Bookmark category must be at most 20 characters', 40001);
+      }
+
+      if (normalizedCategory) {
+        ensureMockBookmarkCategory(normalizedCategory);
+      }
 
       if (existingBookmark) {
         const refreshedBookmark: Bookmark = {
@@ -449,6 +563,7 @@ export const handlers = [
           poiAddress: requestBody.poiAddress,
           poiLatitude: requestBody.poiLatitude,
           poiLongitude: requestBody.poiLongitude,
+          category: normalizedCategory,
         };
         mockBookmarks = mockBookmarks.map((bookmark) =>
           bookmark.bookmarkId === existingBookmark.bookmarkId ? refreshedBookmark : bookmark,
@@ -465,7 +580,7 @@ export const handlers = [
         poiAddress: requestBody.poiAddress,
         poiLatitude: requestBody.poiLatitude,
         poiLongitude: requestBody.poiLongitude,
-        category: requestBody.category ?? null,
+        category: normalizedCategory,
       };
 
       nextBookmarkSequence += 1;
@@ -496,6 +611,10 @@ export const handlers = [
     const normalizedCategory = requestBody.category?.trim() ? requestBody.category.trim() : null;
     if (normalizedCategory && normalizedCategory.length > 20) {
       return createErrorResponse('Bookmark category must be at most 20 characters', 40001);
+    }
+
+    if (normalizedCategory) {
+      ensureMockBookmarkCategory(normalizedCategory);
     }
 
     const updatedBookmark: Bookmark = {

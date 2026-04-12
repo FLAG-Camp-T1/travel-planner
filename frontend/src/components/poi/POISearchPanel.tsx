@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { createPoiDetailOverlayFromPoi } from '@/components/place/placeDetailOverlayFactory';
 import { useAppStore } from '@/stores/useAppStore';
 import { DEFAULT_POI_SEARCH_RADIUS_METERS } from '@/stores/slices/mapViewSlice';
 
@@ -12,9 +13,13 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
   const searchPOI = useAppStore((state) => state.searchPOI);
   const clearPOIResults = useAppStore((state) => state.clearPOIResults);
   const closePlaceDetail = useAppStore((state) => state.closePlaceDetail);
+  const lastPOISearchRequest = useAppStore((state) => state.lastPOISearchRequest);
+  const openPlaceDetail = useAppStore((state) => state.openPlaceDetail);
+  const poiResults = useAppStore((state) => state.poiResults);
   const setActivePlannerPanel = useAppStore((state) => state.setActivePlannerPanel);
   const poiStatus = useAppStore((state) => state.poiStatus);
   const mapCenter = useAppStore((state) => state.mapCenter);
+  const selectPOI = useAppStore((state) => state.selectPOI);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -50,6 +55,23 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
     void searchPOI(buildSearchRequest(trimmed));
   };
 
+  const handleSelectSingleSearchResult = useCallback(() => {
+    const trimmed = keyword.trim();
+    if (
+      poiStatus !== 'ready' ||
+      poiResults.length !== 1 ||
+      !lastPOISearchRequest ||
+      lastPOISearchRequest.keyword.trim() !== trimmed
+    ) {
+      return false;
+    }
+
+    const [poi] = poiResults;
+    selectPOI(poi);
+    void openPlaceDetail(createPoiDetailOverlayFromPoi(poi));
+    return true;
+  }, [keyword, lastPOISearchRequest, openPlaceDetail, poiResults, poiStatus, selectPOI]);
+
   const handleClear = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setKeyword('');
@@ -65,6 +87,10 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
+      if (handleSelectSingleSearchResult()) {
+        return;
+      }
       handleSearch();
     }
   };
@@ -79,10 +105,10 @@ export default function POISearchPanel({ layout = 'sidebar' }: POISearchPanelPro
 
   if (layout === 'topbar') {
     return (
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 shadow-inner shadow-white/70">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
         <input
           type="text"
-          className="min-w-0 basis-full rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:flex-1"
+          className="min-w-0 basis-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:flex-1"
           value={keyword}
           onChange={(e) => handleKeywordChange(e.target.value)}
           onKeyDown={handleKeyDown}

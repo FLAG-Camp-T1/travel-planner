@@ -5,11 +5,13 @@ type TripPlanSidebarShellProps = {
   overlay?: ReactNode;
   width: number;
   onResizeStart: (event: PointerEvent<HTMLButtonElement>) => void;
+  onResetWidth: () => void;
 };
 
 export default function TripPlanSidebarShell({
   children,
   onResizeStart,
+  onResetWidth,
   overlay,
   width,
 }: TripPlanSidebarShellProps) {
@@ -25,9 +27,10 @@ export default function TripPlanSidebarShell({
         aria-label="Resize sidebar"
         aria-orientation="vertical"
         onPointerDown={onResizeStart}
-        className="group absolute right-0 top-0 z-10 h-full w-4 translate-x-1/2 cursor-col-resize touch-none"
+        onDoubleClick={onResetWidth}
+        className="group absolute right-0 top-0 z-10 h-full w-6 translate-x-1/2 cursor-col-resize touch-none"
       >
-        <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gray-200 transition-colors group-hover:bg-blue-300" />
+        <span className="absolute left-1/2 top-0 h-full w-1 -translate-x-1/2 rounded-full bg-gray-200 transition-colors group-hover:bg-blue-400" />
       </button>
     </aside>
   );

@@ -1,4 +1,4 @@
-import type { TripPlanningSlice } from '../types';
+import type { DayRouteInvalidationReason, TripPlanningSlice } from '../types';
 
 export const getTripDayCacheKey = (tripId: number, dayNumber: number) => `${tripId}:${dayNumber}`;
 
@@ -6,6 +6,7 @@ export const getInvalidatedDayRouteState = (
   state: TripPlanningSlice,
   tripId: number,
   dayNumber: number,
+  reason: DayRouteInvalidationReason | null = null,
 ) => {
   const cacheKey = getTripDayCacheKey(tripId, dayNumber);
 
@@ -26,6 +27,11 @@ export const getInvalidatedDayRouteState = (
       ...state.dayRouteErrorByDayNumber,
       [cacheKey]: null,
     },
+    dayRouteInvalidationReasonByDayNumber: {
+      ...state.dayRouteInvalidationReasonByDayNumber,
+      [cacheKey]: reason,
+    },
+    activeDayRouteSegmentIndex: null,
   };
 };
 
@@ -68,6 +74,11 @@ export const getPrunedTripDayCachesState = (
     ),
     dayRouteErrorByDayNumber: Object.fromEntries(
       Object.entries(state.dayRouteErrorByDayNumber).filter(([cacheKey]) => keepCacheKey(cacheKey)),
+    ),
+    dayRouteInvalidationReasonByDayNumber: Object.fromEntries(
+      Object.entries(state.dayRouteInvalidationReasonByDayNumber).filter(([cacheKey]) =>
+        keepCacheKey(cacheKey),
+      ),
     ),
   };
 };
@@ -126,6 +137,7 @@ export const getReorderedCachedDayItemsState = (
   const cacheKey = getTripDayCacheKey(tripId, dayNumber);
   const currentItems = state.dayItemsByDayNumber[cacheKey] ?? [];
   const itemsById = new Map(currentItems.map((item) => [item.itemId, item]));
+  const travelMethodsByPosition = currentItems.map((item) => item.travelMethod);
 
   return {
     dayItemsByDayNumber: {
@@ -136,6 +148,7 @@ export const getReorderedCachedDayItemsState = (
         .map((item, index) => ({
           ...item,
           visitOrder: index + 1,
+          travelMethod: travelMethodsByPosition[index] ?? null,
         })),
     },
   };

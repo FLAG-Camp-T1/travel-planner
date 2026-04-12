@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, MoreHorizontal, Trash2 } from 'lucide-react';
 import type { ItineraryItem, TripDay } from '@/api/tripApi';
+import useBoundedMenuPosition from '@/components/trip-plan/useBoundedMenuPosition';
 import {
   ITINERARY_CONTENT_START_X,
   ITINERARY_DASHED_TIMELINE_STYLE,
@@ -40,8 +41,15 @@ export default function ItineraryStopNode({
 }: ItineraryStopNodeProps) {
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const hasMoveTargets = moveOptions.length > 0;
   const itemLabel = item.name ?? `Stop ${item.visitOrder}`;
+  const { placement: actionsMenuPlacement, menuStyle: actionsMenuStyle } = useBoundedMenuPosition({
+    open: actionsMenuOpen,
+    anchorRef: actionsMenuRef,
+    menuRef: actionsMenuPanelRef,
+    preferredSide: 'left',
+  });
 
   useEffect(() => {
     if (!actionsMenuOpen) {
@@ -140,7 +148,17 @@ export default function ItineraryStopNode({
             </button>
 
             {actionsMenuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 min-w-52 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
+              <div
+                ref={actionsMenuPanelRef}
+                className={`absolute z-20 min-w-52 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl ${
+                  actionsMenuPlacement === 'left'
+                    ? 'right-[calc(100%+0.5rem)]'
+                    : actionsMenuPlacement === 'right'
+                      ? 'left-[calc(100%+0.5rem)]'
+                      : 'right-0 top-[calc(100%+0.5rem)]'
+                }`}
+                style={actionsMenuStyle}
+              >
                 {hasMoveTargets ? (
                   <>
                     <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">

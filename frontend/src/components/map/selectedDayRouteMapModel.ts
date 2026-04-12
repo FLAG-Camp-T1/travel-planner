@@ -7,6 +7,7 @@ import {
 const GAP_DISTANCE_THRESHOLD_METERS = 20;
 
 export type DecodedRouteSegment = {
+  segmentIndex: number;
   fromItemId: number;
   toItemId: number;
   path: google.maps.LatLng[];
@@ -98,11 +99,13 @@ export const buildSelectedDayRouteMapModel = ({
   const decodedSegments = segments
     .map((segment, index) => ({
       segment,
+      segmentIndex: index,
       strokeColor: segmentColors[index],
     }))
     .filter(({ segment }) => segment.encodedPolyline.trim().length > 0)
-    .map(({ segment, strokeColor }) => {
+    .map(({ segment, segmentIndex, strokeColor }) => {
       return {
+        segmentIndex,
         fromItemId: segment.fromItemId,
         toItemId: segment.toItemId,
         path: geometryLib.encoding.decodePath(segment.encodedPolyline.trim()),

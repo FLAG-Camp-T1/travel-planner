@@ -23,7 +23,18 @@ export default function POIMarkers() {
   const animationFrameRef = useRef<number | null>(null);
   const isExploreActive = activePlannerPanel === 'explore';
   const visiblePoiResults = poiResults.flatMap((poi, index) =>
-    isExploreActive && poi.latitude != null && poi.longitude != null ? [{ poi, index }] : [],
+    isExploreActive && poi.latitude != null && poi.longitude != null
+      ? [
+          {
+            poi,
+            index,
+            position: {
+              lat: poi.latitude,
+              lng: poi.longitude,
+            },
+          },
+        ]
+      : [],
   );
 
   useEffect(() => {
@@ -100,14 +111,14 @@ export default function POIMarkers() {
 
   return (
     <>
-      {visiblePoiResults.map(({ poi, index }) => {
+      {visiblePoiResults.map(({ poi, index, position }) => {
         const isSelected = selectedPOI?.placeId === poi.placeId;
         const isHovered = hoveredPOI?.placeId === poi.placeId;
 
         return (
           <AdvancedMarker
             key={poi.placeId}
-            position={{ lat: poi.latitude, lng: poi.longitude }}
+            position={position}
             title={`${index + 1}. ${poi.name}`}
             onClick={() => {
               selectPOI(poi);
@@ -115,7 +126,7 @@ export default function POIMarkers() {
             }}
           >
             <Pin
-              glyphText={`${index + 1}`}
+              glyph={`${index + 1}`}
               background={isSelected ? '#ef4444' : isHovered ? '#f59e0b' : '#3b82f6'}
               glyphColor="#fff"
               borderColor={isSelected ? '#b91c1c' : isHovered ? '#b45309' : '#1d4ed8'}

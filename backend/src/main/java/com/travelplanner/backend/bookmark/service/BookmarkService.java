@@ -1,6 +1,8 @@
 package com.travelplanner.backend.bookmark.service;
 
+import com.travelplanner.backend.bookmark.dto.BookmarkCategoryDto;
 import com.travelplanner.backend.bookmark.dto.BookmarkDto;
+import com.travelplanner.backend.bookmark.dto.CreateBookmarkCategoryRequest;
 import com.travelplanner.backend.bookmark.dto.CreateBookmarkRequest;
 import com.travelplanner.backend.bookmark.dto.UpdateBookmarkRequest;
 import com.travelplanner.backend.bookmark.entity.BookmarkEntity;
@@ -72,6 +74,12 @@ public class BookmarkService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<BookmarkCategoryDto> getCurrentUserBookmarkCategories() {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        return findCurrentUserCategories(currentUserId);
+    }
+
     @Transactional
     public BookmarkDto createBookmark(CreateBookmarkRequest request) {
         UUID currentUserId = currentUserProvider.getCurrentUserId();
@@ -97,6 +105,23 @@ public class BookmarkService {
                                 .customCategory(categoryId)
                                 .build());
         return toDto(savedBookmark, poi, normalizedCategory, request);
+    }
+
+    @Transactional
+    public BookmarkCategoryDto createBookmarkCategory(CreateBookmarkCategoryRequest request) {
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        String normalizedCategory = normalizeCategory(request.name());
+        if (normalizedCategory == null) {
+            throw new BusinessException(
+                    ResultCode.PARAM_INVALID, "Bookmark category name is required");
+        }
+
+        Long categoryId = resolveCategoryId(currentUserId, normalizedCategory);
+        return BookmarkCategoryDto.builder()
+                .categoryId(String.valueOf(categoryId))
+                .name(normalizedCategory)
+                .bookmarkCount(countBookmarksInCategory(currentUserId, categoryId))
+                .build();
     }
 
     @Transactional
@@ -129,6 +154,22 @@ public class BookmarkService {
         Long bookmarkPrimaryKey = parseBookmarkId(bookmarkId);
         BookmarkEntity bookmark = getOwnedBookmark(bookmarkPrimaryKey);
         bookmarkRepository.deleteById(bookmark.id());
+    }
+
+    @Transactional
+    public void deleteBookmarkCategory(String categoryId, boolean deleteBookmarks) {
+        Long categoryPrimaryKey = parseCategoryId(categoryId);
+        UUID currentUserId = currentUserProvider.getCurrentUserId();
+        requireOwnedCategory(currentUserId, categoryPrimaryKey);
+        MapSqlParameterSource params = categoryParameters(currentUserId, categoryPrimaryKey);
+
+        if (deleteBookmarks) {
+            deleteBookmarksInCategory(params);
+        } else {
+            clearCategoryFromBookmarks(params);
+        }
+
+        deleteCategoryRecord(params);
     }
 
     private PoiEntity createPoi(String googlePlaceId) {
@@ -197,6 +238,29 @@ public class BookmarkService {
         return findCategoryNames(List.of(categoryId)).get(categoryId);
     }
 
+    private List<BookmarkCategoryDto> findCurrentUserCategories(UUID userId) {
+        return jdbcTemplate.query(
+                """
+                SELECT category.id,
+                       category.category_name,
+                       COUNT(bookmark.id) AS bookmark_count
+                FROM bookmark_category category
+                LEFT JOIN bookmark
+                       ON bookmark.custom_category = category.id
+                      AND bookmark.user_id = category.user_id
+                WHERE category.user_id = :userId
+                GROUP BY category.id, category.category_name
+                ORDER BY LOWER(category.category_name), category.id
+                """,
+                new MapSqlParameterSource("userId", userId),
+                (rs, rowNum) ->
+                        BookmarkCategoryDto.builder()
+                                .categoryId(String.valueOf(rs.getLong("id")))
+                                .name(rs.getString("category_name"))
+                                .bookmarkCount(rs.getLong("bookmark_count"))
+                                .build());
+    }
+
     private Long resolveCategoryId(UUID userId, String category) {
         if (category == null) {
             return null;
@@ -223,6 +287,80 @@ public class BookmarkService {
                 """,
                 params,
                 Long.class);
+    }
+
+    private long countBookmarksInCategory(UUID userId, Long categoryId) {
+        if (categoryId == null) {
+            return 0L;
+        }
+
+        Long bookmarkCount =
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*)
+                        FROM bookmark
+                        WHERE user_id = :userId AND custom_category = :categoryId
+                        """,
+                        new MapSqlParameterSource()
+                                .addValue("userId", userId)
+                                .addValue("categoryId", categoryId),
+                        Long.class);
+
+        return bookmarkCount != null ? bookmarkCount : 0L;
+    }
+
+    private void requireOwnedCategory(UUID userId, Long categoryId) {
+        List<Long> categoryIds =
+                jdbcTemplate.query(
+                        """
+                        SELECT id
+                        FROM bookmark_category
+                        WHERE user_id = :userId AND id = :categoryId
+                        """,
+                        new MapSqlParameterSource()
+                                .addValue("userId", userId)
+                                .addValue("categoryId", categoryId),
+                        (rs, rowNum) -> rs.getLong("id"));
+
+        if (!categoryIds.isEmpty()) {
+            return;
+        }
+
+        throw new BusinessException(ResultCode.BOOKMARK_NOT_FOUND, "Bookmark category not found");
+    }
+
+    private MapSqlParameterSource categoryParameters(UUID userId, Long categoryId) {
+        return new MapSqlParameterSource()
+                .addValue("userId", userId)
+                .addValue("categoryId", categoryId);
+    }
+
+    private void deleteBookmarksInCategory(MapSqlParameterSource params) {
+        jdbcTemplate.update(
+                """
+                DELETE FROM bookmark
+                WHERE user_id = :userId AND custom_category = :categoryId
+                """,
+                params);
+    }
+
+    private void clearCategoryFromBookmarks(MapSqlParameterSource params) {
+        jdbcTemplate.update(
+                """
+                UPDATE bookmark
+                SET custom_category = NULL
+                WHERE user_id = :userId AND custom_category = :categoryId
+                """,
+                params);
+    }
+
+    private void deleteCategoryRecord(MapSqlParameterSource params) {
+        jdbcTemplate.update(
+                """
+                DELETE FROM bookmark_category
+                WHERE user_id = :userId AND id = :categoryId
+                """,
+                params);
     }
 
     private BookmarkEntity getOwnedBookmark(Long bookmarkId) {
@@ -272,6 +410,14 @@ public class BookmarkService {
             return Long.valueOf(bookmarkId);
         } catch (NumberFormatException exception) {
             throw new BusinessException(ResultCode.PARAM_INVALID, "bookmarkId must be a number");
+        }
+    }
+
+    private Long parseCategoryId(String categoryId) {
+        try {
+            return Long.valueOf(categoryId);
+        } catch (NumberFormatException exception) {
+            throw new BusinessException(ResultCode.PARAM_INVALID, "categoryId must be a number");
         }
     }
 }

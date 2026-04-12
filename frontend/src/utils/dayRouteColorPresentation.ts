@@ -1,4 +1,3 @@
-import type { DayRouteSegment } from '@/api/tripApi';
 import { getTravelMethodStrokeColor } from '@/components/trip-plan/travelMethodPresentation';
 
 export type DayRouteColorMode = 'travelMethod' | 'contrast';
@@ -8,8 +7,8 @@ const CONTRAST_BASE_HUE = 208;
 const CONTRAST_SATURATION = 78;
 const CONTRAST_LIGHTNESS_SEQUENCE = [44, 56, 38, 50];
 
-export const getDayRouteSegmentColors = (
-  segments: DayRouteSegment[],
+export const getDayRouteSegmentColors = <TSegment extends { travelMethod: string }>(
+  segments: TSegment[],
   colorMode: DayRouteColorMode,
 ) => {
   if (colorMode === 'contrast') {

@@ -22,6 +22,8 @@ class SchemaMigrationIntegrationTest {
         assertEquals(1, tableCount(jdbcTemplate, "TRIP"));
         assertEquals(1, tableCount(jdbcTemplate, "TRIP_DAY"));
         assertEquals(1, tableCount(jdbcTemplate, "ITINERARY"));
+        assertEquals(1, tableCount(jdbcTemplate, "BOOKMARK_CATEGORY"));
+        assertEquals(1, tableCount(jdbcTemplate, "BOOKMARK"));
     }
 
     @Test

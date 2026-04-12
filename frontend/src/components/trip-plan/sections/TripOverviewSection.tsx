@@ -1,4 +1,5 @@
 import { useShallow } from 'zustand/react/shallow';
+import SectionInfoHint from '@/components/trip-plan/SectionInfoHint';
 import TripEditSection from '@/components/trip-plan/sections/TripEditSection';
 import { useAppStore } from '@/stores/useAppStore';
 
@@ -31,8 +32,10 @@ export default function TripOverviewSection() {
     <section className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-700">Trip Overview</h2>
-          <p className="mt-1 text-sm text-gray-500">Overview of the current trip.</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-700">Trip Overview</h2>
+            <SectionInfoHint tooltip="Review the active trip's title, duration, and scheduling details here." />
+          </div>
         </div>
         {currentTrip ? <TripEditSection /> : null}
       </div>
@@ -41,13 +44,13 @@ export default function TripOverviewSection() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold text-gray-900">{title}</div>
-            <div className="mt-1 text-sm text-gray-500">
-              {tripStatus === 'loading'
-                ? 'Loading the current trip summary.'
-                : tripStatus === 'error'
-                  ? (tripError ?? 'Failed to load the current trip summary.')
-                  : 'Trip details are ready.'}
-            </div>
+            {tripStatus === 'loading' || tripStatus === 'error' ? (
+              <div className="mt-1 text-sm text-gray-500">
+                {tripStatus === 'loading'
+                  ? 'Loading the current trip summary.'
+                  : (tripError ?? 'Failed to load the current trip summary.')}
+              </div>
+            ) : null}
           </div>
 
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">

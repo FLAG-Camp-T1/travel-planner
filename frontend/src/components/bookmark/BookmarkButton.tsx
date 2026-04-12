@@ -100,6 +100,7 @@ export default function BookmarkButton({
           mode="create"
           placeName={poiName}
           placeAddress={poiAddress}
+          initialCategory={currentBookmark?.category ?? null}
           isSubmitting={isPending}
           error={dialogError}
           onClose={() => {

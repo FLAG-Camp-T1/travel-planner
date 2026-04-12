@@ -1,6 +1,7 @@
 type TravelMethodStyle = {
   hue: number;
   saturation: number;
+  dotColor: string;
   capsuleClassName: string;
   capsuleHoverClassName: string;
   dotClassName: string;
@@ -12,6 +13,7 @@ type TravelMethodStyle = {
 const DEFAULT_TRAVEL_METHOD_STYLE: TravelMethodStyle = {
   hue: 215,
   saturation: 16,
+  dotColor: '#94A3B8',
   capsuleClassName: 'bg-slate-100 ring-slate-200',
   capsuleHoverClassName:
     'group-hover:bg-slate-400 group-hover:ring-slate-400 group-focus-visible:bg-slate-400 group-focus-visible:ring-slate-400',
@@ -25,6 +27,7 @@ const TRAVEL_METHOD_STYLES: Record<string, TravelMethodStyle> = {
   Drive: {
     hue: 203,
     saturation: 82,
+    dotColor: '#38BDF8',
     capsuleClassName: 'bg-sky-50 ring-sky-200',
     capsuleHoverClassName:
       'group-hover:bg-sky-400 group-hover:ring-sky-400 group-focus-visible:bg-sky-400 group-focus-visible:ring-sky-400',
@@ -36,6 +39,7 @@ const TRAVEL_METHOD_STYLES: Record<string, TravelMethodStyle> = {
   Walk: {
     hue: 152,
     saturation: 78,
+    dotColor: '#34D399',
     capsuleClassName: 'bg-emerald-50 ring-emerald-200',
     capsuleHoverClassName:
       'group-hover:bg-emerald-400 group-hover:ring-emerald-400 group-focus-visible:bg-emerald-400 group-focus-visible:ring-emerald-400',
@@ -47,6 +51,7 @@ const TRAVEL_METHOD_STYLES: Record<string, TravelMethodStyle> = {
   Transit: {
     hue: 262,
     saturation: 84,
+    dotColor: '#A78BFA',
     capsuleClassName: 'bg-violet-50 ring-violet-200',
     capsuleHoverClassName:
       'group-hover:bg-violet-400 group-hover:ring-violet-400 group-focus-visible:bg-violet-400 group-focus-visible:ring-violet-400',
@@ -58,6 +63,7 @@ const TRAVEL_METHOD_STYLES: Record<string, TravelMethodStyle> = {
   Bicycle: {
     hue: 42,
     saturation: 88,
+    dotColor: '#FBBF24',
     capsuleClassName: 'bg-amber-50 ring-amber-200',
     capsuleHoverClassName:
       'group-hover:bg-amber-400 group-hover:ring-amber-400 group-focus-visible:bg-amber-400 group-focus-visible:ring-amber-400',
@@ -69,6 +75,7 @@ const TRAVEL_METHOD_STYLES: Record<string, TravelMethodStyle> = {
   'Two Wheeler': {
     hue: 342,
     saturation: 82,
+    dotColor: '#FB7185',
     capsuleClassName: 'bg-rose-50 ring-rose-200',
     capsuleHoverClassName:
       'group-hover:bg-rose-400 group-hover:ring-rose-400 group-focus-visible:bg-rose-400 group-focus-visible:ring-rose-400',
@@ -89,6 +96,7 @@ export const getTravelMethodPalette = (travelMethod: string) => {
   const {
     capsuleClassName,
     capsuleHoverClassName,
+    dotColor,
     dotClassName,
     dotHoverClassName,
     textClassName,
@@ -98,6 +106,7 @@ export const getTravelMethodPalette = (travelMethod: string) => {
   return {
     capsuleClassName,
     capsuleHoverClassName,
+    dotColor,
     dotClassName,
     dotHoverClassName,
     textClassName,
