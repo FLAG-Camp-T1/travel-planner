@@ -1,6 +1,8 @@
 package com.travelplanner.backend.bookmark.controller;
 
+import com.travelplanner.backend.bookmark.dto.BookmarkCategoryDto;
 import com.travelplanner.backend.bookmark.dto.BookmarkDto;
+import com.travelplanner.backend.bookmark.dto.CreateBookmarkCategoryRequest;
 import com.travelplanner.backend.bookmark.dto.CreateBookmarkRequest;
 import com.travelplanner.backend.bookmark.dto.UpdateBookmarkRequest;
 import com.travelplanner.backend.bookmark.service.BookmarkService;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -35,12 +38,25 @@ public class BookmarkController {
         return ApiResponse.success(bookmarkService.getCurrentUserBookmarks());
     }
 
+    @GetMapping("/categories")
+    @Operation(summary = "Get all bookmark categories for current user")
+    public ApiResponse<List<BookmarkCategoryDto>> getBookmarkCategories() {
+        return ApiResponse.success(bookmarkService.getCurrentUserBookmarkCategories());
+    }
+
     @PostMapping
     @Operation(summary = "Create a bookmark for current user")
     public ApiResponse<BookmarkDto> createBookmark(
             @Valid @RequestBody CreateBookmarkRequest request) {
         log.info("Inbound Bookmark Create Request: {}", request);
         return ApiResponse.success(bookmarkService.createBookmark(request));
+    }
+
+    @PostMapping("/categories")
+    @Operation(summary = "Create a bookmark category for current user")
+    public ApiResponse<BookmarkCategoryDto> createBookmarkCategory(
+            @RequestBody CreateBookmarkCategoryRequest request) {
+        return ApiResponse.success(bookmarkService.createBookmarkCategory(request));
     }
 
     @PatchMapping("/{bookmarkId}")
@@ -54,6 +70,15 @@ public class BookmarkController {
     @Operation(summary = "Delete a bookmark for current user")
     public ApiResponse<Void> deleteBookmark(@PathVariable String bookmarkId) {
         bookmarkService.deleteBookmark(bookmarkId);
+        return ApiResponse.success();
+    }
+
+    @DeleteMapping("/categories/{categoryId}")
+    @Operation(summary = "Delete a bookmark category for current user")
+    public ApiResponse<Void> deleteBookmarkCategory(
+            @PathVariable String categoryId,
+            @RequestParam(defaultValue = "false") boolean deleteBookmarks) {
+        bookmarkService.deleteBookmarkCategory(categoryId, deleteBookmarks);
         return ApiResponse.success();
     }
 }

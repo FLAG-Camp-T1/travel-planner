@@ -1,10 +1,14 @@
 import { useLayoutEffect } from 'react';
 import { Map } from '@vis.gl/react-google-maps';
 import DayRouteViewportFocusBridge from '@/components/map/DayRouteViewportFocusBridge';
+import BookmarkViewportMarkers from '@/components/map/BookmarkViewportMarkers';
 import GlobalApiErrorBanner from '@/components/map/GlobalApiErrorBanner';
+import MapFocusGuard from '@/components/map/MapFocusGuard';
 import MapPlaceClickOverlayBridge from '@/components/map/MapPlaceClickOverlayBridge';
 import PlannerMapCameraSync from '@/components/map/PlannerMapCameraSync';
 import POIMarkers from '@/components/map/POIMarkers';
+import RouteFocusHintOverlay from '@/components/map/RouteFocusHintOverlay';
+import SearchAreaPromptOverlay from '@/components/map/SearchAreaPromptOverlay';
 import SelectedDayRoutePolyline from '@/components/map/SelectedDayRoutePolyline';
 import TripActionSuccessToast from '@/components/map/TripActionSuccessToast';
 import { useShallow } from 'zustand/react/shallow';
@@ -55,25 +59,30 @@ export default function PlannerPage() {
   return (
     <TripPlanWorkspaceShell>
       <TripPlanMapShell apiKey={apiKey}>
-        <div className="relative h-full w-full">
+        <div className="planner-map-surface relative h-full w-full">
           <Map
             defaultCenter={defaultCameraProps.center}
             defaultZoom={defaultCameraProps.zoom}
             style={{ width: '100%', height: '100%' }}
             disableDefaultUI={true}
             mapTypeControl={false}
+            keyboardShortcuts={false}
             gestureHandling={'greedy'}
             mapId={'DEMO_MAP_ID'}
           >
+            <MapFocusGuard />
             <DayRouteViewportFocusBridge />
             <PlannerMapCameraSync />
             <MapPlaceClickOverlayBridge />
             <CustomZoomControl />
             <SelectedDayRoutePolyline />
+            <BookmarkViewportMarkers />
             <POIMarkers />
           </Map>
 
           <GlobalApiErrorBanner />
+          <RouteFocusHintOverlay />
+          <SearchAreaPromptOverlay />
           <TripActionSuccessToast />
         </div>
       </TripPlanMapShell>

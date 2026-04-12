@@ -1,7 +1,6 @@
 import { useShallow } from 'zustand/react/shallow';
-import DayRouteSection from '@/components/trip-plan/sections/DayRouteSection';
-import ItinerarySection from '@/components/trip-plan/sections/ItinerarySection';
 import MyTripsSection from '@/components/trip-plan/sections/MyTripsSection';
+import SelectedDayPlanSection from '@/components/trip-plan/sections/SelectedDayPlanSection';
 import TripDayNavigationSection from '@/components/trip-plan/sections/TripDayNavigationSection';
 import TripOverviewSection from '@/components/trip-plan/sections/TripOverviewSection';
 import { useAppStore } from '@/stores/useAppStore';
@@ -102,8 +101,7 @@ export default function TripsPanel() {
         <>
           <TripOverviewSection />
           <TripDayNavigationSection />
-          <ItinerarySection />
-          <DayRouteSection />
+          <SelectedDayPlanSection />
         </>
       ) : null}
     </>

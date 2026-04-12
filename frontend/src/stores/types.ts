@@ -1,4 +1,4 @@
-import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { Bookmark, BookmarkCategory, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
@@ -22,17 +22,35 @@ export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 export type AuthStatus = 'hydrating' | 'authenticated' | 'unauthenticated';
 export type PlannerPanel = 'trips' | 'explore' | 'bookmarks';
 export type TripDayCacheKey = string;
+export type DayRouteInvalidationReason = 'reorder' | 'stale';
+export type BookmarkCategoryFilter =
+  | { kind: 'all' }
+  | { kind: 'uncategorized' }
+  | { kind: 'category'; categoryName: string };
 
 export interface BookmarkSlice {
   bookmarks: Bookmark[];
   bookmarksStatus: LoadStatus;
   bookmarksError: string | null;
+  bookmarkCategories: BookmarkCategory[];
+  bookmarkCategoriesStatus: LoadStatus;
+  bookmarkCategoriesError: string | null;
+  bookmarkCategoryDeleteStatus: LoadStatus;
+  bookmarkCategoryDeleteError: string | null;
+  bookmarkCategoryDeleteTargetId: string | null;
+  hoveredBookmarkId: string | null;
+  selectedBookmarkCategoryFilter: BookmarkCategoryFilter;
   bookmarkUpdateStatus: LoadStatus;
   bookmarkUpdateError: string | null;
   bookmarkUpdateTargetId: string | null;
   pendingByPlaceId: Record<string, boolean>;
   fetchBookmarks: () => Promise<void>;
+  fetchBookmarkCategories: () => Promise<void>;
   createBookmark: (request: CreateBookmarkRequest) => Promise<void>;
+  createBookmarkCategory: (name: string) => Promise<BookmarkCategory>;
+  deleteBookmarkCategory: (categoryId: string, deleteBookmarks: boolean) => Promise<void>;
+  setHoveredBookmarkId: (bookmarkId: string | null) => void;
+  setBookmarkCategoryFilter: (filter: BookmarkCategoryFilter) => void;
   updateBookmarkCategory: (bookmarkId: string, category?: string | null) => Promise<void>;
   removeBookmark: (bookmarkId: string, googlePlaceId: string) => Promise<void>;
 }
@@ -74,7 +92,9 @@ export interface TripPlanningSlice {
   dayRouteSegmentsByDayNumber: Record<TripDayCacheKey, DayRouteSegment[]>;
   dayRouteStatusByDayNumber: Record<TripDayCacheKey, LoadStatus>;
   dayRouteErrorByDayNumber: Record<TripDayCacheKey, string | null>;
+  dayRouteInvalidationReasonByDayNumber: Record<TripDayCacheKey, DayRouteInvalidationReason | null>;
   dayRouteColorMode: DayRouteColorMode;
+  activeDayRouteSegmentIndex: number | null;
   tripStatus: LoadStatus;
   daysStatus: LoadStatus;
   tripError: string | null;
@@ -113,6 +133,7 @@ export interface TripPlanningSlice {
   fetchTripDays: (tripId: number) => Promise<void>;
   selectDay: (dayNumber: number) => void;
   setDayRouteColorMode: (mode: DayRouteColorMode) => void;
+  setActiveDayRouteSegmentIndex: (segmentIndex: number | null) => void;
   fetchDayItems: (tripId: number, dayNumber: number) => Promise<void>;
   createDayItem: (
     tripId: number,
@@ -154,6 +175,8 @@ export interface POISlice {
   poiError: string | null;
   selectedPOI: POIDto | null;
   hoveredPOI: POIDto | null;
+  lastPOISearchRequest: POISearchRequest | null;
+  lastPOISearchCenter: google.maps.LatLngLiteral | null;
   searchPOI: (request: POISearchRequest) => Promise<void>;
   selectPOI: (poi: POIDto | null) => void;
   setHoveredPOI: (poi: POIDto | null) => void;

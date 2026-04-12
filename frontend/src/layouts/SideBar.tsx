@@ -9,14 +9,16 @@ import { useAppStore } from '@/stores/useAppStore';
 type SideBarProps = {
   width: number;
   onResizeStart: (event: PointerEvent<HTMLButtonElement>) => void;
+  onResetWidth: () => void;
 };
 
-export default function SideBar({ onResizeStart, width }: SideBarProps) {
+export default function SideBar({ onResizeStart, onResetWidth, width }: SideBarProps) {
   const activePlannerPanel = useAppStore((state) => state.activePlannerPanel);
 
   return (
     <TripPlanSidebarShell
       onResizeStart={onResizeStart}
+      onResetWidth={onResetWidth}
       width={width}
       overlay={<PlaceDetailOverlay />}
     >

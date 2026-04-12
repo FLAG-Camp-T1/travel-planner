@@ -13,7 +13,12 @@ import {
   updateTripDayItem as updateTripDayItemApi,
   updateTrip as updateTripApi,
 } from '@/api/tripApi';
-import type { AppStoreCreator, TripPlanningSlice } from '../types';
+import type {
+  AppStoreCreator,
+  DayRouteInvalidationReason,
+  LoadStatus,
+  TripPlanningSlice,
+} from '../types';
 import {
   getCachedDayItemTravelMethodState,
   getInvalidatedDayRouteState,
@@ -32,6 +37,14 @@ import {
 } from './tripPlanningState';
 import type { DayRouteColorMode } from '@/utils/dayRouteColorPresentation';
 import { toDisplayedTripTravelMethod } from '@/utils/tripTravelMethod';
+
+type DayRouteSnapshot = {
+  error: string | null;
+  invalidationReason: DayRouteInvalidationReason | null;
+  routeSegments: TripPlanningSlice['dayRouteSegmentsByDayNumber'][string];
+  routeStatus: LoadStatus;
+  routeSummary: TripPlanningSlice['dayRouteByDayNumber'][string];
+};
 
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Trip planning request failed.';
@@ -130,13 +143,55 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     set(patch, false, action);
   };
 
-  const invalidateDayRoute = (tripId: number, dayNumber: number) => {
+  const invalidateDayRoute = (
+    tripId: number,
+    dayNumber: number,
+    reason: DayRouteInvalidationReason | null = 'stale',
+  ) => {
     set(
-      (state) => getInvalidatedDayRouteState(state, tripId, dayNumber),
+      (state) => getInvalidatedDayRouteState(state, tripId, dayNumber, reason),
       false,
       'trip/day-route:invalidate',
     );
   };
+
+  const captureDayRouteSnapshot = (
+    state: TripPlanningSlice,
+    cacheKey: string,
+  ): DayRouteSnapshot => ({
+    error: state.dayRouteErrorByDayNumber[cacheKey] ?? null,
+    invalidationReason: state.dayRouteInvalidationReasonByDayNumber[cacheKey] ?? null,
+    routeSegments: state.dayRouteSegmentsByDayNumber[cacheKey] ?? [],
+    routeStatus: state.dayRouteStatusByDayNumber[cacheKey] ?? 'idle',
+    routeSummary: state.dayRouteByDayNumber[cacheKey] ?? null,
+  });
+
+  const restoreDayRouteSnapshot = (
+    state: TripPlanningSlice,
+    cacheKey: string,
+    snapshot: DayRouteSnapshot,
+  ) => ({
+    dayRouteByDayNumber: {
+      ...state.dayRouteByDayNumber,
+      [cacheKey]: snapshot.routeSummary,
+    },
+    dayRouteSegmentsByDayNumber: {
+      ...state.dayRouteSegmentsByDayNumber,
+      [cacheKey]: snapshot.routeSegments,
+    },
+    dayRouteStatusByDayNumber: {
+      ...state.dayRouteStatusByDayNumber,
+      [cacheKey]: snapshot.routeStatus,
+    },
+    dayRouteErrorByDayNumber: {
+      ...state.dayRouteErrorByDayNumber,
+      [cacheKey]: snapshot.error,
+    },
+    dayRouteInvalidationReasonByDayNumber: {
+      ...state.dayRouteInvalidationReasonByDayNumber,
+      [cacheKey]: snapshot.invalidationReason,
+    },
+  });
 
   const pruneTripDayCaches = (tripId: number, validDayNumbers: number[]) => {
     set(
@@ -235,14 +290,6 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
       (state) => getRemovedCachedDayItemState(state, tripId, dayNumber, itemId),
       false,
       'trip/day-items:remove-cache',
-    );
-  };
-
-  const reorderCachedDayItems = (tripId: number, dayNumber: number, itemIds: number[]) => {
-    set(
-      (state) => getReorderedCachedDayItemsState(state, tripId, dayNumber, itemIds),
-      false,
-      'trip/day-items:reorder-cache',
     );
   };
 
@@ -623,6 +670,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
             days: response.days,
             daysStatus: 'ready',
             daysError: null,
+            activeDayRouteSegmentIndex: null,
             selectedDayNumber:
               state.selectedDayNumber &&
               response.days.some((day) => day.dayNumber === state.selectedDayNumber)
@@ -652,6 +700,7 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     selectDay: (dayNumber) => {
       set(
         {
+          activeDayRouteSegmentIndex: null,
           selectedDayNumber: dayNumber,
         },
         false,
@@ -670,6 +719,20 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
         },
         false,
         'trip/day-route-color:set',
+      );
+    },
+
+    setActiveDayRouteSegmentIndex: (segmentIndex) => {
+      if (get().activeDayRouteSegmentIndex === segmentIndex) {
+        return;
+      }
+
+      set(
+        {
+          activeDayRouteSegmentIndex: segmentIndex,
+        },
+        false,
+        'trip/day-route-segment:focus',
       );
     },
 
@@ -845,8 +908,16 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
     },
 
     reorderDayItems: async (tripId, dayNumber, request, targetItemId) => {
-      setDayItemReorderState(
-        {
+      const cacheKey = getTripDayCacheKey(tripId, dayNumber);
+      const previousState = get();
+      const previousDayItems = (previousState.dayItemsByDayNumber[cacheKey] ?? []).map((item) => ({
+        ...item,
+      }));
+      const previousRouteSnapshot = captureDayRouteSnapshot(previousState, cacheKey);
+      const previousActiveSegmentIndex = previousState.activeDayRouteSegmentIndex;
+
+      set(
+        (state) => ({
           dayItemCreationError: null,
           dayItemUpdateError: null,
           dayItemDeletionError: null,
@@ -854,14 +925,15 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           dayItemReorderStatus: 'loading',
           dayItemReorderError: null,
           dayItemReorderTargetId: targetItemId,
-        },
+          ...getInvalidatedDayRouteState(state, tripId, dayNumber, 'reorder'),
+          ...getReorderedCachedDayItemsState(state, tripId, dayNumber, request.itemIds),
+        }),
+        false,
         'trip/day-item:reorder:start',
       );
 
       try {
         await reorderTripDayItemsApi(tripId, dayNumber, request);
-        invalidateDayRoute(tripId, dayNumber);
-        reorderCachedDayItems(tripId, dayNumber, request.itemIds);
 
         setDayItemReorderState(
           {
@@ -872,12 +944,21 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
           'trip/day-item:reorder:success',
         );
       } catch (error) {
-        setDayItemReorderState(
-          {
+        const errorMessage = getErrorMessage(error);
+
+        set(
+          (state) => ({
+            dayItemsByDayNumber: {
+              ...state.dayItemsByDayNumber,
+              [cacheKey]: previousDayItems,
+            },
+            ...restoreDayRouteSnapshot(state, cacheKey, previousRouteSnapshot),
+            activeDayRouteSegmentIndex: previousActiveSegmentIndex,
             dayItemReorderStatus: 'error',
-            dayItemReorderError: getErrorMessage(error),
+            dayItemReorderError: errorMessage,
             dayItemReorderTargetId: null,
-          },
+          }),
+          false,
           'trip/day-item:reorder:error',
         );
       }
@@ -928,6 +1009,11 @@ export const createTripPlanningSlice: AppStoreCreator<TripPlanningSlice> = (set,
               ...state.dayRouteErrorByDayNumber,
               [cacheKey]: null,
             },
+            dayRouteInvalidationReasonByDayNumber: {
+              ...state.dayRouteInvalidationReasonByDayNumber,
+              [cacheKey]: null,
+            },
+            activeDayRouteSegmentIndex: null,
           }),
           false,
           'trip/day-route:success',

@@ -1,5 +1,17 @@
-import type { DayRouteSummary } from '@/api/tripApi';
-import type { LoadStatus } from '@/stores/types';
+import type { DayRouteSegment, DayRouteSummary, ItineraryItem } from '@/api/tripApi';
+import type { DayRouteInvalidationReason, LoadStatus } from '@/stores/types';
+import { getTripTravelMethodLabel } from '@/utils/tripTravelMethod';
+
+export type RouteSegmentRow = {
+  key: string;
+  fromItemId: number;
+  toItemId: number;
+  travelMethod: string;
+  distanceLabel: string;
+  durationLabel: string;
+  viewport?: DayRouteSegment['viewport'];
+  isInferred: boolean;
+};
 
 export const LONG_ROUTE_WARNING_THRESHOLD_SECONDS = 16 * 60 * 60;
 
@@ -61,7 +73,7 @@ export const getLongRouteWarningMessage = () => {
   return 'This route spends more than 16 hours in transit. Consider reducing stops or splitting the itinerary across multiple days.';
 };
 
-export const getRouteEmptyStateMessage = ({
+const getRouteEmptyStateMessage = ({
   currentDayItemCount,
   currentDayItemsStatus,
   selectedDayNumber,
@@ -93,15 +105,15 @@ export const getRouteEmptyStateMessage = ({
   return `Generate a route after adding at least two stops to Day ${selectedDayNumber}.`;
 };
 
-export const getRouteStatusMessage = ({
-  currentTrip,
+const getRouteStatusMessage = ({
+  hasCurrentTrip,
   currentDayRouteError,
   currentDayRouteSummary,
   currentDayRouteStatus,
   routeEmptyStateMessage,
   selectedDayNumber,
 }: {
-  currentTrip: { tripId: number } | null;
+  hasCurrentTrip: boolean;
   currentDayRouteError: string | null;
   currentDayRouteSummary: DayRouteSummary | null;
   currentDayRouteStatus: LoadStatus;
@@ -120,9 +132,139 @@ export const getRouteStatusMessage = ({
     return currentDayRouteError ?? `Failed to generate route data for Day ${selectedDayNumber}.`;
   }
 
-  if (currentTrip && currentDayRouteSummary === null && routeEmptyStateMessage) {
+  if (hasCurrentTrip && currentDayRouteSummary === null && routeEmptyStateMessage) {
     return routeEmptyStateMessage;
   }
 
   return `Day ${selectedDayNumber} route`;
+};
+
+export type SelectedDayPlanRouteUiState = {
+  canTriggerRouteAction: boolean;
+  displayedStatusMessage: string | null;
+  routeActionLabel: 'Generate Route' | 'Regenerate Route' | 'Generating...';
+  showLongRouteWarning: boolean;
+  showPlaceholderRouteState: boolean;
+  showRouteActionButton: boolean;
+};
+
+export const getSelectedDayPlanRouteUiState = ({
+  currentDayItemCount,
+  currentDayItemsStatus,
+  currentDayRouteError,
+  currentDayRouteInvalidationReason,
+  currentDayRouteStatus,
+  currentDayRouteSummary,
+  hasCurrentTrip,
+  selectedDayNumber,
+}: {
+  currentDayItemCount: number;
+  currentDayItemsStatus: LoadStatus;
+  currentDayRouteError: string | null;
+  currentDayRouteInvalidationReason: DayRouteInvalidationReason | null;
+  currentDayRouteStatus: LoadStatus;
+  currentDayRouteSummary: DayRouteSummary | null;
+  hasCurrentTrip: boolean;
+  selectedDayNumber: number | null;
+}): SelectedDayPlanRouteUiState => {
+  const routeEmptyStateMessage = getRouteEmptyStateMessage({
+    currentDayItemCount,
+    currentDayItemsStatus,
+    selectedDayNumber,
+  });
+  const routeStatusMessage = getRouteStatusMessage({
+    hasCurrentTrip,
+    currentDayRouteError,
+    currentDayRouteSummary,
+    currentDayRouteStatus,
+    routeEmptyStateMessage,
+    selectedDayNumber,
+  });
+  const showPlaceholderRouteState =
+    currentDayRouteSummary === null && currentDayItemsStatus === 'ready' && currentDayItemCount > 0;
+  const displayedStatusMessage =
+    currentDayRouteStatus === 'loading' || currentDayRouteStatus === 'error'
+      ? routeStatusMessage
+      : currentDayRouteInvalidationReason === 'reorder'
+        ? `Day ${selectedDayNumber ?? 0} route needs regeneration.`
+        : currentDayRouteInvalidationReason === 'stale'
+          ? 'Route details need regeneration.'
+          : currentDayRouteSummary === null
+            ? routeEmptyStateMessage
+            : null;
+  const showRouteActionButton =
+    hasCurrentTrip &&
+    selectedDayNumber !== null &&
+    currentDayItemsStatus === 'ready' &&
+    currentDayItemCount >= 2 &&
+    (currentDayRouteStatus === 'loading' ||
+      currentDayRouteInvalidationReason !== null ||
+      currentDayRouteSummary === null);
+
+  return {
+    canTriggerRouteAction:
+      hasCurrentTrip &&
+      selectedDayNumber !== null &&
+      currentDayItemsStatus === 'ready' &&
+      currentDayItemCount >= 2 &&
+      currentDayRouteStatus !== 'loading' &&
+      currentDayRouteSummary === null,
+    displayedStatusMessage,
+    routeActionLabel:
+      currentDayRouteStatus === 'loading'
+        ? 'Generating...'
+        : currentDayRouteInvalidationReason !== null
+          ? 'Regenerate Route'
+          : 'Generate Route',
+    showLongRouteWarning: shouldShowLongRouteWarning(currentDayRouteSummary),
+    showPlaceholderRouteState,
+    showRouteActionButton,
+  };
+};
+
+export const buildRouteSegmentRows = (segments: DayRouteSegment[]): RouteSegmentRow[] => {
+  return segments.map((segment, index) => ({
+    key: `${segment.fromItemId}-${segment.toItemId}-${index}`,
+    fromItemId: segment.fromItemId,
+    toItemId: segment.toItemId,
+    travelMethod: segment.travelMethod,
+    distanceLabel: formatDistance(segment.distanceMeters),
+    durationLabel: formatSegmentDuration(segment.durationSeconds),
+    viewport: segment.viewport,
+    isInferred: false,
+  }));
+};
+
+export const buildInferredRouteSegmentRows = (items: ItineraryItem[]): RouteSegmentRow[] => {
+  return items.slice(1).map((item, index) => ({
+    key: `inferred-${items[index]?.itemId ?? index}-${item.itemId}`,
+    fromItemId: items[index].itemId,
+    toItemId: item.itemId,
+    travelMethod: getTripTravelMethodLabel(item.travelMethod),
+    distanceLabel: '--',
+    durationLabel: '--',
+    isInferred: true,
+  }));
+};
+
+export const buildDisplayedRouteSegmentRows = ({
+  items,
+  segments,
+  showPlaceholderRouteState,
+}: {
+  items: ItineraryItem[];
+  segments: DayRouteSegment[];
+  showPlaceholderRouteState: boolean;
+}) => {
+  if (items.length < 2) {
+    return [];
+  }
+
+  const inferredRows = buildInferredRouteSegmentRows(items);
+  if (showPlaceholderRouteState) {
+    return inferredRows;
+  }
+
+  const realRows = buildRouteSegmentRows(segments);
+  return items.slice(1).map((_, index) => realRows[index] ?? inferredRows[index]);
 };

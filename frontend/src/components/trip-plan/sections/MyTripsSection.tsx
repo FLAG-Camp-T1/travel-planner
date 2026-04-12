@@ -1,5 +1,7 @@
 import { CalendarDays, MoreHorizontal, PencilLine, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import SectionInfoHint from '@/components/trip-plan/SectionInfoHint';
+import useBoundedMenuPosition from '@/components/trip-plan/useBoundedMenuPosition';
 import TripEditSection from '@/components/trip-plan/sections/TripEditSection';
 import TripCreationSection from '@/components/trip-plan/sections/TripCreationSection';
 import { useShallow } from 'zustand/react/shallow';
@@ -61,6 +63,13 @@ export default function MyTripsSection() {
   const [openActionsTripId, setOpenActionsTripId] = useState<number | null>(null);
   const [editingTrip, setEditingTrip] = useState<(typeof trips)[number] | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuPanelRef = useRef<HTMLDivElement | null>(null);
+  const { placement: actionsMenuPlacement, menuStyle: actionsMenuStyle } = useBoundedMenuPosition({
+    open: openActionsTripId !== null,
+    anchorRef: actionsMenuRef,
+    menuRef: actionsMenuPanelRef,
+    preferredSide: 'left',
+  });
 
   useEffect(() => {
     if (openActionsTripId === null) {
@@ -90,9 +99,12 @@ export default function MyTripsSection() {
 
   return (
     <section className="space-y-3">
-      <div className="space-y-2">
+      <div>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-gray-700">My Trips</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-700">My Trips</h2>
+            <SectionInfoHint tooltip="Switch between saved trips here, refresh the list, or create a new trip." />
+          </div>
           <div className="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap">
             <button
               type="button"
@@ -108,9 +120,6 @@ export default function MyTripsSection() {
             <TripCreationSection />
           </div>
         </div>
-        <p className="text-sm text-gray-500">
-          Switch between saved trips or create a new one here.
-        </p>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -164,19 +173,15 @@ export default function MyTripsSection() {
               return (
                 <li key={trip.tripId} className={isActionsOpen ? 'relative z-30' : 'relative'}>
                   <div
-                    className={`flex items-stretch gap-3 px-4 py-4 transition ${rowEdgeRoundingClass} ${
-                      isSelected ? 'bg-blue-50/70' : 'bg-white'
+                    className={`group flex items-stretch gap-3 px-4 py-4 transition ${rowEdgeRoundingClass} ${
+                      isSelected ? 'bg-blue-50/70' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
                     <button
                       type="button"
                       onClick={() => void bootstrapTrip(trip.tripId)}
                       disabled={tripBootstrapStatus === 'loading' || isDeletingTarget}
-                      className={`min-w-0 flex-1 text-left ${
-                        isSelected
-                          ? ''
-                          : 'hover:bg-slate-50 disabled:cursor-wait disabled:hover:bg-transparent'
-                      }`}
+                      className="min-w-0 flex-1 text-left disabled:cursor-wait"
                     >
                       <div className="min-w-0">
                         <div className="flex items-start justify-between gap-3">
@@ -235,7 +240,17 @@ export default function MyTripsSection() {
                       </button>
 
                       {isActionsOpen ? (
-                        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-40 min-w-44 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
+                        <div
+                          ref={actionsMenuPanelRef}
+                          className={`absolute z-40 min-w-44 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl ${
+                            actionsMenuPlacement === 'left'
+                              ? 'right-[calc(100%+0.5rem)]'
+                              : actionsMenuPlacement === 'right'
+                                ? 'left-[calc(100%+0.5rem)]'
+                                : 'right-0 top-[calc(100%+0.5rem)]'
+                          }`}
+                          style={actionsMenuStyle}
+                        >
                           <button
                             type="button"
                             onClick={() => {

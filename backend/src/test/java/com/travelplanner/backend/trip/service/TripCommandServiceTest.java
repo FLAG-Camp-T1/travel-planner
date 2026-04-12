@@ -574,16 +574,19 @@ class TripCommandServiceTest {
         firstItem.setId(5001L);
         firstItem.setTripDayId(2001L);
         firstItem.setVisitOrder(1);
+        firstItem.setTravelMethod(null);
 
         ItineraryEntity secondItem = new ItineraryEntity();
         secondItem.setId(5002L);
         secondItem.setTripDayId(2001L);
         secondItem.setVisitOrder(2);
+        secondItem.setTravelMethod("WALK");
 
         ItineraryEntity thirdItem = new ItineraryEntity();
         thirdItem.setId(5003L);
         thirdItem.setTripDayId(2001L);
         thirdItem.setVisitOrder(3);
+        thirdItem.setTravelMethod("TRANSIT");
 
         when(currentUserProvider.getCurrentUserId()).thenReturn(CURRENT_USER_ID);
         when(tripRepository.findByIdAndUserId(1001L, CURRENT_USER_ID))
@@ -604,6 +607,9 @@ class TripCommandServiceTest {
         assertEquals(1, finalOrderBatch.get(0).getVisitOrder());
         assertEquals(2, finalOrderBatch.get(1).getVisitOrder());
         assertEquals(3, finalOrderBatch.get(2).getVisitOrder());
+        assertNull(finalOrderBatch.get(0).getTravelMethod());
+        assertEquals("WALK", finalOrderBatch.get(1).getTravelMethod());
+        assertEquals("TRANSIT", finalOrderBatch.get(2).getTravelMethod());
     }
 
     @Test

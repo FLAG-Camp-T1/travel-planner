@@ -146,13 +146,7 @@ public class TripCommandService {
 
         validateTripDayReorderRequest(tripId, dayNumber, currentItems, requestedItemIds);
 
-        Map<Long, ItineraryEntity> itemsById =
-                currentItems.stream()
-                        .collect(Collectors.toMap(ItineraryEntity::getId, Function.identity()));
-        List<ItineraryEntity> reorderedItems =
-                requestedItemIds.stream().map(itemsById::get).toList();
-
-        saveWithSequentialVisitOrder(reorderedItems);
+        saveReorderedItemsWithOriginalLegTravelMethods(currentItems, requestedItemIds);
     }
 
     @Transactional
@@ -286,8 +280,30 @@ public class TripCommandService {
     }
 
     private void saveWithSequentialVisitOrder(List<ItineraryEntity> items) {
+        saveWithSequentialVisitOrder(items, null);
+    }
+
+    private void saveReorderedItemsWithOriginalLegTravelMethods(
+            List<ItineraryEntity> currentItems, List<Long> requestedItemIds) {
+        List<String> travelMethodsByPosition =
+                currentItems.stream().map(ItineraryEntity::getTravelMethod).toList();
+        Map<Long, ItineraryEntity> itemsById =
+                currentItems.stream()
+                        .collect(Collectors.toMap(ItineraryEntity::getId, Function.identity()));
+        List<ItineraryEntity> reorderedItems =
+                requestedItemIds.stream().map(itemsById::get).toList();
+
+        saveWithSequentialVisitOrder(reorderedItems, travelMethodsByPosition);
+    }
+
+    private void saveWithSequentialVisitOrder(
+            List<ItineraryEntity> items, List<String> travelMethodsByPosition) {
         for (int index = 0; index < items.size(); index += 1) {
-            items.get(index).setVisitOrder(index + 1);
+            ItineraryEntity item = items.get(index);
+            item.setVisitOrder(index + 1);
+            if (travelMethodsByPosition != null) {
+                item.setTravelMethod(travelMethodsByPosition.get(index));
+            }
         }
 
         if (!items.isEmpty()) {

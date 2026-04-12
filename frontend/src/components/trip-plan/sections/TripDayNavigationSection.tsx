@@ -1,9 +1,8 @@
+import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import SectionInfoHint from '@/components/trip-plan/SectionInfoHint';
 import { useAppStore } from '@/stores/useAppStore';
-
-const getDaySecondaryText = (date: string | null) => {
-  return date ?? 'No fixed date';
-};
+import { buildTripDayCalendarModel } from './tripDayCalendarPresentation';
 
 export default function TripDayNavigationSection() {
   const {
@@ -26,11 +25,39 @@ export default function TripDayNavigationSection() {
     })),
   );
 
+  const itineraryCountByDayNumber = useMemo(() => {
+    if (!currentTrip) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      days.map((day) => {
+        const dayCacheKey = `${currentTrip.tripId}:${day.dayNumber}`;
+        const itineraryCount = dayItemsByDayNumber[dayCacheKey]?.length ?? 0;
+        return [day.dayNumber, itineraryCount];
+      }),
+    );
+  }, [currentTrip, dayItemsByDayNumber, days]);
+
+  const calendarModel = useMemo(() => {
+    return buildTripDayCalendarModel({
+      days,
+      itineraryCountByDayNumber,
+      selectedDayNumber,
+    });
+  }, [days, itineraryCountByDayNumber, selectedDayNumber]);
+
+  const dayCellSizeClassName = calendarModel.showWeekdayHeader
+    ? 'aspect-square w-full min-h-0'
+    : 'h-[3.7rem] w-full';
+
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold text-gray-700">Days</h2>
-        <p className="mt-1 text-sm text-gray-500">Choose a day to view its itinerary and route.</p>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-gray-700">Days</h2>
+          <SectionInfoHint tooltip="Choose a day to view and edit its itinerary and route details." />
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -52,44 +79,91 @@ export default function TripDayNavigationSection() {
           </div>
         ) : null}
 
-        {days.map((day) => {
-          const isSelected = day.dayNumber === selectedDayNumber;
-          const dayCacheKey = currentTrip ? `${currentTrip.tripId}:${day.dayNumber}` : null;
-          const itineraryCount = dayCacheKey ? (dayItemsByDayNumber[dayCacheKey]?.length ?? 0) : 0;
-          const itineraryCountLabel =
-            itineraryCount === 1 ? '1 itinerary' : `${itineraryCount} itineraries`;
-
-          return (
-            <button
-              type="button"
-              key={day.dayNumber}
-              onClick={() => selectDay(day.dayNumber)}
-              className={`w-full rounded-2xl border px-4 py-3 text-left shadow-sm ${
-                isSelected
-                  ? 'border-blue-200 bg-blue-50/60'
-                  : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/30'
-              }`}
-              aria-pressed={isSelected}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">Day {day.dayNumber}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                    <span>{getDaySecondaryText(day.date)}</span>
-                    <span className={isSelected ? 'text-blue-700' : 'text-slate-500'}>
-                      {itineraryCountLabel}
-                    </span>
+        {daysStatus === 'ready' && days.length > 0 ? (
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            {calendarModel.showWeekdayHeader ? (
+              <div className="mb-2 grid grid-cols-7 gap-2">
+                {calendarModel.weekdayLetters.map((weekdayLetter, index) => (
+                  <div
+                    key={`${weekdayLetter}-${index}`}
+                    className="text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400"
+                  >
+                    {weekdayLetter}
                   </div>
-                </div>
-                {isSelected ? (
-                  <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-medium text-blue-700">
-                    Selected
-                  </span>
-                ) : null}
+                ))}
               </div>
-            </button>
-          );
-        })}
+            ) : null}
+
+            <div
+              className={`grid ${calendarModel.gridColumnClassName} gap-2`}
+              style={
+                calendarModel.showWeekdayHeader
+                  ? undefined
+                  : {
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(2.75rem, 1fr))',
+                    }
+              }
+            >
+              {calendarModel.cells.map((cell) => {
+                if (cell.isPlaceholder) {
+                  return (
+                    <div
+                      key={cell.key}
+                      aria-hidden="true"
+                      className={`${dayCellSizeClassName} rounded-lg border border-transparent`}
+                    />
+                  );
+                }
+
+                const [itineraryCountValue, itineraryCountUnit = 'stops'] =
+                  cell.itineraryCountLabel.split(' ', 2);
+
+                return (
+                  <button
+                    type="button"
+                    key={cell.key}
+                    onClick={() => selectDay(cell.dayNumber)}
+                    title={cell.dateLabel}
+                    aria-label={`Day ${cell.dayNumber}, ${cell.itineraryCountLabel}, ${cell.dateLabel}`}
+                    className={`${dayCellSizeClassName} block rounded-md border px-1.5 py-1.5 text-center transition-colors ${
+                      cell.isSelected
+                        ? 'border-blue-200 bg-blue-50'
+                        : 'border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50'
+                    }`}
+                    aria-pressed={cell.isSelected}
+                  >
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 overflow-hidden">
+                      <div
+                        className={`text-[8px] font-semibold uppercase tracking-[0.12em] leading-none ${
+                          cell.isSelected ? 'text-blue-500' : 'text-gray-400'
+                        }`}
+                      >
+                        Day
+                      </div>
+                      <div
+                        className={`text-sm font-semibold leading-none ${
+                          cell.isSelected ? 'text-blue-800' : 'text-gray-700'
+                        }`}
+                      >
+                        {cell.dayNumber}
+                      </div>
+                      <div
+                        className={`text-[9px] font-medium leading-none tracking-tight ${
+                          cell.isSelected ? 'text-blue-700' : 'text-slate-500'
+                        }`}
+                      >
+                        <span>{itineraryCountValue}</span>{' '}
+                        <span className={cell.isSelected ? 'text-blue-500' : 'text-slate-400'}>
+                          {itineraryCountUnit}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );

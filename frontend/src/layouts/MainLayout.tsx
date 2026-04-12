@@ -54,6 +54,10 @@ export default function MainLayout() {
     document.body.style.userSelect = 'none';
   };
 
+  const handleSidebarResetWidth = () => {
+    setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50 text-gray-800 font-sans">
       <TopBar />
@@ -61,7 +65,11 @@ export default function MainLayout() {
       <div ref={contentRowRef} className="flex flex-1 overflow-hidden">
         <PlannerNavRail />
 
-        <SideBar onResizeStart={handleSidebarResizeStart} width={sidebarWidth} />
+        <SideBar
+          onResizeStart={handleSidebarResizeStart}
+          onResetWidth={handleSidebarResetWidth}
+          width={sidebarWidth}
+        />
 
         <main className="flex-1 relative bg-gray-100 flex flex-col">
           <Outlet />

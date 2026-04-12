@@ -1,11 +1,18 @@
 import {
   createBookmark as createBookmarkRequest,
+  createBookmarkCategory as createBookmarkCategoryRequest,
+  deleteBookmarkCategory as deleteBookmarkCategoryRequest,
   deleteBookmark as deleteBookmarkRequest,
+  getBookmarkCategories,
   getBookmarks,
   updateBookmark as updateBookmarkRequest,
 } from '@/api/bookmarkApi';
-import type { Bookmark, CreateBookmarkRequest } from '@/api/bookmarkApi';
+import type { Bookmark, BookmarkCategory, CreateBookmarkRequest } from '@/api/bookmarkApi';
 import type { AppStoreCreator, BookmarkSlice } from '../types';
+import {
+  DEFAULT_BOOKMARK_CATEGORY_FILTER,
+  isSameBookmarkCategoryFilter,
+} from '@/utils/bookmarkFilters';
 
 const getErrorMessage = (error: unknown) => {
   return error instanceof Error ? error.message : 'Failed to update bookmarks.';
@@ -30,10 +37,30 @@ const buildOptimisticBookmark = (request: CreateBookmarkRequest): Bookmark => {
   };
 };
 
+const sortCategories = (categories: BookmarkCategory[]) => {
+  return [...categories].sort((left, right) => left.name.localeCompare(right.name));
+};
+
+const refreshBookmarkCategoriesIfLoaded = (get: () => BookmarkSlice) => {
+  if (get().bookmarkCategoriesStatus === 'idle') {
+    return;
+  }
+
+  void get().fetchBookmarkCategories();
+};
+
 export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) => ({
   bookmarks: [],
   bookmarksStatus: 'idle',
   bookmarksError: null,
+  bookmarkCategories: [],
+  bookmarkCategoriesStatus: 'idle',
+  bookmarkCategoriesError: null,
+  bookmarkCategoryDeleteStatus: 'idle',
+  bookmarkCategoryDeleteError: null,
+  bookmarkCategoryDeleteTargetId: null,
+  hoveredBookmarkId: null,
+  selectedBookmarkCategoryFilter: DEFAULT_BOOKMARK_CATEGORY_FILTER,
   bookmarkUpdateStatus: 'idle',
   bookmarkUpdateError: null,
   bookmarkUpdateTargetId: null,
@@ -61,6 +88,11 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
           bookmarks,
           bookmarksStatus: 'ready',
           bookmarksError: null,
+          hoveredBookmarkId:
+            get().hoveredBookmarkId &&
+            bookmarks.some((bookmark) => bookmark.bookmarkId === get().hoveredBookmarkId)
+              ? get().hoveredBookmarkId
+              : null,
         },
         false,
         'bookmarks/fetch:success',
@@ -73,6 +105,44 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
         },
         false,
         'bookmarks/fetch:error',
+      );
+    }
+  },
+
+  fetchBookmarkCategories: async () => {
+    if (get().bookmarkCategoriesStatus === 'loading') {
+      return;
+    }
+
+    set(
+      {
+        bookmarkCategoriesStatus: 'loading',
+        bookmarkCategoriesError: null,
+      },
+      false,
+      'bookmark-categories/fetch:start',
+    );
+
+    try {
+      const bookmarkCategories = await getBookmarkCategories();
+
+      set(
+        {
+          bookmarkCategories: sortCategories(bookmarkCategories),
+          bookmarkCategoriesStatus: 'ready',
+          bookmarkCategoriesError: null,
+        },
+        false,
+        'bookmark-categories/fetch:success',
+      );
+    } catch (error) {
+      set(
+        {
+          bookmarkCategoriesStatus: 'error',
+          bookmarkCategoriesError: getErrorMessage(error),
+        },
+        false,
+        'bookmark-categories/fetch:error',
       );
     }
   },
@@ -118,6 +188,8 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
         false,
         'bookmarks/create:success',
       );
+
+      refreshBookmarkCategoriesIfLoaded(get);
     } catch (error) {
       const errorMessage = getErrorMessage(error);
 
@@ -133,6 +205,138 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
 
       throw error instanceof Error ? error : new Error(errorMessage);
     }
+  },
+
+  createBookmarkCategory: async (name) => {
+    set(
+      {
+        bookmarkCategoriesStatus: 'loading',
+        bookmarkCategoriesError: null,
+      },
+      false,
+      'bookmark-categories/create:start',
+    );
+
+    try {
+      const createdCategory = await createBookmarkCategoryRequest({ name });
+
+      set(
+        (state) => ({
+          bookmarkCategories: sortCategories([
+            ...state.bookmarkCategories.filter(
+              (category) => category.categoryId !== createdCategory.categoryId,
+            ),
+            createdCategory,
+          ]),
+          bookmarkCategoriesStatus: 'ready',
+          bookmarkCategoriesError: null,
+        }),
+        false,
+        'bookmark-categories/create:success',
+      );
+
+      return createdCategory;
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+
+      set(
+        {
+          bookmarkCategoriesStatus: 'error',
+          bookmarkCategoriesError: errorMessage,
+        },
+        false,
+        'bookmark-categories/create:error',
+      );
+
+      throw error instanceof Error ? error : new Error(errorMessage);
+    }
+  },
+
+  deleteBookmarkCategory: async (categoryId, deleteBookmarks) => {
+    set(
+      {
+        bookmarkCategoryDeleteStatus: 'loading',
+        bookmarkCategoryDeleteError: null,
+        bookmarkCategoryDeleteTargetId: categoryId,
+      },
+      false,
+      'bookmark-categories/delete:start',
+    );
+
+    try {
+      await deleteBookmarkCategoryRequest(categoryId, deleteBookmarks);
+
+      set(
+        (state) => ({
+          bookmarkCategories: state.bookmarkCategories.filter(
+            (category) => category.categoryId !== categoryId,
+          ),
+          bookmarkCategoryDeleteStatus: 'ready',
+          bookmarkCategoryDeleteError: null,
+          bookmarkCategoryDeleteTargetId: null,
+        }),
+        false,
+        'bookmark-categories/delete:success',
+      );
+
+      await Promise.all([get().fetchBookmarks(), get().fetchBookmarkCategories()]);
+
+      const currentFilter = get().selectedBookmarkCategoryFilter;
+      const categoryStillExists =
+        currentFilter.kind === 'category'
+          ? get().bookmarkCategories.some(
+              (category) => category.name === currentFilter.categoryName,
+            )
+          : true;
+
+      if (currentFilter.kind === 'category' && !categoryStillExists) {
+        set(
+          {
+            selectedBookmarkCategoryFilter: DEFAULT_BOOKMARK_CATEGORY_FILTER,
+          },
+          false,
+          'bookmark-categories/filter:reset-after-delete',
+        );
+      }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+
+      set(
+        {
+          bookmarkCategoryDeleteStatus: 'error',
+          bookmarkCategoryDeleteError: errorMessage,
+          bookmarkCategoryDeleteTargetId: categoryId,
+        },
+        false,
+        'bookmark-categories/delete:error',
+      );
+
+      throw error instanceof Error ? error : new Error(errorMessage);
+    }
+  },
+
+  setHoveredBookmarkId: (bookmarkId) => {
+    set(
+      {
+        hoveredBookmarkId: bookmarkId,
+      },
+      false,
+      'bookmarks/hover',
+    );
+  },
+
+  setBookmarkCategoryFilter: (filter) => {
+    if (isSameBookmarkCategoryFilter(get().selectedBookmarkCategoryFilter, filter)) {
+      return;
+    }
+
+    set(
+      {
+        selectedBookmarkCategoryFilter: filter,
+      },
+      false,
+      'bookmark-categories/filter:set',
+    );
   },
 
   updateBookmarkCategory: async (bookmarkId, category) => {
@@ -175,6 +379,8 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
         false,
         'bookmarks/update:success',
       );
+
+      refreshBookmarkCategoriesIfLoaded(get);
     } catch (error) {
       const errorMessage = getErrorMessage(error);
 
@@ -234,6 +440,8 @@ export const createBookmarkSlice: AppStoreCreator<BookmarkSlice> = (set, get) =>
         false,
         'bookmarks/remove:success',
       );
+
+      refreshBookmarkCategoriesIfLoaded(get);
     } catch (error) {
       const errorMessage = getErrorMessage(error);
 
