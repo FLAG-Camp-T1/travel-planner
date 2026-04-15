@@ -59,7 +59,7 @@ class AuthControllerTest {
                                 .content(
                                         """
                                         {
-                                          "userName": "traveler01",
+                                          "username": "traveler01",
                                           "email": "traveler@example.com",
                                           "password": "Travel123!"
                                         }

@@ -9,7 +9,9 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("poi")
 public class PoiEntity {
 
-    @Id private Long id;
+    @Id
+    @Column("id")
+    private Long id;
 
     @Column("places_id")
     private String placesId;

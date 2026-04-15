@@ -9,7 +9,7 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("bookmark")
 @Builder
 public record BookmarkEntity(
-        @Id Long id,
+        @Id @Column("id") Long id,
         @Column("user_id") UUID userId,
         @Column("poi_id") Long poiId,
         @Column("custom_category") Long customCategory) {}

@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useEffectEvent } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
+import { subscribeToAuthSessionExpired } from '@/api/authSessionBus';
 import MainLayout from '@/layouts/MainLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import LoginPage from '@/pages/LoginPage';
@@ -32,44 +33,61 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+export function AppRoutes() {
   const hydrateAuth = useAppStore((state) => state.hydrateAuth);
+  const handleSessionExpired = useAppStore((state) => state.handleSessionExpired);
+  const navigate = useNavigate();
 
   useEffect(() => {
     hydrateAuth();
   }, [hydrateAuth]);
 
+  const onSessionExpired = useEffectEvent((message: string) => {
+    handleSessionExpired(message);
+    navigate('/login', { replace: true });
+  });
+
+  useEffect(() => {
+    return subscribeToAuthSessionExpired(onSessionExpired);
+  }, []);
+
+  return (
+    <Routes>
+      {/* Route Group that requires Topbar and Left Sidebar */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/planner" replace />} />
+        <Route path="planner" element={<PlannerPage />} />
+      </Route>
+
+      {/* Route Group for Individual Pages (Auth) */}
+      <Route
+        element={
+          <PublicRoute>
+            <AuthLayout />
+          </PublicRoute>
+        }
+      >
+        <Route path="login" element={<LoginPage />} />
+        <Route path="signup" element={<SignupPage />} />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Route Group that requires Topbar and Left Sidebar */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/planner" replace />} />
-          <Route path="planner" element={<PlannerPage />} />
-        </Route>
-
-        {/* Route Group for Individual Pages (Auth) */}
-        <Route
-          element={
-            <PublicRoute>
-              <AuthLayout />
-            </PublicRoute>
-          }
-        >
-          <Route path="login" element={<LoginPage />} />
-          <Route path="signup" element={<SignupPage />} />
-        </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

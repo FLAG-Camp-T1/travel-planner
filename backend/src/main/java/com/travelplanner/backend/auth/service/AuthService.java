@@ -57,7 +57,7 @@ public class AuthService {
 
     @Transactional
     public AuthTokenResponse signup(SignupRequest request) {
-        String normalizedUserName = normalizeUserName(request.userName());
+        String normalizedUserName = normalizeUserName(request.username());
         String normalizedEmail = normalizeEmail(request.email());
         String normalizedPassword = request.password().trim();
 

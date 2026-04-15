@@ -2,6 +2,7 @@ import type { Bookmark, BookmarkCategory, CreateBookmarkRequest } from '@/api/bo
 import type { LoginCredentials, SignupData } from '@/api/authApi';
 import type { PlaceDetailDto } from '@/api/placeApi';
 import type { POIDto, POISearchRequest } from '@/api/poiApi';
+import type { AuthNoticeState } from '@/types/authNotice';
 import type {
   CreateTripDayItemRequest,
   CreateTripRequest,
@@ -59,21 +60,16 @@ export interface AuthSlice {
   token: string | null;
   authStatus: AuthStatus;
   authError: string | null;
+  authNotice: AuthNoticeState | null;
   isAuthenticated: boolean;
   hydrateAuth: () => void;
+  handleSessionExpired: (message?: string) => void;
+  setAuthNotice: (notice: AuthNoticeState | null) => void;
+  clearAuthNotice: () => void;
   clearAuthError: () => void;
   login: (credentials: LoginCredentials) => Promise<void>;
-  signup: (
-    userData: SignupData,
-    options?: {
-      autoLogin?: boolean;
-    },
-  ) => Promise<{
-    redirectedToLogin: boolean;
-  }>;
-  logout: () => Promise<{
-    serverSynced: boolean;
-  }>;
+  signup: (userData: SignupData) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export interface TripPlanningSlice {

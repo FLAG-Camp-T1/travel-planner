@@ -1,5 +1,7 @@
 import axios from 'axios';
+import { emitAuthSessionExpired } from './authSessionBus';
 import { emitApiError } from './apiErrorBus';
+import { API_BASE_URL } from './apiConfig';
 import { getActiveMockFlags, MOCK_FLAGS_HEADER } from '@/mocks/mockScenario';
 import { getStoredAuthToken } from '@/utils/authStorage';
 
@@ -11,8 +13,15 @@ const getApiErrorMessage = (error: unknown) => {
   return 'Request failed. Please try again.';
 };
 
+const getAuthorizationHeader = (error: {
+  config?: { headers?: { Authorization?: unknown; authorization?: unknown } };
+}) => {
+  const headerValue = error.config?.headers?.Authorization ?? error.config?.headers?.authorization;
+  return typeof headerValue === 'string' ? headerValue : null;
+};
+
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:8080/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -55,6 +64,16 @@ axiosClient.interceptors.response.use(
     }
   },
   (error) => {
+    const authorizationHeader = getAuthorizationHeader(error);
+    const hasBearerToken = authorizationHeader?.startsWith('Bearer ');
+
+    if (error.response?.status === 401 && hasBearerToken) {
+      emitAuthSessionExpired(
+        error.response?.data?.message || 'Your session expired. Please log in again.',
+      );
+      return Promise.reject(new Error('Your session expired. Please log in again.'));
+    }
+
     const errorMsg = error.response?.data?.message || error.message;
     console.error('HTTP level error:', errorMsg);
     emitApiError(errorMsg || 'HTTP request failed.');

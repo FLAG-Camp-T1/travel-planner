@@ -9,7 +9,9 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("itinerary")
 public class ItineraryEntity {
 
-    @Id private Long id;
+    @Id
+    @Column("id")
+    private Long id;
 
     @Column("trip_day_id")
     private Long tripDayId;

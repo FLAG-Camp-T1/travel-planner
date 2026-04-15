@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import POISearchPanel from '@/components/poi/POISearchPanel';
 import UserProfileModal from '@/layouts/UserProfileModal';
-import type { AuthNoticeState } from '@/types/authNotice';
 import { useAppStore } from '@/stores/useAppStore';
 import { getDisplayNameFromToken } from '@/utils/authTokenPresentation';
 
@@ -18,18 +17,7 @@ export default function TopBar() {
   const avatarLabel = displayName.slice(0, 1).toUpperCase();
 
   const handleLogout = async () => {
-    const result = await logout();
-
-    if (!result.serverSynced) {
-      const logoutNotice: AuthNoticeState = {
-        message: 'Logged out locally, but we could not confirm the server logout request.',
-        messageTone: 'warning',
-      };
-
-      navigate('/login', { replace: true, state: logoutNotice });
-      return;
-    }
-
+    await logout();
     navigate('/login', { replace: true });
   };
 
