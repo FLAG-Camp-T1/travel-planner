@@ -14,7 +14,6 @@ public class UserService {
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder =
             PasswordEncoderFactories.createDelegatingPasswordEncoder();
-
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,20}$");
 
@@ -42,7 +41,6 @@ public class UserService {
         }
 
         String normalizedEmail = email.trim().toLowerCase();
-
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new IllegalArgumentException("Email already exists.");
         }
@@ -53,7 +51,6 @@ public class UserService {
 
         UUID userId = UUID.randomUUID();
         String passwordHash = passwordEncoder.encode(password);
-
         jdbcTemplate.update(
                 "INSERT INTO app_user (user_id, user_name, email, password_hash) VALUES (?, ?, ?, ?)",
                 userId,
