@@ -1,28 +1,29 @@
 package com.travelplanner.backend.auth.config;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Base64;
 import java.util.Date;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
 
-    private static final String SECRET_KEY =
-            "1234567890123456789012345678901212345678901234567890123456789012";
-    private static final long EXPIRATION = 1000 * 60 * 60;
+    private final JwtProperties jwtProperties;
 
     public String generateToken(String email) {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .setExpiration(
+                        new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -32,8 +33,12 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        String email = extractUsername(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        try {
+            String email = extractUsername(token);
+            return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private boolean isTokenExpired(String token) {
@@ -49,8 +54,7 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes =
-                Decoders.BASE64.decode(Base64.getEncoder().encodeToString(SECRET_KEY.getBytes()));
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

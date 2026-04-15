@@ -18,29 +18,38 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomUserDetailsService userDetailsService;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(
                         auth ->
-                                auth.requestMatchers("/api/auth/login")
+                                auth.requestMatchers(
+                                                "/api/auth/signup",
+                                                "/api/auth/login",
+                                                "/api/auth/logout",
+                                                "/v3/api-docs/**",
+                                                "/swagger-ui/**",
+                                                "/swagger-ui.html")
                                         .permitAll()
-                                        .requestMatchers("/api/auth/logout")
-                                        .permitAll()
-                                        .requestMatchers("/api/auth/hello")
-                                        .authenticated()
                                         .anyRequest()
                                         .authenticated())
                 .userDetailsService(userDetailsService)
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
                 .addFilterBefore(
                         jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService) {
+        return new JwtAuthenticationFilter(jwtService, userDetailsService);
     }
 
     @Bean
