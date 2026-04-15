@@ -19,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -29,9 +30,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth ->
                                 auth.requestMatchers(
-                                                "/api/auth/signup",
-                                                "/api/auth/login",
-                                                "/api/auth/logout",
+                                                "/api/v1/auth/signup",
+                                                "/api/v1/auth/login",
+                                                "/api/v1/auth/logout",
                                                 "/v3/api-docs/**",
                                                 "/swagger-ui/**",
                                                 "/swagger-ui.html")
@@ -41,6 +42,8 @@ public class SecurityConfig {
                 .userDetailsService(userDetailsService)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
+                .exceptionHandling(
+                        exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(
                         jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
