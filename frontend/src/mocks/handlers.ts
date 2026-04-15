@@ -131,14 +131,15 @@ let nextBookmarkCategorySequence = 3;
 let nextItineraryItemSequence = 1000;
 let nextTripSequence = 1002;
 
-let mockUsers: Array<{ username: string; password: string }> = [
+let mockUsers: Array<{ username: string; email: string; password: string }> = [
   {
     username: 'demo',
+    email: 'demo@example.com',
     password: 'demo1234',
   },
 ];
 
-const createMockToken = (username: string) => `mock-token-${username}`;
+const createMockToken = (email: string) => `mock-token-${email}`;
 
 let mockBookmarks: Bookmark[] = [
   {
@@ -378,56 +379,62 @@ const mockPlaceDetailsById: Record<string, PlaceDetailDto> = {
 
 export const handlers = [
   http.post<never, LoginCredentials, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
-    `${API_BASE_URL}/login`,
+    `${API_BASE_URL}/auth/login`,
     async ({ request }) => {
       const requestBody = (await request.json()) as LoginCredentials;
-      const username = requestBody.username?.trim();
+      const email = requestBody.email?.trim().toLowerCase();
       const password = requestBody.password?.trim();
 
-      if (!username || !password) {
-        return createErrorResponse('Username and password are required.', 40002);
+      if (!email || !password) {
+        return createErrorResponse('Email and password are required.', 40002);
       }
 
       const matchedUser = mockUsers.find(
-        (user) => user.username === username && user.password === password,
+        (user) => user.email === email && user.password === password,
       );
 
       if (!matchedUser) {
-        return createErrorResponse('Invalid username or password.', 40100);
+        return createErrorResponse('Invalid email or password.', 40100);
       }
 
       return createSuccessResponse<AuthResponse>({
-        token: createMockToken(matchedUser.username),
+        token: createMockToken(matchedUser.email),
       });
     },
   ),
 
   http.post<never, SignupData, MockApiResponse<AuthResponse> | MockApiResponse<null>>(
-    `${API_BASE_URL}/signup`,
+    `${API_BASE_URL}/auth/signup`,
     async ({ request }) => {
       const requestBody = (await request.json()) as SignupData;
       const username = requestBody.username?.trim();
+      const email = requestBody.email?.trim().toLowerCase();
       const password = requestBody.password?.trim();
 
-      if (!username || !password) {
-        return createErrorResponse('Username and password are required.', 40002);
+      if (!username || !email || !password) {
+        return createErrorResponse('Username, email, and password are required.', 40002);
       }
 
       const usernameExists = mockUsers.some((user) => user.username === username);
+      const emailExists = mockUsers.some((user) => user.email === email);
 
       if (usernameExists) {
         return createErrorResponse('Username already exists.', 40000);
       }
 
-      mockUsers = [...mockUsers, { username, password }];
+      if (emailExists) {
+        return createErrorResponse('Email already exists.', 40000);
+      }
+
+      mockUsers = [...mockUsers, { username, email, password }];
 
       return createSuccessResponse<AuthResponse>({
-        token: createMockToken(username),
+        token: createMockToken(email),
       });
     },
   ),
 
-  http.post(`${API_BASE_URL}/logout`, () => {
+  http.post(`${API_BASE_URL}/auth/logout`, () => {
     return createSuccessResponse(null);
   }),
 

@@ -16,6 +16,9 @@ spring:
 app:
   current-user:
     fixed-id: ${APP_CURRENT_USER_FIXED_ID:00000000-0000-0000-0000-000000000001}
+  jwt:
+    secret: ${APP_JWT_SECRET}
+    expiration-ms: ${APP_JWT_EXPIRATION_MS:3600000}
   bootstrap:
     seed-enabled: false
 

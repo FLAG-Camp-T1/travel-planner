@@ -4,7 +4,7 @@ import type { AuthNoticeState } from '@/types/authNotice';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function LoginPage() {
     clearAuthError();
 
     try {
-      await login({ username, password });
+      await login({ email, password });
       navigate('/planner', { replace: true });
     } catch (err) {
       const error = err as Error;
@@ -36,7 +36,7 @@ export default function LoginPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-center text-gray-800">Welcome Back</h2>
-      <p className="text-center text-gray-500">Please enter your account and password to log in</p>
+      <p className="text-center text-gray-500">Please enter your email and password to log in</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {authNotice?.message && (
@@ -58,14 +58,14 @@ export default function LoginPage() {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
-            type="text"
+            type="email"
             required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-            placeholder="Enter your username"
+            placeholder="Enter your email"
           />
         </div>
 

@@ -8,5 +8,7 @@ spring:
     enabled: true
 
 app:
+  jwt:
+    secret: test-jwt-secret-key-for-integration-tests-123456
   bootstrap:
     seed-enabled: false
