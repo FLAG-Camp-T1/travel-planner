@@ -14,6 +14,7 @@ public class UserService {
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder =
             PasswordEncoderFactories.createDelegatingPasswordEncoder();
+
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,20}$");
 
@@ -23,7 +24,6 @@ public class UserService {
     }
 
     public void signUp(String userName, String email, String password) {
-        // 1. basic validation
         if (userName == null || userName.isBlank()) {
             throw new IllegalArgumentException("Username cannot be empty.");
         }
@@ -41,10 +41,8 @@ public class UserService {
                     "Password must be 8-20 characters and include uppercase, lowercase, number, and special character.");
         }
 
-        // 2. normalize email
         String normalizedEmail = email.trim().toLowerCase();
 
-        // 3. duplicate checks
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new IllegalArgumentException("Email already exists.");
         }
@@ -53,11 +51,8 @@ public class UserService {
             throw new IllegalArgumentException("Username already exists.");
         }
 
-        // 4. create entity
         UUID userId = UUID.randomUUID();
         String passwordHash = passwordEncoder.encode(password);
-
-        System.out.println("About to insert email: " + normalizedEmail);
 
         jdbcTemplate.update(
                 "INSERT INTO app_user (user_id, user_name, email, password_hash) VALUES (?, ?, ?, ?)",
@@ -65,7 +60,5 @@ public class UserService {
                 userName,
                 normalizedEmail,
                 passwordHash);
-
-        System.out.println("Inserted email: " + normalizedEmail);
     }
 }
