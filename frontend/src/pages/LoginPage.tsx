@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import type { AuthNoticeState } from '@/types/authNotice';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppStore } from '@/stores/useAppStore';
 
 export default function LoginPage() {
@@ -8,17 +7,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const authNoticeFromStore = useAppStore((state) => state.authNotice);
+  const clearAuthNotice = useAppStore((state) => state.clearAuthNotice);
   const clearAuthError = useAppStore((state) => state.clearAuthError);
   const login = useAppStore((state) => state.login);
-  const location = useLocation();
   const navigate = useNavigate();
-  const authNotice = (location.state as AuthNoticeState | null) ?? null;
-  const noticeTone = authNotice?.messageTone ?? 'success';
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+    clearAuthNotice();
     clearAuthError();
 
     try {
@@ -39,15 +38,15 @@ export default function LoginPage() {
       <p className="text-center text-gray-500">Please enter your email and password to log in</p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {authNotice?.message && (
+        {authNoticeFromStore && (
           <div
             className={`rounded-lg border p-3 text-sm ${
-              noticeTone === 'warning'
+              authNoticeFromStore.messageTone === 'warning'
                 ? 'border-amber-100 bg-amber-50 text-amber-700'
                 : 'border-green-100 bg-green-50 text-green-700'
             }`}
           >
-            {authNotice.message}
+            {authNoticeFromStore.message}
           </div>
         )}
 

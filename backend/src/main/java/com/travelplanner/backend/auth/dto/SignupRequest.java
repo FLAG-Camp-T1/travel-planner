@@ -11,7 +11,7 @@ public record SignupRequest(
         @NotBlank(message = "Username cannot be empty.")
                 @Size(max = 50, message = "Username must be 50 characters or fewer.")
                 @Schema(description = "Public username", example = "traveler01")
-                String userName,
+                String username,
         @NotBlank(message = "Email cannot be empty.")
                 @Email(message = "Email must be valid.")
                 @Schema(description = "Login email", example = "traveler01@example.com")

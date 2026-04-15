@@ -26,9 +26,8 @@ import type {
 import type { MockFailureFlag } from './mockScenario';
 import { MOCK_FLAGS_HEADER } from './mockScenario';
 import { buildMockTripDayRouteResult } from './routeFixtures';
+import { API_BASE_URL } from '@/api/apiConfig';
 import { toDisplayedTripTravelMethod } from '@/utils/tripTravelMethod';
-
-const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 interface MockApiResponse<T> {
   code: number;

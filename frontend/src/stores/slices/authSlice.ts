@@ -1,6 +1,8 @@
 import { authApi } from '@/api/authApi';
 import type { LoginCredentials, SignupData } from '@/api/authApi';
+import type { AuthNoticeState } from '@/types/authNotice';
 import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from '@/utils/authStorage';
+import { isAuthTokenExpired } from '@/utils/authTokenPresentation';
 import type { AppStoreCreator, AuthSlice } from '../types';
 
 const getErrorMessage = (error: unknown) => {
@@ -11,41 +13,85 @@ const toError = (error: unknown) => {
   return error instanceof Error ? error : new Error(getErrorMessage(error));
 };
 
+const unauthenticatedState = (
+  overrides: Partial<Pick<AuthSlice, 'authError' | 'authNotice'>> = {},
+) => ({
+  token: null,
+  authStatus: 'unauthenticated' as const,
+  authError: null,
+  authNotice: null,
+  isAuthenticated: false,
+  ...overrides,
+});
+
+const authenticatedState = (token: string) => ({
+  token,
+  authStatus: 'authenticated' as const,
+  authError: null,
+  authNotice: null,
+  isAuthenticated: true,
+});
+
 export const createAuthSlice: AppStoreCreator<AuthSlice> = (set) => ({
   token: null,
   authStatus: 'hydrating',
   authError: null,
+  authNotice: null,
   isAuthenticated: false,
 
   hydrateAuth: () => {
     const token = getStoredAuthToken();
+    if (!token) {
+      set(unauthenticatedState(), false, 'auth/hydrate');
+      return;
+    }
 
+    if (isAuthTokenExpired(token)) {
+      clearStoredAuthToken();
+      set(unauthenticatedState(), false, 'auth/hydrate');
+      return;
+    }
+
+    set(authenticatedState(token), false, 'auth/hydrate');
+  },
+
+  handleSessionExpired: (message = 'Your session expired. Please log in again.') => {
+    clearStoredAuthToken();
     set(
-      {
-        token,
-        authStatus: token ? 'authenticated' : 'unauthenticated',
-        authError: null,
-        isAuthenticated: Boolean(token),
-      },
+      unauthenticatedState({
+        authNotice: {
+          message,
+          messageTone: 'warning',
+        },
+      }),
       false,
-      'auth/hydrate',
+      'auth/session-expired',
     );
   },
 
-  clearAuthError: () => {
+  setAuthNotice: (notice: AuthNoticeState | null) => {
     set(
       {
-        authError: null,
+        authNotice: notice,
       },
       false,
-      'auth/error:clear',
+      notice ? 'auth/notice:set' : 'auth/notice:clear',
     );
+  },
+
+  clearAuthNotice: () => {
+    set({ authNotice: null }, false, 'auth/notice:clear');
+  },
+
+  clearAuthError: () => {
+    set({ authError: null }, false, 'auth/error:clear');
   },
 
   login: async (credentials: LoginCredentials) => {
     set(
       {
         authError: null,
+        authNotice: null,
       },
       false,
       'auth/login:start',
@@ -57,26 +103,14 @@ export const createAuthSlice: AppStoreCreator<AuthSlice> = (set) => ({
 
       setStoredAuthToken(token);
 
-      set(
-        {
-          token,
-          authStatus: 'authenticated',
-          authError: null,
-          isAuthenticated: true,
-        },
-        false,
-        'auth/login:success',
-      );
+      set(authenticatedState(token), false, 'auth/login:success');
     } catch (error) {
       clearStoredAuthToken();
 
       set(
-        {
-          token: null,
-          authStatus: 'unauthenticated',
+        unauthenticatedState({
           authError: getErrorMessage(error),
-          isAuthenticated: false,
-        },
+        }),
         false,
         'auth/login:error',
       );
@@ -85,51 +119,20 @@ export const createAuthSlice: AppStoreCreator<AuthSlice> = (set) => ({
     }
   },
 
-  signup: async (userData: SignupData, options) => {
-    const shouldAutoLogin = options?.autoLogin ?? false;
-
+  signup: async (userData: SignupData) => {
     set(
       {
         authError: null,
+        authNotice: null,
       },
       false,
       'auth/signup:start',
     );
 
     try {
-      const response = await authApi.signup(userData);
+      await authApi.signup(userData);
 
-      if (shouldAutoLogin) {
-        const { token } = response;
-
-        setStoredAuthToken(token);
-
-        set(
-          {
-            token,
-            authStatus: 'authenticated',
-            authError: null,
-            isAuthenticated: true,
-          },
-          false,
-          'auth/signup:success:auto-login',
-        );
-
-        return { redirectedToLogin: false };
-      }
-
-      set(
-        {
-          token: null,
-          authStatus: 'unauthenticated',
-          authError: null,
-          isAuthenticated: false,
-        },
-        false,
-        'auth/signup:success',
-      );
-
-      return { redirectedToLogin: true };
+      set(unauthenticatedState(), false, 'auth/signup:success');
     } catch (error) {
       set(
         {
@@ -147,39 +150,19 @@ export const createAuthSlice: AppStoreCreator<AuthSlice> = (set) => ({
     set(
       {
         authError: null,
+        authNotice: null,
       },
       false,
       'auth/logout:start',
     );
 
-    let serverSynced = true;
-
     try {
       await authApi.logout();
-    } catch (error) {
-      serverSynced = false;
-
-      set(
-        {
-          authError: getErrorMessage(error),
-        },
-        false,
-        'auth/logout:error',
-      );
+    } catch {
+      // Stateless logout only depends on clearing the local token.
     } finally {
       clearStoredAuthToken();
-
-      set(
-        {
-          token: null,
-          authStatus: 'unauthenticated',
-          isAuthenticated: false,
-        },
-        false,
-        serverSynced ? 'auth/logout:success' : 'auth/logout:local-clear',
-      );
+      set(unauthenticatedState(), false, 'auth/logout');
     }
-
-    return { serverSynced };
   },
 });

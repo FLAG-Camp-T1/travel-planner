@@ -58,6 +58,7 @@ DB_PORT=数据库端口
 DB_NAME=数据库名
 DB_USERNAME=数据库用户名
 DB_PASSWORD=数据库密码
+APP_JWT_SECRET=至少32字符的本地JWT签名密钥
 ```
 
 ### 2.4 启动服务
