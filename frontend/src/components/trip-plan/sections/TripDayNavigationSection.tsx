@@ -48,7 +48,7 @@ export default function TripDayNavigationSection() {
   }, [days, itineraryCountByDayNumber, selectedDayNumber]);
 
   const dayCellSizeClassName = calendarModel.showWeekdayHeader
-    ? 'aspect-square w-full min-h-0'
+    ? 'min-h-[4.5rem] w-full'
     : 'h-[3.7rem] w-full';
 
   return (
@@ -132,7 +132,7 @@ export default function TripDayNavigationSection() {
                     }`}
                     aria-pressed={cell.isSelected}
                   >
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 overflow-hidden">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-0.5">
                       <div
                         className={`text-[8px] font-semibold uppercase tracking-[0.12em] leading-none ${
                           cell.isSelected ? 'text-blue-500' : 'text-gray-400'
@@ -148,7 +148,7 @@ export default function TripDayNavigationSection() {
                         {cell.dayNumber}
                       </div>
                       <div
-                        className={`text-[9px] font-medium leading-none tracking-tight ${
+                        className={`text-[9px] font-medium leading-[1.2] tracking-tight ${
                           cell.isSelected ? 'text-blue-700' : 'text-slate-500'
                         }`}
                       >
